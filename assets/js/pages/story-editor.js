@@ -1,3 +1,5 @@
+console.info("[Histórias dos Crias] story-editor-fixed carregado");
+
 import { setupTheme } from "../core/theme.js";
 import {
     escapeHtml,
@@ -987,6 +989,7 @@ function bindSeasons() {
                 );
             },
         );
+    });
 
 
     document.querySelectorAll(
