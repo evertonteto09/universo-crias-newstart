@@ -1,4 +1,6 @@
-// Preencha com as credenciais públicas do seu projeto Supabase.
-// A anon key é apropriada para o navegador quando o RLS está configurado corretamente.
-export const SUPABASE_URL = "COLOQUE_AQUI";
-export const SUPABASE_ANON_KEY = "COLOQUE_AQUI";
+export const SUPABASE_URL = "https://vhfuyooakycgzadxfoxb.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_ozUx0Sq1Mfz2DrXCRaBORg_oIOSIbOC";
+
+export const STORAGE_BUCKETS = {
+    STORY_COVERS: "story-covers",
+};
