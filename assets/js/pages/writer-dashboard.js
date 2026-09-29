@@ -1,4 +1,5 @@
 import { setupTheme } from "../core/theme.js";
+import { openConfirmModal } from "../core/modal.js";
 import {
     escapeHtml,
     storyCoverSource,
@@ -20,6 +21,7 @@ import {
 
 import {
     getWriterReviews,
+    deleteReview,
 } from "../services/review.service.js";
 
 import {
@@ -258,42 +260,54 @@ async function loadReviews(
                     .map(
                         (review) => `
                             <article
-                                class="review-card"
+                                class="review-card review-card-writer"
+                                data-review-id="${review.id}"
                             >
-                                <div class="review-meta">
-                                    <strong>
-                                        ${escapeHtml(
-                                            review.reader_name
-                                        )}
-                                    </strong>
+                                <div class="review-card-content">
+                                    <div class="review-meta">
+                                        <strong>
+                                            ${escapeHtml(
+                                                review.reader_name
+                                            )}
+                                        </strong>
 
-                                    <span>
-                                        ${ratingStars(
-                                            review.rating
+                                        <span>
+                                            ${ratingStars(
+                                                review.rating
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    <p>
+                                        ${escapeHtml(
+                                            review.content
                                         )}
-                                    </span>
+                                    </p>
+
+                                    <small class="muted">
+                                        ${
+                                            review.chapter_id
+                                                ? "Episódio específico"
+                                                : "Obra completa"
+                                        }
+                                        ·
+                                        ${
+                                            review.status ===
+                                            "published"
+                                                ? "Visível"
+                                                : "Oculta"
+                                        }
+                                    </small>
                                 </div>
 
-                                <p>
-                                    ${escapeHtml(
-                                        review.content
-                                    )}
-                                </p>
-
-                                <small class="muted">
-                                    ${
-                                        review.chapter_id
-                                            ? "Episódio específico"
-                                            : "Obra completa"
-                                    }
-                                    ·
-                                    ${
-                                        review.status ===
-                                        "published"
-                                            ? "Visível"
-                                            : "Oculta"
-                                    }
-                                </small>
+                                <button
+                                    type="button"
+                                    class="danger-icon-button delete-review-button"
+                                    aria-label="Excluir avaliação de ${escapeHtml(review.reader_name)}"
+                                    title="Excluir avaliação"
+                                >
+                                    ×
+                                </button>
                             </article>
                         `
                     )
@@ -303,6 +317,67 @@ async function loadReviews(
                         Essa história ainda não recebeu avaliações.
                     </article>
                 `;
+
+        document
+            .querySelectorAll(
+                ".delete-review-button"
+            )
+            .forEach((button) => {
+                button.addEventListener(
+                    "click",
+                    (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const card =
+                            event.currentTarget.closest(
+                                "[data-review-id]"
+                            );
+
+                        const reviewId =
+                            Number(
+                                card.dataset.reviewId
+                            );
+
+                        const readerName =
+                            card.querySelector(
+                                ".review-meta strong"
+                            )?.textContent?.trim() ||
+                            "este leitor";
+
+                        const reviewText =
+                            card.querySelector(
+                                ".review-card-content p"
+                            )?.textContent?.trim() ||
+                            "";
+
+                        openConfirmModal({
+                            eyebrow: "MODERAÇÃO",
+                            title: "Excluir avaliação?",
+                            message: `Excluir permanentemente a avaliação de <strong>${escapeHtml(readerName)}</strong>?`,
+                            details: `
+                                <div class="review-delete-preview">
+                                    “${escapeHtml(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
+                                </div>
+                                <span>
+                                    Use esta opção para remover avaliações ofensivas,
+                                    ataques ou spam da obra.
+                                </span>
+                            `,
+                            confirmLabel: "Excluir avaliação",
+                            onConfirm: async () => {
+                                await deleteReview(
+                                    reviewId
+                                );
+
+                                await loadReviews(
+                                    storyId
+                                );
+                            },
+                        });
+                    },
+                );
+            });
     } catch (error) {
         console.error(error);
 

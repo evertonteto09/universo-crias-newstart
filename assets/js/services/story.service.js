@@ -5,6 +5,7 @@ export async function getPublishedStories() {
         .from("stories")
         .select(`
             id,
+            writer_id,
             title,
             slug,
             description,
@@ -55,6 +56,7 @@ export async function getPublishedStoryBySlug(slug) {
         .from("stories")
         .select(`
             id,
+            writer_id,
             title,
             slug,
             description,
@@ -232,4 +234,44 @@ export async function getStoryReviewSummary(storyId) {
         average: total / ratings.length,
         count: ratings.length,
     };
+}
+
+
+export function getPublishedChaptersInOrder(story) {
+    return (story?.seasons ?? [])
+        .flatMap((season) =>
+            (season.chapters ?? [])
+                .filter(
+                    (chapter) =>
+                        chapter.status === "published"
+                )
+                .map((chapter) => ({
+                    ...chapter,
+                    season_number: season.number,
+                    season_title: season.title,
+                }))
+        )
+        .sort((a, b) => {
+            if (a.season_number !== b.season_number) {
+                return a.season_number - b.season_number;
+            }
+
+            return a.number - b.number;
+        });
+}
+
+
+export async function deleteStory(storyId) {
+    const { data, error } = await supabase
+        .from("stories")
+        .delete()
+        .eq("id", storyId)
+        .select("id, cover_path")
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
 }

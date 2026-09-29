@@ -12,11 +12,12 @@ import {
 import {
     getWriterChapter,
     updateChapter,
+    deleteChapter,
 } from "../services/chapter.service.js";
 
 import {
-    supabase,
-} from "../core/supabase.js";
+    openConfirmModal,
+} from "../core/modal.js";
 
 setupTheme();
 
@@ -158,6 +159,14 @@ function render() {
                     hidden
                 >
                     Voltar para rascunho
+                </button>
+
+                <button
+                    id="delete-chapter-button"
+                    class="danger-button"
+                    type="button"
+                >
+                    Excluir episódio
                 </button>
 
                 <span
@@ -380,6 +389,38 @@ function bind() {
                 "draft"
             );
         }
+    );
+
+    document.querySelector(
+        "#delete-chapter-button"
+    ).addEventListener(
+        "click",
+        () => {
+            openConfirmModal({
+                eyebrow:
+                    chapter.number === 0
+                        ? "PILOTO"
+                        : `EPISÓDIO ${chapter.number}`,
+                title: "Excluir episódio?",
+                message: `Excluir <strong>${escapeHtml(chapter.title)}</strong>?`,
+                details: `
+                    <p>
+                        O conteúdo do episódio e as avaliações
+                        vinculadas serão removidos.
+                    </p>
+                    <span><strong>Esta ação é definitiva.</strong></span>
+                `,
+                confirmLabel: "Excluir episódio",
+                onConfirm: async () => {
+                    await deleteChapter(
+                        chapter.id
+                    );
+
+                    location.href =
+                        `./story-editor.html?id=${storyId}`;
+                },
+            });
+        },
     );
 }
 

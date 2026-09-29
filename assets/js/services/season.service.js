@@ -105,3 +105,19 @@ export async function updateSeason(
 
     return data;
 }
+
+
+export async function deleteSeason(seasonId) {
+    const { data, error } = await supabase
+        .from("seasons")
+        .delete()
+        .eq("id", seasonId)
+        .select("id")
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}

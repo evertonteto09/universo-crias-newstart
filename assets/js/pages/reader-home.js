@@ -1,4 +1,5 @@
 import { setupTheme } from "../core/theme.js";
+import { setupProfanityFilter } from "../core/profanity-filter.js";
 import {
     escapeHtml,
     ratingStars,
@@ -8,6 +9,7 @@ import { getPublishedStories } from "../services/story.service.js";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 
 setupTheme();
+setupProfanityFilter();
 
 const grid =
     document.querySelector("#story-grid");

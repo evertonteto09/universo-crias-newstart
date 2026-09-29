@@ -190,3 +190,19 @@ export async function updateChapter(
 
     return data;
 }
+
+
+export async function deleteChapter(chapterId) {
+    const { data, error } = await supabase
+        .from("chapters")
+        .delete()
+        .eq("id", chapterId)
+        .select("id")
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}

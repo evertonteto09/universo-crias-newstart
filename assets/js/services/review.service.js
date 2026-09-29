@@ -151,3 +151,19 @@ export async function moderateReview(
 
     return data;
 }
+
+
+export async function deleteReview(reviewId) {
+    const { data, error } = await supabase
+        .from("reviews")
+        .delete()
+        .eq("id", reviewId)
+        .select("id")
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
