@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Histórias dos Crias — leia histórias, episódios e avaliações.">
+    <title>Histórias dos Crias</title>
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="./index.html">Histórias dos Crias</a>
+        <nav class="main-nav" aria-label="Navegação principal">
+            <a href="./index.html">Histórias</a>
+            <a href="./portal-escritor/login.html">Portal do Escritor</a>
+            <button class="theme-button" id="theme-toggle" type="button">Tema</button>
+        </nav>
+    </header>
+
+    <main class="page-shell fade-in">
+        <section class="hero">
+            <span class="eyebrow">BIBLIOTECA</span>
+            <h1>Histórias dos Crias</h1>
+            <p>Explore as obras, conheça seus autores e descubra novos episódios.</p>
+        </section>
+
+        <section>
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">PUBLICADAS</span>
+                    <h2>Histórias</h2>
+                </div>
+                <span id="story-count" class="muted">—</span>
+            </div>
+
+            <div id="story-grid" class="story-grid" aria-live="polite">
+                <article class="loading-card">Carregando histórias...</article>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <span>Histórias dos Crias</span>
+        <a href="./portal-escritor/login.html">Área do escritor</a>
+    </footer>
+
+    <script type="module" src="./assets/js/reader-home.js"></script>
+</body>
+</html>

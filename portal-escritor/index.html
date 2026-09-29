@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Portal do Escritor</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="../index.html">Histórias dos Crias</a>
+        <nav class="main-nav">
+            <span id="writer-name" class="muted">—</span>
+            <button id="logout-button" class="theme-button" type="button">Sair</button>
+        </nav>
+    </header>
+
+    <main class="page-shell fade-in">
+        <section class="hero hero-compact">
+            <span class="eyebrow">PORTAL DO ESCRITOR</span>
+            <h1>Suas histórias</h1>
+            <p>Crie obras, edite capítulos, guarde rascunhos e publique quando estiver tudo pronto.</p>
+        </section>
+
+        <section>
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">MINHAS OBRAS</span>
+                    <h2>Biblioteca do escritor</h2>
+                </div>
+                <button id="new-story-button" class="primary-button" type="button">+ Nova história</button>
+            </div>
+            <div id="writer-story-grid" class="story-grid">
+                <article class="loading-card">Carregando...</article>
+            </div>
+        </section>
+
+        <section class="panel-section">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">AVALIAÇÕES</span>
+                    <h2>Feedback dos leitores</h2>
+                </div>
+            </div>
+            <div id="review-list" class="review-list">
+                <article class="loading-card">Selecione uma história para visualizar as avaliações.</article>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../assets/js/writer-dashboard.js"></script>
+</body>
+</html>
