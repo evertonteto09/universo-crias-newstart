@@ -9,7 +9,6 @@ const PHRASES = [
     "filho da puta",
     "filho-da-puta",
     "vai se foder",
-    "vai se fuder",
     "vai tomar no cu",
 ];
 
@@ -20,7 +19,6 @@ const WORDS = [
     "puta",
     "puto",
     "foder",
-    "fuder",
     "foderam",
     "fodase",
     "foda-se",

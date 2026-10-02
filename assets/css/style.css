@@ -89,6 +89,78 @@ a { color: inherit; }
 
 .main-nav a:hover { color: var(--text); }
 
+
+.writer-filter {
+    position: relative;
+}
+
+.writer-filter-toggle {
+    white-space: nowrap;
+}
+
+.writer-filter-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 30;
+    width: min(310px, 82vw);
+    max-height: 340px;
+    overflow: auto;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+}
+
+.writer-filter-menu[hidden] {
+    display: none;
+}
+
+.writer-filter-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+.writer-filter-option:hover,
+.writer-filter-option.active {
+    background: var(--surface-2);
+}
+
+.writer-filter-option > span:first-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.writer-filter-option small {
+    color: var(--muted);
+    font-size: .76rem;
+}
+
+.writer-filter-count {
+    flex: 0 0 auto;
+    min-width: 28px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: .75rem;
+    text-align: center;
+}
+
 .page-shell {
     width: min(1180px, calc(100% - 32px));
     margin: 0 auto;
@@ -133,6 +205,58 @@ a { color: inherit; }
 
 .section-heading h2,
 .season-heading h2 { margin: 8px 0 0; }
+
+
+.story-search-section {
+    margin: -28px 0 34px;
+}
+
+.story-search {
+    position: relative;
+    display: block;
+}
+
+.story-search input {
+    min-height: 54px;
+    padding: 14px 16px 14px 48px;
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.story-search input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.story-search-icon {
+    position: absolute;
+    left: 17px;
+    top: 50%;
+    z-index: 1;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 1.45rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.story-search-status {
+    min-height: 1.25em;
+    margin-top: 9px;
+    padding-left: 4px;
+    font-size: .86rem;
+}
+
+.story-author {
+    margin-top: -2px;
+    font-size: .9rem;
+    color: var(--accent) !important;
+}
+
+.search-empty-card h3 {
+    margin: 9px 0 7px;
+}
 
 .story-grid {
     display: grid;
@@ -463,6 +587,10 @@ textarea { resize: vertical; }
 }
 
 @media (max-width: 680px) {
+    .writer-filter-menu {
+        right: auto;
+        left: 0;
+    }
     .site-header,
     .site-footer {
         align-items: flex-start;

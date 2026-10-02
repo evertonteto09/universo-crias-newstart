@@ -12,6 +12,11 @@ export async function getPublishedStories() {
             cover_type,
             cover_url,
             cover_path,
+            writers (
+                id,
+                name,
+                username
+            ),
             seasons (
                 id,
                 number,
@@ -63,6 +68,11 @@ export async function getPublishedStoryBySlug(slug) {
             cover_type,
             cover_url,
             cover_path,
+            writers (
+                id,
+                name,
+                username
+            ),
             seasons (
                 id,
                 number,

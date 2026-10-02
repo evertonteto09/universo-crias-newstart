@@ -108,7 +108,7 @@ function render() {
                             id="content-counter"
                             class="muted"
                         >
-                            0 caracteres
+                            0 caracteres · 0 palavras
                         </span>
                     </div>
 
@@ -206,14 +206,25 @@ function updateCounter() {
 
     if (!textarea || !counter) return;
 
+    const text = textarea.value;
+
     const length =
-        textarea.value.length;
+        text.length;
+
+    const words =
+        text.trim()
+            ? text.trim().split(/\s+/u).filter(Boolean).length
+            : 0;
 
     counter.textContent =
         `${length.toLocaleString("pt-BR")} ${
             length === 1
                 ? "caractere"
                 : "caracteres"
+        } · ${words.toLocaleString("pt-BR")} ${
+            words === 1
+                ? "palavra"
+                : "palavras"
         }`;
 }
 

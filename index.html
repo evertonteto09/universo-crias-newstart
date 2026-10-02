@@ -22,6 +22,27 @@
             >
                 Filtro: ON
             </button>
+
+            <div class="writer-filter" data-writer-filter>
+                <button
+                    class="theme-button writer-filter-toggle"
+                    id="writer-filter-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                    aria-controls="writer-filter-menu"
+                >
+                    Escritor: todos
+                </button>
+
+                <div
+                    class="writer-filter-menu"
+                    id="writer-filter-menu"
+                    role="menu"
+                    hidden
+                ></div>
+            </div>
+
             <button class="theme-button" id="theme-toggle" type="button">Tema</button>
         </nav>
     </header>
@@ -31,6 +52,25 @@
             <span class="eyebrow">BIBLIOTECA</span>
             <h1>Histórias dos Crias</h1>
             <p>Explore as obras, conheça seus autores e descubra novos episódios.</p>
+        </section>
+
+        <section class="story-search-section">
+            <label class="story-search" for="story-search">
+                <span class="story-search-icon" aria-hidden="true">⌕</span>
+                <input
+                    id="story-search"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="Pesquisar por história ou autor..."
+                    aria-describedby="story-search-status"
+                >
+            </label>
+
+            <div
+                id="story-search-status"
+                class="story-search-status muted"
+                aria-live="polite"
+            ></div>
         </section>
 
         <section>
