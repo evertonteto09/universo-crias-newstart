@@ -11,6 +11,11 @@ import {
 } from "../core/utils.js";
 
 import {
+    renderDynamicContent,
+    bindDynamicText,
+} from "../core/dynamic-text.js";
+
+import {
     getPublishedChapter,
 } from "../services/chapter.service.js";
 
@@ -42,21 +47,12 @@ let currentSeason = null;
 let currentChapter = null;
 let publishedChapters = [];
 
-function renderContent(content) {
-    return filterProfanity(
-        String(content ?? "")
-    )
-        .split(/\n{2,}/)
-        .map(
-            (paragraph) =>
-                `<p>${escapeHtml(
-                    paragraph
-                ).replaceAll(
-                    "\n",
-                    "<br>"
-                )}</p>`
+async function renderContent(content) {
+    return renderDynamicContent(
+        filterProfanity(
+            String(content ?? "")
         )
-        .join("");
+    );
 }
 
 function notFound() {
@@ -313,6 +309,11 @@ function bindReviewForm() {
 }
 
 async function renderPage() {
+    const renderedContent =
+        await renderContent(
+            currentChapter.content,
+        );
+
     page.innerHTML = `
         <article class="reader-page">
 
@@ -351,9 +352,7 @@ async function renderPage() {
 
             <section class="reader-content">
                 <div id="chapter-content-rendered">
-                    ${renderContent(
-                        currentChapter.content
-                    )}
+                    ${renderedContent}
                 </div>
             </section>
 
@@ -522,9 +521,15 @@ async function load() {
         bindReviewForm();
         await loadReviews();
 
+        bindDynamicText(
+            document.querySelector(
+                "#chapter-content-rendered"
+            )
+        );
+
         window.addEventListener(
             "hdc-profanity-filter-changed",
-            () => {
+            async () => {
                 const contentRoot =
                     document.querySelector(
                         "#chapter-content-rendered"
@@ -532,7 +537,7 @@ async function load() {
 
                 if (contentRoot) {
                     contentRoot.innerHTML =
-                        renderContent(
+                        await renderContent(
                             currentChapter.content
                         );
                 }

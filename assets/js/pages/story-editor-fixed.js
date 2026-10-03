@@ -38,13 +38,6 @@ import {
 } from "../services/storage.service.js";
 
 import {
-    getWriterStoryNews,
-    createStoryNews,
-    updateStoryNews,
-    deleteStoryNews,
-} from "../services/news.service.js";
-
-import {
     openFormModal,
     openConfirmModal,
 } from "../core/modal.js";
@@ -65,7 +58,6 @@ const storyId =
 
 let story = null;
 let seasons = [];
-let news = [];
 
 function getCover(storyData) {
     return storyCoverSource(
@@ -177,106 +169,6 @@ function seasonHtml(season) {
         </article>
     `;
 }
-
-
-function newsHtml(item) {
-    const title =
-        String(item.title ?? "").trim() ||
-        "Sem título";
-
-    const content =
-        String(item.content ?? "").trim();
-
-    return `
-        <article
-            class="story-news-card"
-            data-news-id="${Number(item.id)}"
-        >
-            <div class="story-news-card-main">
-                <div class="story-news-meta">
-                    <span class="eyebrow">
-                        NOTÍCIA DA OBRA
-                    </span>
-
-                    <span class="story-news-date">
-                        ${formatDate(item.updated_at || item.created_at)}
-                    </span>
-                </div>
-
-                <h3>
-                    ${escapeHtml(title)}
-                </h3>
-
-                <p class="story-news-content">${escapeHtml(content.trim())}</p>
-            </div>
-
-            <div class="story-news-actions">
-                <button
-                    type="button"
-                    class="secondary-button edit-news-button"
-                >
-                    Editar
-                </button>
-
-                <button
-                    type="button"
-                    class="danger-icon-button delete-news-button"
-                    aria-label="Excluir notícia ${escapeHtml(title)}"
-                    title="Excluir notícia"
-                >
-                    ×
-                </button>
-            </div>
-        </article>
-    `;
-}
-
-
-function renderNewsSection() {
-    const list =
-        news.length
-            ? news.map(newsHtml).join("")
-            : `
-                <article class="empty-card">
-                    Essa história ainda não possui notícias.
-                    Publique uma novidade para que os leitores
-                    saibam o que está acontecendo com a obra.
-                </article>
-            `;
-
-    return `
-        <section class="editor-panel story-news-editor-section">
-            <div class="section-heading">
-                <div>
-                    <span class="eyebrow">
-                        ATUALIZAÇÕES
-                    </span>
-
-                    <h2>Notícias da história</h2>
-                </div>
-
-                <button
-                    id="new-news-button"
-                    class="primary-button"
-                    type="button"
-                >
-                    + Nova notícia
-                </button>
-            </div>
-
-            <p class="muted story-news-help">
-                Publique novidades, avisos, pausas ou informações
-                sobre esta obra. A notícia fica disponível para os
-                leitores assim que for publicada.
-            </p>
-
-            <div class="story-news-list">
-                ${list}
-            </div>
-        </section>
-    `;
-}
-
 
 function render() {
     const cover =
@@ -492,8 +384,6 @@ function render() {
             </aside>
         </section>
 
-        ${renderNewsSection()}
-
         <section class="danger-zone">
             <div>
                 <span class="eyebrow danger-eyebrow">
@@ -521,7 +411,6 @@ function render() {
 
     bindStorySettings();
     bindSeasons();
-    bindNews();
     bindDeleteStory();
 
     // O botão é criado dentro do render(), portanto
@@ -539,247 +428,6 @@ function render() {
         );
     }
 }
-
-function openNewsForm(existingNews = null) {
-    const isEditing =
-        Boolean(existingNews);
-
-    const title =
-        isEditing
-            ? "Editar notícia"
-            : "Nova notícia";
-
-    const submitLabel =
-        isEditing
-            ? "Salvar alterações"
-            : "Publicar notícia";
-
-    openFormModal({
-        eyebrow: "ATUALIZAÇÃO DA OBRA",
-        title,
-        width: "720px",
-        html: `
-            <div class="modal-context modal-context-accent">
-                <span class="modal-context-icon">📰</span>
-                <div>
-                    <strong>
-                        ${escapeHtml(story.title)}
-                    </strong>
-                    <span>
-                        ${isEditing
-                            ? "Atualize a novidade publicada para os leitores."
-                            : "A notícia será publicada imediatamente na página da história."
-                        }
-                    </span>
-                </div>
-            </div>
-
-            <label>
-                Título da notícia
-                <input
-                    id="modal-news-title"
-                    maxlength="200"
-                    value="${
-                        isEditing
-                            ? escapeHtml(existingNews.title)
-                            : ""
-                    }"
-                    placeholder="Ex.: Novo episódio chegando!"
-                    autocomplete="off"
-                    required
-                >
-            </label>
-
-            <label>
-                Conteúdo
-                <textarea
-                    id="modal-news-content"
-                    rows="10"
-                    maxlength="10000"
-                    placeholder="Escreva a novidade que deseja compartilhar..."
-                    required
-                >${
-                    isEditing
-                        ? escapeHtml(existingNews.content)
-                        : ""
-                }</textarea>
-            </label>
-
-            <small class="field-help">
-                A notícia aceita quebras de linha normalmente.
-            </small>
-        `,
-        onSubmit: async (form) => {
-            const newsTitle =
-                form.querySelector(
-                    "#modal-news-title"
-                ).value.trim();
-
-            const content =
-                form.querySelector(
-                    "#modal-news-content"
-                ).value.trim();
-
-            if (!newsTitle) {
-                throw new Error(
-                    "Informe um título para a notícia."
-                );
-            }
-
-            if (!content) {
-                throw new Error(
-                    "Informe o conteúdo da notícia."
-                );
-            }
-
-            if (newsTitle.length > 200) {
-                throw new Error(
-                    "O título da notícia deve ter no máximo 200 caracteres."
-                );
-            }
-
-            if (content.length > 10000) {
-                throw new Error(
-                    "O conteúdo da notícia deve ter no máximo 10.000 caracteres."
-                );
-            }
-
-            if (isEditing) {
-                const updated =
-                    await updateStoryNews(
-                        existingNews.id,
-                        {
-                            title: newsTitle,
-                            content,
-                        }
-                    );
-
-                news =
-                    news.map((item) =>
-                        item.id === existingNews.id
-                            ? {
-                                ...item,
-                                ...updated,
-                            }
-                            : item
-                    );
-            } else {
-                const created =
-                    await createStoryNews({
-                        storyId: story.id,
-                        title: newsTitle,
-                        content,
-                    });
-
-                news = [
-                    created,
-                    ...news,
-                ];
-            }
-
-            render();
-        },
-    });
-}
-
-
-function bindNews() {
-    const newButton =
-        document.querySelector(
-            "#new-news-button"
-        );
-
-    if (newButton) {
-        newButton.addEventListener(
-            "click",
-            () => openNewsForm()
-        );
-    }
-
-    document.querySelectorAll(
-        ".edit-news-button"
-    ).forEach((button) => {
-        button.addEventListener(
-            "click",
-            (event) => {
-                const card =
-                    event.currentTarget.closest(
-                        "[data-news-id]"
-                    );
-
-                const newsId =
-                    Number(
-                        card?.dataset.newsId
-                    );
-
-                const item =
-                    news.find(
-                        (newsItem) =>
-                            newsItem.id === newsId
-                    );
-
-                if (!item) return;
-
-                openNewsForm(item);
-            }
-        );
-    });
-
-    document.querySelectorAll(
-        ".delete-news-button"
-    ).forEach((button) => {
-        button.addEventListener(
-            "click",
-            (event) => {
-                const card =
-                    event.currentTarget.closest(
-                        "[data-news-id]"
-                    );
-
-                const newsId =
-                    Number(
-                        card?.dataset.newsId
-                    );
-
-                const item =
-                    news.find(
-                        (newsItem) =>
-                            newsItem.id === newsId
-                    );
-
-                if (!item) return;
-
-                openConfirmModal({
-                    eyebrow: "ATUALIZAÇÃO DA OBRA",
-                    title: "Excluir notícia?",
-                    message: `Excluir permanentemente <strong>${escapeHtml(item.title)}</strong>?`,
-                    details: `
-                        <p>
-                            A notícia será removida da página pública
-                            e não poderá mais ser recuperada.
-                        </p>
-                        <span>Esta ação é definitiva.</span>
-                    `,
-                    confirmLabel: "Excluir notícia",
-                    onConfirm: async () => {
-                        await deleteStoryNews(
-                            item.id
-                        );
-
-                        news =
-                            news.filter(
-                                (newsItem) =>
-                                    newsItem.id !== item.id
-                            );
-
-                        render();
-                    },
-                });
-            }
-        );
-    });
-}
-
 
 function bindStorySettings() {
     const form =
@@ -1596,11 +1244,6 @@ async function init() {
 
         seasons =
             await getWriterSeasons(
-                story.id
-            );
-
-        news =
-            await getWriterStoryNews(
                 story.id
             );
 

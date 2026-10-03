@@ -1,4 +1,5 @@
 import { supabase } from "../core/supabase.js";
+import { removeChapterImagesFromContent } from "./storage.service.js";
 
 export async function getPublishedChapter(
     storySlug,
@@ -193,6 +194,30 @@ export async function updateChapter(
 
 
 export async function deleteChapter(chapterId) {
+    const { data: chapter, error: chapterError } =
+        await supabase
+            .from("chapters")
+            .select("id, content")
+            .eq("id", chapterId)
+            .single();
+
+    if (chapterError) {
+        throw chapterError;
+    }
+
+    try {
+        await removeChapterImagesFromContent(
+            chapter.content,
+        );
+    } catch (error) {
+        // A falha de limpeza do Storage não deve impedir
+        // a exclusão do episódio no banco.
+        console.warn(
+            "Não foi possível limpar algumas imagens do episódio.",
+            error,
+        );
+    }
+
     const { data, error } = await supabase
         .from("chapters")
         .delete()

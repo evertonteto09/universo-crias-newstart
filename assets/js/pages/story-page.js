@@ -28,6 +28,10 @@ import {
     submitReview,
 } from "../services/review.service.js";
 
+import {
+    getPublishedStoryNews,
+} from "../services/news.service.js";
+
 setupTheme();
 setupProfanityFilter();
 
@@ -260,6 +264,153 @@ async function renderStoryReviewForm(
     `;
 }
 
+
+function formatNewsDate(value) {
+    if (!value) {
+        return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+            dateStyle: "medium",
+            timeStyle: "short",
+        },
+    ).format(date);
+}
+
+function renderNews(news) {
+    return `
+        <article class="news-card">
+            <div class="news-card-meta">
+                <span class="eyebrow">
+                    NOTÍCIA DA OBRA
+                </span>
+
+                <time datetime="${escapeHtml(news.created_at || "")}">
+                    ${escapeHtml(
+                        formatNewsDate(news.created_at)
+                    )}
+                </time>
+            </div>
+
+            <h3>
+                ${escapeHtml(news.title)}
+            </h3>
+
+            <div class="news-card-content">${escapeHtml(
+                String(news.content ?? "").trim()
+            )}</div>
+        </article>
+    `;
+}
+
+function renderNewsPanel(news) {
+    const content =
+        news.length
+            ? `
+                <div class="news-list">
+                    ${news.map(renderNews).join("")}
+                </div>
+              `
+            : `
+                <article class="empty-card">
+                    <span class="eyebrow">
+                        NOTÍCIAS
+                    </span>
+
+                    <h3>
+                        Nenhuma novidade publicada ainda.
+                    </h3>
+
+                    <p class="muted">
+                        Quando o escritor publicar uma novidade
+                        sobre esta obra, ela aparecerá aqui.
+                    </p>
+                </article>
+              `;
+
+    return `
+        <section class="story-tab-panel" data-story-tab-panel="news" hidden>
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">
+                        NOVIDADES
+                    </span>
+
+                    <h2>
+                        Notícias da história
+                    </h2>
+                </div>
+
+                <span class="muted">
+                    ${news.length}
+                    ${news.length === 1 ? "publicação" : "publicações"}
+                </span>
+            </div>
+
+            ${content}
+        </section>
+    `;
+}
+
+function setupStoryTabs() {
+    const tabs =
+        [...document.querySelectorAll(
+            "[data-story-tab]"
+        )];
+
+    const panels =
+        [...document.querySelectorAll(
+            "[data-story-tab-panel]"
+        )];
+
+    if (!tabs.length || !panels.length) {
+        return;
+    }
+
+    const activate = (target) => {
+        for (const tab of tabs) {
+            const active =
+                tab.dataset.storyTab === target;
+
+            tab.classList.toggle(
+                "active",
+                active,
+            );
+
+            tab.setAttribute(
+                "aria-selected",
+                String(active),
+            );
+        }
+
+        for (const panel of panels) {
+            panel.hidden =
+                panel.dataset.storyTabPanel !== target;
+        }
+    };
+
+    for (const tab of tabs) {
+        tab.addEventListener(
+            "click",
+            () => {
+                activate(
+                    tab.dataset.storyTab
+                );
+            },
+        );
+    }
+
+    activate("chapters");
+}
+
 async function load() {
     if (!slug) {
         notFound();
@@ -355,6 +506,20 @@ async function load() {
             );
         }
 
+        let news = [];
+
+        try {
+            news =
+                await getPublishedStoryNews(
+                    story.id,
+                );
+        } catch (newsError) {
+            console.warn(
+                "[News]",
+                newsError,
+            );
+        }
+
         page.innerHTML = `
             <section class="story-hero">
                 <img
@@ -384,7 +549,46 @@ async function load() {
                 </div>
             </section>
 
-            <section>
+            <nav
+                class="story-tabs"
+                role="tablist"
+                aria-label="Conteúdo da história"
+            >
+                <button
+                    type="button"
+                    class="story-tab active"
+                    data-story-tab="chapters"
+                    role="tab"
+                    aria-selected="true"
+                >
+                    📖 Episódios
+                </button>
+
+                <button
+                    type="button"
+                    class="story-tab"
+                    data-story-tab="news"
+                    role="tab"
+                    aria-selected="false"
+                >
+                    📰 Notícias
+                </button>
+
+                <button
+                    type="button"
+                    class="story-tab"
+                    data-story-tab="reviews"
+                    role="tab"
+                    aria-selected="false"
+                >
+                    ⭐ Avaliações
+                </button>
+            </nav>
+
+            <section
+                class="story-tab-panel"
+                data-story-tab-panel="chapters"
+            >
                 <div class="section-heading">
                     <div>
                         <span class="eyebrow">
@@ -407,7 +611,13 @@ async function load() {
                 </div>
             </section>
 
-            <section class="review-section">
+            ${renderNewsPanel(news)}
+
+            <section
+                class="review-section story-tab-panel"
+                data-story-tab-panel="reviews"
+                hidden
+            >
                 <div class="section-heading">
                     <div>
                         <span class="eyebrow">
@@ -423,6 +633,8 @@ async function load() {
                 <div id="story-reviews"></div>
             </section>
         `;
+
+        setupStoryTabs();
 
         const reviewsRoot =
             document.querySelector(
