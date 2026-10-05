@@ -226,11 +226,9 @@ async function loadReviews() {
                                 </span>
                             </div>
 
-                            <p class="review-text">
-                                ${escapeHtml(
-                                    review.content
-                                )}
-                            </p>
+                            <p class="review-text">${escapeHtml(
+                                review.content
+                            )}</p>
                         </article>
                     `
                 )
