@@ -91,6 +91,11 @@ export function renderDynamicInlineText(value) {
         "<u>$1</u>",
     );
 
+    text = text.replace(
+        /\*([^*\n]+?)\*/g,
+        "<em>$1</em>",
+    );
+
     // Restauramos código e spoilers somente depois das demais marcações.
     return restoreTokens(text, protectedParts);
 }
