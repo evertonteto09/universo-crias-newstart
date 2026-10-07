@@ -1,9 +1,21 @@
-const THEMES = ["neblina", "preto", "branco"];
+const THEMES = ["neblina", "preto", "branco", "vermelho", "amarelo", "roxo"];
 const STORAGE_KEY = "hdc-theme";
+const THEME_LABELS = {
+    neblina: "Neblina",
+    preto: "Preto",
+    branco: "Branco",
+    vermelho: "Vermelho",
+    amarelo: "Amarelo",
+    roxo: "Roxo"
+};
+
+function themeLabel(theme) {
+    return THEME_LABELS[theme] || theme;
+}
 
 export function setupTheme() {
-    const saved =
-        localStorage.getItem(STORAGE_KEY) || "neblina";
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const saved = THEMES.includes(stored) ? stored : "neblina";
 
     document.documentElement.dataset.theme = saved;
 
@@ -17,7 +29,7 @@ export function setupTheme() {
         const current =
             document.documentElement.dataset.theme || "neblina";
 
-        button.textContent = `Tema: ${current}`;
+        button.textContent = `Tema: ${themeLabel(current)}`;
     };
 
     updateLabel();

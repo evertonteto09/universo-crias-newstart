@@ -1,22 +1,36 @@
 const DEFAULT_COVER = "./assets/img/default-story-cover.svg";
 
+const THEMES = ["neblina", "preto", "branco", "vermelho", "amarelo", "roxo"];
+const THEME_LABELS = {
+    neblina: "Neblina",
+    preto: "Preto",
+    branco: "Branco",
+    vermelho: "Vermelho",
+    amarelo: "Amarelo",
+    roxo: "Roxo"
+};
+
+function themeLabel(theme) {
+    return THEME_LABELS[theme] || theme;
+}
+
 export function setupTheme() {
-    const saved = localStorage.getItem("hdc-theme") || "neblina";
+    const stored = localStorage.getItem("hdc-theme");
+    const saved = THEMES.includes(stored) ? stored : "neblina";
     document.documentElement.dataset.theme = saved;
 
     const button = document.querySelector("#theme-toggle");
     if (!button) return;
-
-    const themes = ["neblina", "preto", "branco"];
     button.addEventListener("click", () => {
         const current = document.documentElement.dataset.theme || "neblina";
-        const next = themes[(themes.indexOf(current) + 1) % themes.length];
+        const index = THEMES.indexOf(current);
+        const next = THEMES[(index + 1) % THEMES.length];
         document.documentElement.dataset.theme = next;
         localStorage.setItem("hdc-theme", next);
-        button.textContent = `Tema: ${next}`;
+        button.textContent = `Tema: ${themeLabel(next)}`;
     });
 
-    button.textContent = `Tema: ${saved}`;
+    button.textContent = `Tema: ${themeLabel(saved)}`;
 }
 
 export function coverForStory(story) {
