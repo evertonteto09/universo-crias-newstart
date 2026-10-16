@@ -25,6 +25,7 @@ import {
 
 import {
     getPublishedStoryReviews,
+    getPublishedChapterRatingSummaries,
     submitReview,
 } from "../services/review.service.js";
 
@@ -62,8 +63,9 @@ function renderReview(review) {
                     ${escapeHtml(review.reader_name)}
                 </strong>
 
-                <span title="${review.rating}/5">
+                <span class="review-rating-display" title="${review.rating}/10">
                     ${ratingStars(review.rating)}
+                    <strong>${Number(review.rating)}/10</strong>
                 </span>
             </div>
 
@@ -148,9 +150,9 @@ async function renderStoryReviewForm(
                         <div
                             class="star-picker"
                             role="radiogroup"
-                            aria-label="Escolha uma nota de 1 a 5 estrelas"
+                            aria-label="Escolha uma nota de 1 a 10 estrelas"
                         >
-                            ${[5, 4, 3, 2, 1]
+                            ${Array.from({ length: 10 }, (_, index) => 10 - index)
                                 .map(
                                     (value) => `
                                         <input
@@ -158,12 +160,12 @@ async function renderStoryReviewForm(
                                             id="story-rating-${value}"
                                             name="story-rating"
                                             value="${value}"
-                                            ${value === 5 ? "checked" : ""}
+                                            required
                                         >
 
                                         <label
                                             for="story-rating-${value}"
-                                            title="${value} estrelas"
+                                            title="${value}/10"
                                         >
                                             ★
                                         </label>
@@ -224,8 +226,8 @@ async function renderStoryReviewForm(
                 <strong>
                     ${
                         reviews.length
-                            ? summaryAverage.toFixed(1)
-                            : "—"
+                            ? `${summaryAverage.toFixed(1)}/10`
+                            : "—/10"
                     }
                 </strong>
 
@@ -427,6 +429,21 @@ async function load() {
                 getStoryCoverUrl,
             );
 
+        let chapterRatingSummaries = {};
+        const publishedChapterIds = (story.seasons ?? [])
+            .flatMap((season) => season.chapters ?? [])
+            .filter((chapter) => chapter.status === "published")
+            .map((chapter) => chapter.id);
+
+        try {
+            chapterRatingSummaries =
+                await getPublishedChapterRatingSummaries(
+                    publishedChapterIds,
+                );
+        } catch (ratingError) {
+            console.warn("Não foi possível carregar as notas dos episódios.", ratingError);
+        }
+
         const seasons =
             (story.seasons ?? [])
                 .map((season) => {
@@ -438,28 +455,42 @@ async function load() {
                                     b.number,
                             )
                             .map(
-                                (chapter) => `
-                                    <a
-                                        class="chapter-row"
-                                        href="./episodio.html?slug=${encodeURIComponent(
-                                            story.slug
-                                        )}&season=${season.number}&episode=${chapter.number}"
-                                    >
-                                        <span class="chapter-number">
-                                            ${
-                                                chapter.number === 0
-                                                    ? "Piloto"
-                                                    : `Ep. ${chapter.number}`
-                                            }
-                                        </span>
+                                (chapter) => {
+                                    const chapterSummary =
+                                        chapterRatingSummaries[String(chapter.id)] || {
+                                            average: 0,
+                                            count: 0,
+                                        };
 
-                                        <span>
-                                            ${escapeHtml(
-                                                chapter.title
-                                            )}
-                                        </span>
-                                    </a>
-                                `
+                                    return `
+                                        <a
+                                            class="chapter-row"
+                                            href="./episodio.html?slug=${encodeURIComponent(
+                                                story.slug
+                                            )}&season=${season.number}&episode=${chapter.number}"
+                                        >
+                                            <span class="chapter-number">
+                                                ${
+                                                    chapter.number === 0
+                                                        ? "Piloto"
+                                                        : `Ep. ${chapter.number}`
+                                                }
+                                            </span>
+
+                                            <span class="chapter-main">
+                                                <span class="chapter-title">
+                                                    ${escapeHtml(chapter.title)}
+                                                </span>
+                                                <span class="chapter-rating" title="${chapterSummary.count} avaliações">
+                                                    ${ratingStars(chapterSummary.average)}
+                                                    <strong class="rating-score">
+                                                        ${chapterSummary.count ? `${chapterSummary.average.toFixed(1)}/10` : "Sem notas"}
+                                                    </strong>
+                                                </span>
+                                            </span>
+                                        </a>
+                                    `;
+                                }
                             )
                             .join("");
 
@@ -662,105 +693,58 @@ async function load() {
             <span class="muted">
                 ${
                     reviews.length
-                        ? `${average.toFixed(1)} · ${reviews.length} avaliações`
+                        ? `${average.toFixed(1)}/10 · ${reviews.length} avaliações`
                         : "Ainda sem avaliações"
                 }
             </span>
         `;
 
-        const form =
-            document.querySelector(
-                "#story-review-form"
-            );
-
-        if (!form) {
-            return;
-        }
-
-        const message =
-            document.querySelector(
-                "#story-review-message"
-            );
-
-        form.addEventListener(
+        // Delegation keeps the form working after its HTML is refreshed.
+        reviewsRoot.addEventListener(
             "submit",
             async (event) => {
-                event.preventDefault();
+                const form = event.target.closest("#story-review-form");
+                if (!form) return;
 
-                showMessage(
-                    message,
-                    "Enviando avaliação..."
-                );
+                event.preventDefault();
+                const message = form.querySelector("#story-review-message");
+                showMessage(message, "Enviando avaliação...");
 
                 try {
-                    const rating =
-                        Number(
-                            form.querySelector(
-                                'input[name="story-rating"]:checked'
-                            )?.value
-                        );
+                    const rating = Number(
+                        form.querySelector('input[name="story-rating"]:checked')?.value,
+                    );
 
                     await submitReview({
                         storyId: story.id,
                         chapterId: null,
-                        readerName:
-                            document.querySelector(
-                                "#story-reader-name"
-                            ).value,
+                        readerName: form.querySelector("#story-reader-name").value,
                         rating,
-                        content:
-                            document.querySelector(
-                                "#story-review-content"
-                            ).value,
+                        content: form.querySelector("#story-review-content").value,
                     });
 
-                    showMessage(
-                        message,
-                        "Avaliação publicada!",
-                        "success",
-                    );
-
-                    form.reset();
-
                     const updatedReviews =
-                        await getPublishedStoryReviews(
-                            story.id,
-                        );
+                        await getPublishedStoryReviews(story.id);
 
                     reviewsRoot.innerHTML =
-                        await renderStoryReviewForm(
-                            story,
-                            updatedReviews,
-                        );
+                        await renderStoryReviewForm(story, updatedReviews);
 
-                    const updatedAverage =
-                        calculateAverage(
-                            updatedReviews
-                        );
-
-                    document.querySelector(
-                        "#story-rating-summary"
-                    ).innerHTML = `
-                        <span>
-                            ${ratingStars(updatedAverage)}
-                        </span>
-
-                        <span class="muted">
-                            ${updatedAverage.toFixed(1)} · ${updatedReviews.length} avaliações
-                        </span>
+                    const updatedAverage = calculateAverage(updatedReviews);
+                    document.querySelector("#story-rating-summary").innerHTML = `
+                        <span>${ratingStars(updatedAverage)}</span>
+                        <span class="muted">${updatedReviews.length ? `${updatedAverage.toFixed(1)}/10 · ${updatedReviews.length} avaliações` : "Ainda sem avaliações"}</span>
                     `;
                 } catch (error) {
                     console.error(error);
-
                     showMessage(
                         message,
-                        error.message ||
-                            "Não foi possível enviar a avaliação.",
+                        error.message || "Não foi possível enviar a avaliação.",
                         "error",
                     );
                 }
-            }
+            },
         );
+
     } catch (error) {
         console.error(error);
         notFound();

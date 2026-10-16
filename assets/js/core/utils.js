@@ -11,12 +11,30 @@ export function escapeHtml(value) {
 }
 
 export function ratingStars(rating) {
-    const safe = Math.max(
+    const score = Math.max(
         0,
-        Math.min(5, Math.round(Number(rating) || 0)),
+        Math.min(10, Number(rating) || 0),
     );
+    const visualScore = score / 2;
+    const stars = Array.from({ length: 5 }, (_, index) => {
+        const fill = Math.max(
+            0,
+            Math.min(1, visualScore - index),
+        ) * 100;
 
-    return "★".repeat(safe) + "☆".repeat(5 - safe);
+        return `
+            <span class="rating-star" aria-hidden="true">
+                <span class="rating-star-empty">☆</span>
+                <span class="rating-star-fill" style="width:${fill}%">★</span>
+            </span>
+        `;
+    }).join("");
+
+    return `
+        <span class="rating-stars" role="img" aria-label="${score > 0 ? `Nota ${score.toFixed(1)} de 10` : "Sem avaliações"}">
+            ${stars}
+        </span>
+    `;
 }
 
 export function storyCoverSource(story, getUploadUrl) {

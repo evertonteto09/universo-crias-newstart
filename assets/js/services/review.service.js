@@ -75,9 +75,9 @@ export async function submitReview({
     if (
         !Number.isInteger(Number(rating)) ||
         Number(rating) < 1 ||
-        Number(rating) > 5
+        Number(rating) > 10
     ) {
-        throw new Error("A nota deve estar entre 1 e 5.");
+        throw new Error("A nota deve estar entre 1 e 10.");
     }
 
     if (!cleanContent) {
@@ -102,6 +102,60 @@ export async function submitReview({
     }
 
     return data;
+}
+
+
+function summarizeRatingRows(rows, keyName) {
+    const grouped = {};
+
+    for (const row of rows ?? []) {
+        const key = String(row[keyName]);
+        if (!grouped[key]) {
+            grouped[key] = { sum: 0, count: 0 };
+        }
+
+        grouped[key].sum += Number(row.rating || 0);
+        grouped[key].count += 1;
+    }
+
+    return Object.fromEntries(
+        Object.entries(grouped).map(([key, value]) => [
+            key,
+            {
+                average: value.count ? value.sum / value.count : 0,
+                count: value.count,
+            },
+        ]),
+    );
+}
+
+export async function getPublishedStoryRatingSummaries(storyIds) {
+    const ids = [...new Set((storyIds ?? []).filter((id) => id !== null && id !== undefined).map(String))];
+    if (!ids.length) return {};
+
+    const { data, error } = await supabase
+        .from("reviews")
+        .select("story_id, rating")
+        .in("story_id", ids)
+        .is("chapter_id", null)
+        .eq("status", "published");
+
+    if (error) throw error;
+    return summarizeRatingRows(data, "story_id");
+}
+
+export async function getPublishedChapterRatingSummaries(chapterIds) {
+    const ids = [...new Set((chapterIds ?? []).filter((id) => id !== null && id !== undefined).map(String))];
+    if (!ids.length) return {};
+
+    const { data, error } = await supabase
+        .from("reviews")
+        .select("chapter_id, rating")
+        .in("chapter_id", ids)
+        .eq("status", "published");
+
+    if (error) throw error;
+    return summarizeRatingRows(data, "chapter_id");
 }
 
 export async function getWriterReviews(

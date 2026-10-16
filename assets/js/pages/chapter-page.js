@@ -202,6 +202,17 @@ async function loadReviews() {
             currentChapter.id,
         );
 
+    const ratingSummary = document.querySelector("#chapter-rating-summary");
+    if (ratingSummary) {
+        const average = reviews.length
+            ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
+            : 0;
+        ratingSummary.innerHTML = `
+            <span>${ratingStars(average)}</span>
+            <span class="muted">${reviews.length ? `${average.toFixed(1)}/10 · ${reviews.length} avaliações` : "Ainda sem avaliações"}</span>
+        `;
+    }
+
     reviewList.innerHTML =
         reviews.length
             ? reviews
@@ -217,12 +228,9 @@ async function loadReviews() {
                                     )}
                                 </strong>
 
-                                <span
-                                    title="${review.rating}/5"
-                                >
-                                    ${ratingStars(
-                                        review.rating
-                                    )}
+                                <span class="review-rating-display" title="${review.rating}/10">
+                                    ${ratingStars(review.rating)}
+                                    <strong>${Number(review.rating)}/10</strong>
                                 </span>
                             </div>
 
@@ -274,9 +282,11 @@ function bindReviewForm() {
                             "#reader-name"
                         ).value,
                     rating:
-                        document.querySelector(
-                            "#reader-rating"
-                        ).value,
+                        Number(
+                            reviewForm.querySelector(
+                                'input[name="chapter-rating"]:checked'
+                            )?.value,
+                        ),
                     content:
                         document.querySelector(
                             "#reader-content"
@@ -346,6 +356,8 @@ async function renderPage() {
                             : `Episódio ${currentChapter.number}`
                     }
                 </p>
+
+                <div id="chapter-rating-summary" class="rating-summary"></div>
             </div>
 
             <section class="reader-content">
@@ -382,33 +394,25 @@ async function renderPage() {
                         >
                     </label>
 
-                    <label>
-                        Nota
-                        <select
-                            id="reader-rating"
-                            required
+                    <div class="review-rating-picker">
+                        <span class="eyebrow">SUA NOTA</span>
+                        <div
+                            class="star-picker"
+                            role="radiogroup"
+                            aria-label="Escolha uma nota de 1 a 10 estrelas"
                         >
-                            <option value="5">
-                                5 estrelas
-                            </option>
-
-                            <option value="4">
-                                4 estrelas
-                            </option>
-
-                            <option value="3">
-                                3 estrelas
-                            </option>
-
-                            <option value="2">
-                                2 estrelas
-                            </option>
-
-                            <option value="1">
-                                1 estrela
-                            </option>
-                        </select>
-                    </label>
+                            ${Array.from({ length: 10 }, (_, index) => 10 - index).map((value) => `
+                                <input
+                                    type="radio"
+                                    id="chapter-rating-${value}"
+                                    name="chapter-rating"
+                                    value="${value}"
+                                    required
+                                >
+                                <label for="chapter-rating-${value}" title="${value}/10">★</label>
+                            `).join("")}
+                        </div>
+                    </div>
 
                     <label>
                         Sua avaliação

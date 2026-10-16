@@ -7,6 +7,7 @@ import {
 } from "../core/utils.js";
 import { getPublishedStories } from "../services/story.service.js";
 import { getStoryCoverUrl } from "../services/storage.service.js";
+import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
 
 setupTheme();
 setupProfanityFilter();
@@ -33,6 +34,7 @@ const writerFilterMenu =
     document.querySelector("#writer-filter-menu");
 
 let allStories = [];
+let storyRatingSummaries = {};
 let selectedWriter = "all";
 
 function normalizeSearchText(value) {
@@ -77,6 +79,12 @@ function storyCard(story) {
     const authorName =
         getAuthorName(story);
 
+    const ratingSummary =
+        storyRatingSummaries[String(story.id)] || {
+            average: 0,
+            count: 0,
+        };
+
     return `
         <a
             class="story-card"
@@ -104,7 +112,12 @@ function storyCard(story) {
                 </p>
 
                 <div class="rating-line">
-                    <span>${ratingStars(0)}</span>
+                    <span title="${ratingSummary.count} avaliações">
+                        ${ratingStars(ratingSummary.average)}
+                    </span>
+                    <strong class="rating-score">
+                        ${ratingSummary.count ? `${ratingSummary.average.toFixed(1)}/10` : "Sem notas"}
+                    </strong>
                     <span class="muted">
                         ${publishedCount}
                         ${
@@ -369,6 +382,16 @@ async function load() {
     try {
         allStories =
             await getPublishedStories();
+
+        try {
+            storyRatingSummaries =
+                await getPublishedStoryRatingSummaries(
+                    allStories.map((story) => story.id),
+                );
+        } catch (ratingError) {
+            console.warn("Não foi possível carregar as médias das obras.", ratingError);
+            storyRatingSummaries = {};
+        }
 
         renderWriterFilterMenu();
         updateWriterFilterLabel();

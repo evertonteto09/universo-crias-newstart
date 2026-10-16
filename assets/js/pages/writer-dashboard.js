@@ -211,7 +211,7 @@ function storyCard(story, summary) {
                     <span class="muted">
                         ${
                             summary.count
-                                ? `${summary.average.toFixed(1)} · ${summary.count} avaliações`
+                                ? `${summary.average.toFixed(1)}/10 · ${summary.count} avaliações`
                                 : "Sem avaliações da obra"
                         }
                     </span>
@@ -271,10 +271,9 @@ async function loadReviews(
                                             )}
                                         </strong>
 
-                                        <span>
-                                            ${ratingStars(
-                                                review.rating
-                                            )}
+                                        <span class="review-rating-display" title="${review.rating}/10">
+                                            ${ratingStars(review.rating)}
+                                            <strong>${Number(review.rating)}/10</strong>
                                         </span>
                                     </div>
 
