@@ -29,7 +29,16 @@ import {
     uploadStoryCover,
 } from "../services/storage.service.js";
 
+import {
+    initCriasPresence,
+} from "../services/crias-presence.service.js";
+
 setupTheme();
+
+const criasPresence = initCriasPresence({
+    details: "No portal do Escritor",
+    state: "Universo dos Crias",
+});
 
 const writerName =
     document.querySelector(

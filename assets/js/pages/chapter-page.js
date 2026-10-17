@@ -24,8 +24,17 @@ import {
     submitReview,
 } from "../services/review.service.js";
 
+import {
+    initCriasPresence,
+} from "../services/crias-presence.service.js";
+
 setupTheme();
 setupProfanityFilter();
+
+const criasPresence = initCriasPresence({
+    details: "Lendo um episódio",
+    state: "Universo dos Crias",
+});
 
 const page =
     document.querySelector("#chapter-page");
@@ -483,6 +492,16 @@ async function load() {
 
         currentChapter =
             result.chapter;
+
+        const episodeLabel =
+            currentChapter.number === 0
+                ? "Piloto"
+                : `Episódio ${currentChapter.number}`;
+        
+        criasPresence.update({
+            details: `Lendo: ${currentStory.title || "uma história"}`,
+            state: `${episodeLabel}: ${currentChapter.title || "Sem título"}`,
+        });
 
         publishedChapters =
             (currentStory.seasons ?? [])

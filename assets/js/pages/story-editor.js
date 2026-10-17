@@ -1,5 +1,3 @@
-console.info("[Histórias dos Crias] story-editor-fixed carregado");
-
 import { setupTheme } from "../core/theme.js";
 import {
     escapeHtml,
@@ -49,6 +47,10 @@ import {
     openConfirmModal,
 } from "../core/modal.js";
 
+import {
+    initCriasPresence,
+} from "../services/crias-presence.service.js";
+
 setupTheme();
 
 const root =
@@ -66,6 +68,7 @@ const storyId =
 let story = null;
 let seasons = [];
 let news = [];
+let criasPresence = null;
 
 function getCover(storyData) {
     return storyCoverSource(
@@ -992,6 +995,12 @@ function bindStorySettings() {
                     heading.textContent =
                         story.title;
                 }
+
+                // Mantém a Rich Presence sincronizada caso o título mude.
+                criasPresence?.update({
+                    details: "Editando uma história",
+                    state: story.title || "Editor da história",
+                });
             } catch (error) {
                 console.error(error);
 
@@ -1605,6 +1614,20 @@ async function init() {
             );
 
         render();
+
+        // Inicializa a presença somente depois de autenticar o escritor
+        // e carregar a história, para evitar criar o painel antes do DOM pronto.
+        if (!criasPresence) {
+            criasPresence = initCriasPresence({
+                details: "Editando uma história",
+                state: story.title || "Editor da história",
+            });
+        } else {
+            criasPresence.update({
+                details: "Editando uma história",
+                state: story.title || "Editor da história",
+            });
+        }
     } catch (error) {
         console.error(error);
 

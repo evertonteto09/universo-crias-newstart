@@ -8,9 +8,15 @@ import {
 import { getPublishedStories } from "../services/story.service.js";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
+import { initCriasPresence } from "../services/crias-presence.service.js";
 
 setupTheme();
 setupProfanityFilter();
+
+const criasPresence = initCriasPresence({
+    details: "Navegando pelas histórias",
+    state: "Universo dos Crias",
+});
 
 const grid =
     document.querySelector("#story-grid");

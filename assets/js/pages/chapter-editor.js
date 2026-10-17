@@ -15,6 +15,14 @@ import {
     deleteChapter,
 } from "../services/chapter.service.js";
 
+import {
+    getWriterStoryById,
+} from "../services/story.service.js";
+
+import {
+    initCriasPresence,
+} from "../services/crias-presence.service.js";
+
 import { supabase } from "../core/supabase.js";
 import {
     getChapterImageUrl,
@@ -50,6 +58,9 @@ const storyId =
     Number(params.get("story"));
 
 let chapter = null;
+let story = null;
+let criasPresence = null;
+let presenceTitleTimer = null;
 let saveTimer = null;
 let imageInsertSelection = { start: 0, end: 0 };
 let protectedImageSnapshot = {
@@ -214,6 +225,49 @@ function ensureChapterImageStyles() {
     `;
 
     document.head.appendChild(style);
+}
+
+function updateChapterEditorPresence(titleOverride = null) {
+    if (!criasPresence || !chapter) {
+        return;
+    }
+
+    const storyTitle =
+        String(story?.title ?? "").trim();
+
+    const chapterTitle =
+        String(titleOverride ?? chapter.title ?? "").trim() ||
+        "Episódio sem título";
+
+    const chapterNumber = Number(chapter.number);
+
+    const episodeLabel =
+        chapterNumber === 0
+            ? "Piloto"
+            : Number.isFinite(chapterNumber) && chapterNumber > 0
+                ? `Episódio ${chapterNumber}`
+                : "Episódio";
+
+    const context = storyTitle
+        ? `${storyTitle} · ${episodeLabel}: ${chapterTitle}`
+        : `${episodeLabel}: ${chapterTitle}`;
+
+    criasPresence.update({
+        details: "Editando um episódio",
+        state: context,
+    });
+}
+
+function scheduleChapterPresenceTitleUpdate(value) {
+    if (presenceTitleTimer) {
+        clearTimeout(presenceTitleTimer);
+    }
+
+    // Evita enviar uma atualização RPC a cada tecla digitada.
+    presenceTitleTimer = setTimeout(() => {
+        presenceTitleTimer = null;
+        updateChapterEditorPresence(value);
+    }, 900);
 }
 
 function render() {
@@ -933,6 +987,13 @@ async function save(
             ...chapter,
             ...updated,
         };
+
+        if (presenceTitleTimer) {
+            clearTimeout(presenceTitleTimer);
+            presenceTitleTimer = null;
+        }
+
+        updateChapterEditorPresence(updated.title);
 
         setStatusUi(
             updated.status
@@ -1668,6 +1729,15 @@ function bind() {
             "#chapter-content"
         );
 
+    const titleInput =
+        document.querySelector(
+            "#chapter-title"
+        );
+
+    titleInput?.addEventListener("input", () => {
+        scheduleChapterPresenceTitleUpdate(titleInput.value);
+    });
+
     bindProtectedImageEditing(
         textarea
     );
@@ -1828,6 +1898,28 @@ async function init() {
                 "Episódio não encontrado ou sem permissão."
             );
         }
+
+        // O título da história é usado apenas para descrever a atividade.
+        // Se a consulta falhar, o editor continua funcionando normalmente.
+        if (Number.isInteger(storyId) && storyId > 0) {
+            try {
+                story = await getWriterStoryById(storyId);
+            } catch (storyError) {
+                console.warn(
+                    "Não foi possível carregar o título da história para a presença:",
+                    storyError,
+                );
+            }
+        }
+
+        // Inicializa a presença somente depois de validar o escritor
+        // e carregar o episódio autorizado.
+        criasPresence = initCriasPresence({
+            details: "Editando um episódio",
+            state: "Carregando episódio...",
+        });
+
+        updateChapterEditorPresence();
 
         // storyId é usado somente para o caminho visual.
         // A autorização real vem do RLS no capítulo.

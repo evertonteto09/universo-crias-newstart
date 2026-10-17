@@ -33,8 +33,17 @@ import {
     getPublishedStoryNews,
 } from "../services/news.service.js";
 
+import {
+    initCriasPresence,
+} from "../services/crias-presence.service.js";
+
 setupTheme();
 setupProfanityFilter();
+
+const criasPresence = initCriasPresence({
+    details: "Lendo uma história",
+    state: "Universo dos Crias",
+});
 
 const page =
     document.querySelector("#story-page");
@@ -422,6 +431,11 @@ async function load() {
             await getPublishedStoryBySlug(
                 slug,
             );
+
+        criasPresence.update({
+            details: "Lendo uma história",
+            state: story.title || "Universo dos Crias",
+        });
 
         const cover =
             storyCoverSource(
