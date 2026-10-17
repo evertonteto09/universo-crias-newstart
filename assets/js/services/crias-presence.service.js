@@ -248,9 +248,34 @@ export function initCriasPresence(initialActivity = {}) {
             }
 
             #${WIDGET_ID} .cp-code:focus-visible,
-            #${WIDGET_ID} button:focus-visible {
+            #${WIDGET_ID} button:focus-visible,
+            #${WIDGET_ID} a:focus-visible {
                 outline: 2px solid var(--accent);
                 outline-offset: 3px;
+            }
+
+            #${WIDGET_ID} .cp-download-callout {
+                display: grid;
+                gap: 8px;
+                padding: 12px;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: var(--surface);
+            }
+
+            #${WIDGET_ID} .cp-download-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                min-height: 42px;
+                text-align: center;
+                text-decoration: none;
+                border-color: rgba(var(--accent-rgb), .35);
+            }
+
+            #${WIDGET_ID} .cp-download-link:hover {
+                border-color: var(--accent);
             }
 
             #${WIDGET_ID} .cp-help {
@@ -440,6 +465,17 @@ export function initCriasPresence(initialActivity = {}) {
             </div>
 
             <div class="cp-section">
+                <div class="cp-download-callout">
+                    <p class="cp-help">Ainda não tem o aplicativo instalado?</p>
+                    <a
+                        class="cp-button cp-download-link cp-full"
+                        id="cp-download-link"
+                        href="#"
+                    >
+                        Baixe o programa aqui <span aria-hidden="true">↗</span>
+                    </a>
+                </div>
+
                 <button
                     class="cp-button cp-button-primary cp-full"
                     id="cp-connect"
@@ -559,6 +595,18 @@ export function initCriasPresence(initialActivity = {}) {
             </div>
         </section>
     `;
+
+    // Resolve a página a partir da localização deste módulo, para funcionar
+    // tanto em /universo-crias-newstart/ no GitHub Pages quanto no Live Server local.
+    const downloadPageLink = host.querySelector("#cp-download-link");
+    if (downloadPageLink) {
+        downloadPageLink.href = new URL("../../../crias-presence.html", import.meta.url).href;
+
+        // Na própria página de instalação, o callout seria redundante.
+        if (window.location.pathname.endsWith("/crias-presence.html")) {
+            downloadPageLink.closest(".cp-download-callout")?.setAttribute("hidden", "");
+        }
+    }
 
     // Coloca o botão próximo aos filtros e antes do seletor de tema.
     const navigation = document.querySelector(".main-nav");

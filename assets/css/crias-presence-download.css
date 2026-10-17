@@ -1,0 +1,365 @@
+/* Página de apresentação e instalação do Crias Presence. Usa as variáveis dos temas do site. */
+.presence-download-page {
+    padding-top: 54px;
+}
+
+.presence-download-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.18fr) minmax(290px, .82fr);
+    align-items: center;
+    gap: clamp(28px, 5vw, 64px);
+    margin-bottom: 42px;
+}
+
+.presence-download-intro h1 {
+    max-width: 760px;
+    margin: 13px 0 20px;
+    font-size: clamp(2.7rem, 6.8vw, 5.4rem);
+    line-height: .98;
+    letter-spacing: -.055em;
+}
+
+.presence-download-intro > p {
+    max-width: 680px;
+    color: var(--muted);
+    line-height: 1.85;
+    font-size: 1.05rem;
+}
+
+.presence-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+}
+
+.presence-badges span {
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--surface);
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.presence-download-card,
+.presence-info-card,
+.presence-steps,
+.presence-safety-note,
+.presence-beta-note {
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.presence-download-card {
+    padding: clamp(22px, 3vw, 32px);
+    background:
+        radial-gradient(circle at top right, rgba(var(--accent-rgb), .17), transparent 48%),
+        var(--surface);
+}
+
+.presence-download-icon {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    margin-bottom: 22px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface-2);
+    font-size: 1.8rem;
+}
+
+.presence-download-card h2 {
+    margin: 9px 0 10px;
+    font-size: 1.6rem;
+    letter-spacing: -.03em;
+}
+
+.presence-download-card > p {
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.75;
+}
+
+.presence-download-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    margin-top: 20px;
+    padding: 13px 18px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    text-decoration: none;
+    text-align: center;
+    font: inherit;
+    font-weight: 800;
+    transition: transform .16s ease, filter .16s ease;
+}
+
+.presence-download-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+}
+
+.presence-download-button:focus-visible,
+.presence-release-link:focus-visible,
+.presence-secondary-button:focus-visible,
+.presence-steps a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+.presence-download-meta {
+    margin: 12px 0 8px;
+    text-align: center;
+    font-size: .76rem !important;
+}
+
+.presence-release-link {
+    display: block;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: .8rem;
+    text-align: center;
+    text-underline-offset: 3px;
+}
+
+.presence-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 34px 0 76px;
+}
+
+.presence-info-card {
+    padding: 22px;
+    box-shadow: none;
+}
+
+.presence-info-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 10px;
+    border-radius: 13px;
+    background: var(--surface-2);
+    font-size: 1.3rem;
+}
+
+.presence-info-card h2 {
+    margin: 5px 0 9px;
+    font-size: 1.05rem;
+}
+
+.presence-info-card p {
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: .87rem;
+    line-height: 1.75;
+}
+
+.presence-install-section {
+    max-width: 900px;
+    margin: 0 auto 68px;
+}
+
+.presence-section-heading {
+    max-width: 700px;
+    margin-bottom: 24px;
+}
+
+.presence-section-heading h2,
+.presence-beta-note h2 {
+    margin: 9px 0 12px;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    letter-spacing: -.04em;
+}
+
+.presence-section-heading p,
+.presence-beta-note p {
+    color: var(--muted);
+    line-height: 1.8;
+}
+
+.presence-steps {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 8px 24px;
+    list-style: none;
+    box-shadow: none;
+}
+
+.presence-steps li {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 16px;
+    padding: 22px 0;
+}
+
+.presence-steps li + li {
+    border-top: 1px solid var(--border);
+}
+
+.presence-step-number {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(var(--accent-rgb), .35);
+    border-radius: 12px;
+    background: rgba(var(--accent-rgb), .12);
+    color: var(--accent);
+    font-weight: 800;
+}
+
+.presence-steps h3 {
+    margin: 2px 0 8px;
+    font-size: 1rem;
+}
+
+.presence-steps p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.8;
+}
+
+.presence-safety-note {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto 48px;
+    padding: 22px;
+    border-color: rgba(var(--accent-rgb), .28);
+    box-shadow: none;
+}
+
+.presence-safety-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--surface-2);
+    font-size: 1.35rem;
+}
+
+.presence-safety-note h2 {
+    margin: 2px 0 8px;
+    font-size: 1.1rem;
+}
+
+.presence-safety-note p {
+    color: var(--muted);
+    font-size: .86rem;
+    line-height: 1.8;
+}
+
+.presence-checksum {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.presence-checksum summary {
+    color: var(--text);
+    cursor: pointer;
+    font-size: .85rem;
+    font-weight: 700;
+}
+
+.presence-checksum code {
+    display: block;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: .72rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+.presence-checksum p {
+    margin-bottom: 0;
+    font-size: .78rem;
+}
+
+.presence-beta-note {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: clamp(22px, 4vw, 34px);
+    box-shadow: none;
+    background:
+        radial-gradient(circle at top right, rgba(var(--accent-rgb), .12), transparent 48%),
+        var(--surface);
+}
+
+.presence-secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    background: var(--surface-2);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    .presence-download-hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .presence-download-card {
+        max-width: 620px;
+    }
+
+    .presence-feature-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .presence-download-page {
+        padding-top: 38px;
+    }
+
+    .presence-steps {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .presence-steps li {
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .presence-step-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+    }
+
+    .presence-safety-note {
+        grid-template-columns: 1fr;
+    }
+}
