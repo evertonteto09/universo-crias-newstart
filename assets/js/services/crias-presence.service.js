@@ -380,6 +380,14 @@ export function initCriasPresence(initialActivity = {}) {
                 line-height: 1.5;
             }
 
+            /* Rich Presence requer o programa e o Discord para computador.
+               Oculte o controle em telas pequenas e dispositivos com toque primário. */
+            @media (max-width: 680px), (hover: none) and (pointer: coarse) {
+                #${WIDGET_ID} {
+                    display: none !important;
+                }
+            }
+
             @media (max-width: 680px) {
                 #${WIDGET_ID} .cp-popover {
                     right: 0;
