@@ -2148,7 +2148,7 @@ textarea { resize: vertical; }
         /* Alinha o botão ao centro da primeira linha de texto em telas pequenas. */
         top: calc((1.9em - 20px) / 2 + 6px);
         /* Mantém o botão próximo ao texto sem invadir o início da linha. */
-        left: -23px;
+        left: -20px;
         width: 18px;
         height: 20px;
         border-radius: 5px;
