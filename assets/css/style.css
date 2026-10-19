@@ -2146,9 +2146,9 @@ textarea { resize: vertical; }
 @media (max-width: 680px) {
     .reader-content .reading-bookmark-action {
         /* Alinha o botão ao centro da primeira linha de texto em telas pequenas. */
-        top: calc((1.9em - 20px) / 2);
-        /* Um pequeno recuo para a direita evita que o botão fique colado à borda. */
-        left: -15px;
+        top: calc((1.9em - 20px) / 2 + 6px);
+        /* Mantém o botão próximo ao texto sem invadir o início da linha. */
+        left: -23px;
         width: 18px;
         height: 20px;
         border-radius: 5px;
@@ -2158,7 +2158,7 @@ textarea { resize: vertical; }
 
     .reader-content .dynamic-heading[data-reading-text] > .reading-bookmark-action {
         /* Os títulos usam line-height menor que os parágrafos. */
-        top: calc((1.15em - 20px) / 2);
+        top: calc((1.15em - 20px) / 2 + 6px);
     }
 
     .reader-content .reading-bookmark-action::before {
