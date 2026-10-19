@@ -28,6 +28,10 @@ import {
     initCriasPresence,
 } from "../services/crias-presence.service.js";
 
+import {
+    setupReadingBookmarkUI,
+} from "../services/reading-bookmark.service.js";
+
 setupTheme();
 setupProfanityFilter();
 
@@ -55,12 +59,13 @@ let currentStory = null;
 let currentSeason = null;
 let currentChapter = null;
 let publishedChapters = [];
+let refreshReadingBookmarkUI = () => {};
 
 async function renderContent(content) {
+    const source = String(content ?? "");
     return renderDynamicContent(
-        filterProfanity(
-            String(content ?? "")
-        )
+        filterProfanity(source),
+        source,
     );
 }
 
@@ -370,6 +375,11 @@ async function renderPage() {
             </div>
 
             <section class="reader-content">
+                <div
+                    id="reading-bookmark-toolbar"
+                    class="reading-bookmark-toolbar"
+                    aria-live="polite"
+                ></div>
                 <div id="chapter-content-rendered">
                     ${renderedContent}
                 </div>
@@ -542,25 +552,45 @@ async function load() {
         bindReviewForm();
         await loadReviews();
 
-        bindDynamicText(
-            document.querySelector(
-                "#chapter-content-rendered"
-            )
+        const contentRoot = document.querySelector(
+            "#chapter-content-rendered"
         );
+
+        refreshReadingBookmarkUI = setupReadingBookmarkUI({
+            root: contentRoot,
+            toolbar: document.querySelector("#reading-bookmark-toolbar"),
+            story: currentStory,
+            season: currentSeason,
+            chapter: currentChapter,
+        });
+
+        const initialBookmarkState = refreshReadingBookmarkUI();
+        if (location.hash === "#ponto-de-leitura" && initialBookmarkState?.match?.element) {
+            window.requestAnimationFrame(() => {
+                initialBookmarkState.match.element.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                });
+            });
+        }
+
+        bindDynamicText(contentRoot);
 
         window.addEventListener(
             "hdc-profanity-filter-changed",
             async () => {
-                const contentRoot =
+                const refreshedContentRoot =
                     document.querySelector(
                         "#chapter-content-rendered"
                     );
 
-                if (contentRoot) {
-                    contentRoot.innerHTML =
+                if (refreshedContentRoot) {
+                    refreshedContentRoot.innerHTML =
                         await renderContent(
                             currentChapter.content
                         );
+                    refreshReadingBookmarkUI();
+                    bindDynamicText(refreshedContentRoot);
                 }
             },
         );

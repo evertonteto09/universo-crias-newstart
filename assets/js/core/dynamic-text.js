@@ -100,29 +100,46 @@ export function renderDynamicInlineText(value) {
     return restoreTokens(text, protectedParts);
 }
 
-function renderNormalParagraph(lines) {
+function readingAnchorText(value) {
+    return String(value ?? "")
+        .replace(/^\s*#{1,3}\s+/gm, "")
+        .replace(/^\s*</gm, "")
+        .replace(/>\s*$/gm, "")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/\|\|/g, "")
+        .replace(/\*\*|__/g, "")
+        .replace(/\*/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function renderNormalParagraph(lines, anchorLines = lines) {
     if (!lines.length) return "";
 
     const content = lines
         .map((line) => renderDynamicInlineText(line))
         .join("<br>");
+    const anchor = readingAnchorText(anchorLines.join(" "));
 
-    return `<p>${content}</p>`;
+    return `<p data-reading-text="${escapeHtml(anchor)}">${content}</p>`;
 }
 
-function renderHeading(line) {
+function renderHeading(line, anchorLine = line) {
     const match = line.match(/^[\s]*(#{1,3})\s+(.+?)\s*$/);
 
     if (!match) return null;
 
     const level = match[1].length;
     const content = renderDynamicInlineText(match[2]);
+    const anchorMatch = String(anchorLine ?? "").match(/^[\s]*#{1,3}\s+(.+?)\s*$/);
+    const anchor = readingAnchorText(anchorMatch?.[1] ?? match[2]);
 
     return `
         <div
             class="dynamic-heading dynamic-heading-${level}"
             role="heading"
             aria-level="${level + 1}"
+            data-reading-text="${escapeHtml(anchor)}"
         >
             ${content}
         </div>
@@ -205,7 +222,7 @@ async function renderImage(line) {
     `;
 }
 
-function renderQuote(lines) {
+function renderQuote(lines, anchorLines = lines) {
     if (!lines.length) return "";
 
     const first = lines[0].replace(/^\s*</, "");
@@ -223,9 +240,10 @@ function renderQuote(lines) {
                 : renderDynamicInlineText(line),
         )
         .join("<br>");
+    const anchor = readingAnchorText(anchorLines.join(" "));
 
     return `
-        <blockquote class="dynamic-quote">
+        <blockquote class="dynamic-quote" data-reading-text="${escapeHtml(anchor)}">
             ${content}
         </blockquote>
     `;
@@ -237,30 +255,37 @@ function renderQuote(lines) {
  *  - < ... > para blocos com linha lateral;
  *  - marcações inline via renderDynamicInlineText().
  */
-export async function renderDynamicContent(value) {
+export async function renderDynamicContent(value, anchorValue = value) {
     const normalized = String(value ?? "").replaceAll("\r\n", "\n");
+    const anchorNormalized = String(anchorValue ?? value ?? "").replaceAll("\r\n", "\n");
     const lines = normalized.split("\n");
+    const anchorLines = anchorNormalized.split("\n");
 
     const output = [];
     let paragraph = [];
+    let paragraphAnchor = [];
     let quote = null;
+    let quoteAnchor = null;
 
     const flushParagraph = () => {
         if (paragraph.length) {
-            output.push(renderNormalParagraph(paragraph));
+            output.push(renderNormalParagraph(paragraph, paragraphAnchor));
             paragraph = [];
+            paragraphAnchor = [];
         }
     };
 
     const flushQuote = () => {
         if (quote && quote.length) {
-            output.push(renderQuote(quote));
+            output.push(renderQuote(quote, quoteAnchor ?? quote));
         }
         quote = null;
+        quoteAnchor = null;
     };
 
-    for (const rawLine of lines) {
-        const line = rawLine;
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+        const line = lines[lineIndex];
+        const anchorLine = anchorLines[lineIndex] ?? line;
         const trimmed = line.trim();
 
         const image = await renderImage(line);
@@ -273,6 +298,7 @@ export async function renderDynamicContent(value) {
 
         if (quote) {
             quote.push(line);
+            quoteAnchor.push(anchorLine);
 
             if (trimmed.endsWith(">")) {
                 flushQuote();
@@ -285,6 +311,7 @@ export async function renderDynamicContent(value) {
         if (/^\s*</.test(line)) {
             flushParagraph();
             quote = [line];
+            quoteAnchor = [anchorLine];
 
             if (trimmed.endsWith(">")) {
                 flushQuote();
@@ -293,7 +320,7 @@ export async function renderDynamicContent(value) {
             continue;
         }
 
-        const heading = renderHeading(line);
+        const heading = renderHeading(line, anchorLine);
 
         if (heading) {
             flushParagraph();
@@ -307,6 +334,7 @@ export async function renderDynamicContent(value) {
         }
 
         paragraph.push(line);
+        paragraphAnchor.push(anchorLine);
     }
 
     flushParagraph();

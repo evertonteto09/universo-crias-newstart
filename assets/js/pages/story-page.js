@@ -37,6 +37,11 @@ import {
     initCriasPresence,
 } from "../services/crias-presence.service.js";
 
+import {
+    getReadingBookmark,
+    removeReadingBookmark,
+} from "../services/reading-bookmark.service.js";
+
 setupTheme();
 setupProfanityFilter();
 
@@ -420,6 +425,78 @@ function setupStoryTabs() {
     activate("chapters");
 }
 
+function renderReadingBookmarkResume(story) {
+    const container = document.querySelector("#reading-bookmark-resume");
+    if (!container) return;
+
+    container.replaceChildren();
+    const bookmark = getReadingBookmark(story.id);
+
+    if (!bookmark) {
+        container.hidden = true;
+        return;
+    }
+
+    container.hidden = false;
+    const publishedChapters = (story.seasons ?? []).flatMap((season) =>
+        (season.chapters ?? [])
+            .filter((chapter) => chapter.status === "published")
+            .map((chapter) => ({ ...chapter, season_number: season.number })),
+    );
+    const savedChapter = publishedChapters.find(
+        (chapter) => String(chapter.id) === String(bookmark.chapterId),
+    );
+
+    const heading = document.createElement("strong");
+    heading.className = "reading-bookmark-resume-title";
+    heading.textContent = "📍 Continuar leitura";
+    container.append(heading);
+
+    const description = document.createElement("p");
+    description.className = "reading-bookmark-resume-description";
+
+    if (savedChapter) {
+        const chapterLabel = Number(savedChapter.number) === 0
+            ? "Piloto"
+            : `Episódio ${savedChapter.number}`;
+        description.textContent = `Você parou em ${chapterLabel}: ${savedChapter.title || "Sem título"} · Temporada ${savedChapter.season_number}.`;
+        container.append(description);
+
+        const actions = document.createElement("div");
+        actions.className = "reading-bookmark-resume-actions";
+        const continueLink = document.createElement("a");
+        continueLink.className = "primary-button";
+        continueLink.href = `./episodio.html?slug=${encodeURIComponent(story.slug)}&season=${savedChapter.season_number}&episode=${savedChapter.number}#ponto-de-leitura`;
+        continueLink.textContent = "Continuar leitura";
+        actions.append(continueLink);
+        container.append(actions);
+    } else {
+        container.classList.add("is-warning");
+        description.textContent = "O episódio onde você parou não está mais disponível na versão publicada desta história. Você pode remover este marcador ou definir outro ponto ao abrir um episódio.";
+        container.append(description);
+    }
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "secondary-button reading-bookmark-resume-remove";
+    removeButton.textContent = "Limpar marcador";
+    removeButton.addEventListener("click", () => {
+        if (removeReadingBookmark(story.id)) {
+            container.classList.remove("is-warning");
+            renderReadingBookmarkResume(story);
+        } else {
+            description.textContent = "Não foi possível limpar o marcador neste navegador.";
+        }
+    });
+
+    // Mantém os dois botões no mesmo grupo para garantir um espaço visual claro.
+    if (savedChapter) {
+        container.querySelector(".reading-bookmark-resume-actions")?.append(removeButton);
+    } else {
+        container.append(removeButton);
+    }
+}
+
 async function load() {
     if (!slug) {
         notFound();
@@ -644,6 +721,8 @@ async function load() {
                     </div>
                 </div>
 
+                <div id="reading-bookmark-resume" class="reading-bookmark-resume" hidden></div>
+
                 <div class="season-stack">
                     ${
                         seasons ||
@@ -678,6 +757,7 @@ async function load() {
         `;
 
         setupStoryTabs();
+        renderReadingBookmarkResume(story);
 
         const reviewsRoot =
             document.querySelector(
