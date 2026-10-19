@@ -514,6 +514,58 @@ a { color: inherit; }
 
 .reader-header { margin-bottom: 40px; }
 
+/* Cabeçalho com capa: ativado apenas quando o episódio começa com uma imagem. */
+.reader-header.has-episode-cover {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: clamp(24px, 4vw, 38px);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.reader-header-cover {
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 42%;
+    opacity: .48;
+    filter: saturate(.8);
+    pointer-events: none;
+    user-select: none;
+}
+
+.reader-header.has-episode-cover::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background:
+        linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--surface) 94%, transparent) 0%,
+            color-mix(in srgb, var(--surface) 72%, transparent) 47%,
+            color-mix(in srgb, var(--surface) 34%, transparent) 100%
+        ),
+        linear-gradient(
+            0deg,
+            var(--surface) 0%,
+            color-mix(in srgb, var(--surface) 20%, transparent) 58%,
+            transparent 100%
+        );
+    pointer-events: none;
+}
+
+.reader-header.has-episode-cover > :not(.reader-header-cover) {
+    position: relative;
+    z-index: 1;
+}
+
 .reader-header h1 {
     margin: 10px 0;
     font-size: clamp(2.4rem, 6vw, 4rem);
@@ -1741,6 +1793,15 @@ textarea { resize: vertical; }
 }
 
 @media (max-width: 680px) {
+    .reader-header.has-episode-cover {
+        padding: 22px 18px;
+        border-radius: 20px;
+    }
+
+    .reader-header-cover {
+        object-position: center 36%;
+    }
+
     .chapter-media-tools {
         align-items: flex-start;
         flex-direction: column;

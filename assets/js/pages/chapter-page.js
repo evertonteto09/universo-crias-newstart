@@ -330,6 +330,90 @@ function bindReviewForm() {
     );
 }
 
+/**
+ * Usa a primeira imagem do episódio como capa decorativa do cabeçalho somente
+ * quando a primeira linha não vazia for um identificador [[image:...]].
+ * Uma cópia decorativa vai para o cabeçalho; a imagem original permanece no texto.
+ */
+function syncEpisodeHeaderCover() {
+    const header = document.querySelector(".reader-header");
+    const contentRoot = document.querySelector("#chapter-content-rendered");
+
+    if (!header || !contentRoot || !currentChapter) return;
+
+    const rawContent = String(currentChapter.content ?? "").replaceAll("\r\n", "\n");
+    const firstNonEmptyLine = rawContent
+        .split("\n")
+        .find((line) => line.trim().length > 0) ?? "";
+    const startsWithImage = /^\s*\[\[image:[^\]\n|]+(?:\|[^\]\n]*)?\]\]\s*$/i.test(firstNonEmptyLine);
+
+    const existingBackdrop = header.querySelector(".reader-header-cover");
+
+    if (!startsWithImage) {
+        existingBackdrop?.remove();
+        header.classList.remove("has-episode-cover");
+        return;
+    }
+
+    // A imagem definida no conteúdo precisa ser o primeiro bloco renderizado.
+    const firstBlock = contentRoot.firstElementChild;
+    const imageFigure = firstBlock?.matches(".dynamic-scene-image")
+        ? firstBlock
+        : null;
+    const originalImage = imageFigure?.querySelector("img") ?? null;
+    const imageSource = originalImage?.currentSrc || originalImage?.src;
+
+    if (!originalImage || !imageSource) {
+        existingBackdrop?.remove();
+        header.classList.remove("has-episode-cover");
+        return;
+    }
+
+    let safeImageUrl;
+    try {
+        const parsedUrl = new URL(imageSource, location.href);
+        if (!/^https?:$/i.test(parsedUrl.protocol)) {
+            existingBackdrop?.remove();
+            header.classList.remove("has-episode-cover");
+            return;
+        }
+        safeImageUrl = parsedUrl.href;
+    } catch {
+        existingBackdrop?.remove();
+        header.classList.remove("has-episode-cover");
+        return;
+    }
+
+    // Ao atualizar o filtro de palavrões, o conteúdo é renderizado de novo.
+    // Se a capa decorativa já corresponde à imagem original, mantemos ambas.
+    if (existingBackdrop && existingBackdrop.src === safeImageUrl) {
+        header.classList.add("has-episode-cover");
+        return;
+    }
+
+    existingBackdrop?.remove();
+
+    // A cópia é apenas decorativa e fica atrás do cabeçalho.
+    // A imagem original (imageFigure) permanece no corpo do episódio.
+    const backdropImage = originalImage.cloneNode(false);
+    backdropImage.className = "reader-header-cover";
+    backdropImage.src = safeImageUrl;
+    backdropImage.removeAttribute("srcset");
+    backdropImage.removeAttribute("sizes");
+    backdropImage.alt = "";
+    backdropImage.setAttribute("aria-hidden", "true");
+    backdropImage.decoding = "async";
+    backdropImage.loading = "eager";
+
+    backdropImage.addEventListener("error", () => {
+        backdropImage.remove();
+        header.classList.remove("has-episode-cover");
+    }, { once: true });
+
+    header.prepend(backdropImage);
+    header.classList.add("has-episode-cover");
+}
+
 async function renderPage() {
     const renderedContent =
         await renderContent(
@@ -548,6 +632,7 @@ async function load() {
                 });
 
         await renderPage();
+        syncEpisodeHeaderCover();
 
         bindReviewForm();
         await loadReviews();
@@ -589,6 +674,7 @@ async function load() {
                         await renderContent(
                             currentChapter.content
                         );
+                    syncEpisodeHeaderCover();
                     refreshReadingBookmarkUI();
                     bindDynamicText(refreshedContentRoot);
                 }
