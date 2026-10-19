@@ -2145,12 +2145,20 @@ textarea { resize: vertical; }
 
 @media (max-width: 680px) {
     .reader-content .reading-bookmark-action {
-        left: -21px;
+        /* Alinha o botão ao centro da primeira linha de texto em telas pequenas. */
+        top: calc((1.9em - 20px) / 2);
+        /* Um pequeno recuo para a direita evita que o botão fique colado à borda. */
+        left: -15px;
         width: 18px;
         height: 20px;
         border-radius: 5px;
         font-size: 11px;
         opacity: .88;
+    }
+
+    .reader-content .dynamic-heading[data-reading-text] > .reading-bookmark-action {
+        /* Os títulos usam line-height menor que os parágrafos. */
+        top: calc((1.15em - 20px) / 2);
     }
 
     .reader-content .reading-bookmark-action::before {
