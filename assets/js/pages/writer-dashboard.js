@@ -7,7 +7,7 @@ import {
     showMessage,
 } from "../core/utils.js";
 
-import { signOut, linkDiscordIdentity, getCurrentUserIdentities } from "../services/auth.service.js";
+import { signOut, linkDiscordIdentity, getCurrentUserIdentities, getCurrentUser } from "../services/auth.service.js";
 import {
     getMyWriterAccount,
     getMyStories,
@@ -46,6 +46,9 @@ const writerName =
     );
 const linkDiscordButton = document.querySelector("#link-discord-button");
 const discordLinkControl = document.querySelector("#discord-link-control");
+const discordLinkFeedback = document.querySelector("#discord-link-feedback");
+
+const DISCORD_LINK_PENDING_KEY = "hdc-discord-link-pending";
 
 const grid =
     document.querySelector(
@@ -402,34 +405,91 @@ async function loadReviews(
     }
 }
 
-async function refreshDiscordLinkStatus() {
+function setDiscordLinkFeedback(message, kind = "") {
+    if (!discordLinkFeedback) return;
+    discordLinkFeedback.textContent = message;
+    discordLinkFeedback.classList.toggle("error", kind === "error");
+    discordLinkFeedback.classList.toggle("success", kind === "success");
+    discordLinkFeedback.hidden = !message;
+}
+
+function setDiscordButtonState(linked) {
     if (!linkDiscordButton) return;
+
+    linkDiscordButton.disabled = linked;
+    linkDiscordButton.dataset.discordLinked = String(linked);
+    linkDiscordButton.textContent = linked ? "Discord vinculado ✓" : "Vincular Discord";
+
+    const tooltip = linked
+        ? "Conta conectada ao Discord"
+        : "Vincule uma vez para entrar pelo Discord nas próximas visitas.";
+    if (discordLinkControl) discordLinkControl.title = tooltip;
+    linkDiscordButton.setAttribute(
+        "aria-label",
+        linked
+            ? "Discord vinculado. Conta conectada ao Discord."
+            : "Vincular Discord à conta atual.",
+    );
+}
+
+async function refreshDiscordLinkStatus() {
+    if (!linkDiscordButton) return false;
 
     try {
         const identities = await getCurrentUserIdentities();
         const linked = identities.some((identity) => identity.provider === "discord");
-
-        // O botão indica o estado; a explicação fica disponível no hover.
-        linkDiscordButton.disabled = linked;
-        linkDiscordButton.dataset.discordLinked = String(linked);
-        linkDiscordButton.textContent = linked ? "Discord vinculado ✓" : "Vincular Discord";
-
-        const tooltip = linked
-            ? "Conta conectada ao Discord"
-            : "Vincule uma vez para entrar pelo Discord nas próximas visitas.";
-        if (discordLinkControl) discordLinkControl.title = tooltip;
-        linkDiscordButton.setAttribute(
-            "aria-label",
-            linked
-                ? "Discord vinculado. Conta conectada ao Discord."
-                : "Vincular Discord à conta atual.",
-        );
+        setDiscordButtonState(linked);
+        return linked;
     } catch (error) {
         console.warn("[Writer Dashboard] Não foi possível consultar o vínculo do Discord:", error);
         const message = "Não foi possível consultar o vínculo do Discord.";
         if (discordLinkControl) discordLinkControl.title = message;
         linkDiscordButton.setAttribute("aria-label", message);
+        linkDiscordButton.disabled = false;
+        return false;
     }
+}
+
+function discordLinkResultMessage(reason) {
+    const messages = {
+        identity_already_exists: "Esta conta do Discord já está vinculada a outra conta do Universo dos Crias. O Supabase não permite associar a mesma identidade Discord a duas contas. Entre na conta correspondente ou procure o administrador para regularizar a associação.",
+        manual_linking_disabled: "A vinculação manual está desativada na configuração de autenticação do Supabase. Procure o administrador do projeto.",
+        authorization_denied: "A autorização do Discord foi cancelada ou negada. Nenhum vínculo foi criado.",
+        pkce_failed: "O navegador não conseguiu concluir a verificação segura do retorno OAuth (PKCE). Abra o site no navegador normal, sem modo anônimo, e tente novamente na mesma aba.",
+        session_missing: "O retorno do Discord chegou, mas a sessão do escritor não foi recuperada. Entre novamente com as credenciais atuais e tente vincular de novo.",
+        session_changed: "A conta autenticada mudou durante a autorização. Por segurança, o vínculo foi interrompido. Entre na conta de escritor correta e tente novamente.",
+        pending_missing: "Não encontramos a solicitação de vínculo iniciada neste navegador. Volte ao portal, entre na conta de escritor e inicie a vinculação novamente.",
+        not_confirmed: "O Discord retornou ao site, mas o Supabase não confirmou o vínculo. A identidade pode já estar associada a outra conta ou o navegador não preservou o estado da autorização. Tente pelo Chrome/Safari normal, na mesma aba; se persistir, envie esta mensagem para investigarmos.",
+        oauth_error: "O Discord ou o Supabase retornou um erro durante a vinculação. Tente novamente; se persistir, envie uma captura da mensagem para investigarmos."
+    };
+    return messages[reason] || messages.oauth_error;
+}
+
+async function handleDiscordLinkResult() {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("discord-link-result");
+    if (!result) return;
+
+    // Atualiza o botão somente depois que a página de retorno terminou de validar a identidade.
+    const linked = await refreshDiscordLinkStatus();
+
+    if (result === "success" && linked) {
+        setDiscordLinkFeedback(
+            "Discord vinculado com sucesso! Nas próximas visitas, você poderá entrar com esse Discord.",
+            "success",
+        );
+    } else {
+        setDiscordLinkFeedback(
+            discordLinkResultMessage(result === "success" ? "not_confirmed" : params.get("reason")),
+            "error",
+        );
+    }
+
+    // Remove os indicadores da URL sem mexer na sessão salva pelo Supabase.
+    params.delete("discord-link-result");
+    params.delete("reason");
+    const cleanUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
+    history.replaceState({}, "", cleanUrl);
 }
 
 if (linkDiscordButton) {
@@ -438,17 +498,36 @@ if (linkDiscordButton) {
         if (linkDiscordButton.dataset.discordLinked === "true") return;
 
         linkDiscordButton.disabled = true;
+        setDiscordLinkFeedback("Abrindo o Discord para confirmar o vínculo…");
         if (discordLinkControl) {
             discordLinkControl.title = "Abrindo o Discord para vincular…";
         }
+
         try {
-            const redirectTo = new URL("./index.html?discord-linked=1", window.location.href).href;
+            const user = await getCurrentUser();
+            if (!user) {
+                throw new Error("Sua sessão expirou. Entre novamente antes de vincular o Discord.");
+            }
+
+            // Não é segredo: guarda apenas a identidade que iniciou o vínculo e o horário.
+            // O callback compara o usuário retornado para impedir confirmação na conta errada.
+            localStorage.setItem(
+                DISCORD_LINK_PENDING_KEY,
+                JSON.stringify({ userId: user.id, startedAt: Date.now() }),
+            );
+
+            const redirectTo = new URL("./discord-callback.html", window.location.href).href;
             await linkDiscordIdentity(redirectTo);
         } catch (error) {
             console.error("[Writer Dashboard] Falha ao vincular Discord:", error);
-            const message = error.message || "Não foi possível vincular o Discord. Verifique se o vínculo manual está habilitado no Supabase.";
-            if (discordLinkControl) discordLinkControl.title = message;
-            linkDiscordButton.setAttribute("aria-label", message);
+            localStorage.removeItem(DISCORD_LINK_PENDING_KEY);
+            setDiscordLinkFeedback(
+                error?.message || "Não foi possível iniciar o vínculo com o Discord. Tente novamente.",
+                "error",
+            );
+            if (discordLinkControl) {
+                discordLinkControl.title = "Não foi possível iniciar o vínculo.";
+            }
             linkDiscordButton.disabled = false;
         }
     });
@@ -609,19 +688,7 @@ async function init() {
     }
 
     await refreshDiscordLinkStatus();
-    const params = new URLSearchParams(location.search);
-    if (params.get("discord-linked") === "1") {
-        if (discordLinkControl) {
-            discordLinkControl.title = "Conta conectada ao Discord";
-        }
-        if (linkDiscordButton) {
-            linkDiscordButton.setAttribute(
-                "aria-label",
-                "Discord vinculado. Conta conectada ao Discord.",
-            );
-        }
-        history.replaceState({}, "", location.pathname);
-    }
+    await handleDiscordLinkResult();
     await loadStories();
 }
 

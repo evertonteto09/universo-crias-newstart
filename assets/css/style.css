@@ -2413,3 +2413,23 @@ textarea { resize: vertical; }
 .discord-link-control > button:disabled {
     pointer-events: none;
 }
+
+
+/* Feedback explícito do fluxo OAuth de vinculação do Discord. */
+.discord-link-feedback:not([hidden]) {
+    margin: 0 0 22px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.discord-link-feedback.success {
+    border-color: rgba(125, 226, 157, .45);
+}
+
+.discord-link-feedback.error {
+    border-color: rgba(255, 126, 126, .5);
+}

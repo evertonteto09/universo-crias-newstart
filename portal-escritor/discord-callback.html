@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Confirmando Discord | Histórias dos Crias</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <main class="auth-page fade-in">
+        <section class="auth-card">
+            <span class="eyebrow">PORTAL DO ESCRITOR</span>
+            <h1>Confirmando vínculo</h1>
+            <p id="discord-callback-message" class="form-message" role="status" aria-live="polite">
+                Estamos confirmando a autorização do Discord com segurança…
+            </p>
+            <a id="discord-callback-return" class="secondary-button" href="./index.html" hidden>
+                Voltar ao Portal do Escritor
+            </a>
+        </section>
+    </main>
+
+    <!-- Captura somente erros/status antes que o cliente OAuth processe ou limpe a URL.
+         Nunca armazenamos o código OAuth nem tokens. -->
+    <script>
+    (() => {
+        try {
+            const query = new URLSearchParams(window.location.search);
+            const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+            const snapshot = {
+                capturedAt: Date.now(),
+                hasCode: query.has("code"),
+                error: query.get("error") || hash.get("error") || "",
+                errorCode: query.get("error_code") || hash.get("error_code") || "",
+                errorDescription: query.get("error_description") || hash.get("error_description") || ""
+            };
+            if (snapshot.hasCode || snapshot.error || snapshot.errorCode || snapshot.errorDescription) {
+                sessionStorage.setItem("hdc-discord-link-oauth-result", JSON.stringify(snapshot));
+            }
+        } catch (error) {
+            // O processamento principal continua; a mensagem de retorno será genérica.
+        }
+    })();
+    </script>
+    <script type="module" src="../assets/js/pages/discord-link-callback.js?v=20261024-mobile-discord-link"></script>
+</body>
+</html>
