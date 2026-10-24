@@ -25,6 +25,14 @@ import {
 } from "../services/review.service.js";
 
 import {
+    getCurrentUser,
+} from "../services/auth.service.js";
+
+import {
+    getMyWriterAccount,
+} from "../services/writer.service.js";
+
+import {
     initCriasPresence,
 } from "../services/crias-presence.service.js";
 
@@ -414,11 +422,99 @@ function syncEpisodeHeaderCover() {
     header.classList.add("has-episode-cover");
 }
 
+async function isCurrentUserStoryOwner() {
+    try {
+        const user = await getCurrentUser();
+        if (!user || !currentStory) return false;
+
+        const writer = await getMyWriterAccount();
+        return Boolean(
+            writer && writer.writer_id === currentStory.writer_id
+        );
+    } catch (error) {
+        // Leitores anônimos ou contas sem vínculo de escritor
+        // continuam podendo avaliar; o banco segue como proteção definitiva.
+        console.debug("[Own episode review check]", error);
+        return false;
+    }
+}
+
 async function renderPage() {
     const renderedContent =
         await renderContent(
             currentChapter.content,
         );
+
+    const isOwnStory = await isCurrentUserStoryOwner();
+    const reviewFormArea = isOwnStory
+        ? `
+            <div class="owner-review-notice">
+                <strong>Você é o escritor desta obra.</strong>
+                <p>
+                    A avaliação dos episódios da própria obra não está
+                    disponível no Portal do Escritor.
+                </p>
+            </div>
+          `
+        : `
+            <form
+                id="review-form"
+                class="review-form"
+            >
+                <label>
+                    Seu nome
+                    <input
+                        id="reader-name"
+                        maxlength="80"
+                        required
+                    >
+                </label>
+
+                <div class="review-rating-picker">
+                    <span class="eyebrow">SUA NOTA</span>
+                    <div
+                        class="star-picker"
+                        role="radiogroup"
+                        aria-label="Escolha uma nota de 1 a 10 estrelas"
+                    >
+                        ${Array.from({ length: 10 }, (_, index) => 10 - index).map((value) => `
+                            <input
+                                type="radio"
+                                id="chapter-rating-${value}"
+                                name="chapter-rating"
+                                value="${value}"
+                                required
+                            >
+                            <label for="chapter-rating-${value}" title="${value}/10">★</label>
+                        `).join("")}
+                    </div>
+                </div>
+
+                <label>
+                    Sua avaliação
+                    <textarea
+                        id="reader-content"
+                        maxlength="3000"
+                        rows="6"
+                        required
+                    ></textarea>
+                </label>
+
+                <button
+                    class="primary-button"
+                    type="submit"
+                >
+                    Publicar avaliação
+                </button>
+
+                <p
+                    id="review-message"
+                    class="form-message"
+                    role="alert"
+                    aria-live="polite"
+                ></p>
+            </form>
+          `;
 
     page.innerHTML = `
         <article class="reader-page">
@@ -484,63 +580,7 @@ async function renderPage() {
                     </div>
                 </div>
 
-                <form
-                    id="review-form"
-                    class="review-form"
-                >
-                    <label>
-                        Seu nome
-                        <input
-                            id="reader-name"
-                            maxlength="80"
-                            required
-                        >
-                    </label>
-
-                    <div class="review-rating-picker">
-                        <span class="eyebrow">SUA NOTA</span>
-                        <div
-                            class="star-picker"
-                            role="radiogroup"
-                            aria-label="Escolha uma nota de 1 a 10 estrelas"
-                        >
-                            ${Array.from({ length: 10 }, (_, index) => 10 - index).map((value) => `
-                                <input
-                                    type="radio"
-                                    id="chapter-rating-${value}"
-                                    name="chapter-rating"
-                                    value="${value}"
-                                    required
-                                >
-                                <label for="chapter-rating-${value}" title="${value}/10">★</label>
-                            `).join("")}
-                        </div>
-                    </div>
-
-                    <label>
-                        Sua avaliação
-                        <textarea
-                            id="reader-content"
-                            maxlength="3000"
-                            rows="6"
-                            required
-                        ></textarea>
-                    </label>
-
-                    <button
-                        class="primary-button"
-                        type="submit"
-                    >
-                        Publicar avaliação
-                    </button>
-
-                    <p
-                        id="review-message"
-                        class="form-message"
-                        role="alert"
-                        aria-live="polite"
-                    ></p>
-                </form>
+                ${reviewFormArea}
 
                 <div
                     id="review-list"

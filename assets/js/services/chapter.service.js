@@ -26,6 +26,7 @@ export async function getPublishedChapter(
             .from("stories")
             .select(`
                 id,
+                writer_id,
                 title,
                 slug,
                 status,
