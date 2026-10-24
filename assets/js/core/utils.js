@@ -37,7 +37,7 @@ export function ratingStars(rating) {
     `;
 }
 
-export function storyCoverSource(story, getUploadUrl) {
+export async function storyCoverSource(story, getUploadUrl) {
     if (
         story?.cover_type === "url" &&
         typeof story.cover_url === "string" &&
@@ -50,10 +50,13 @@ export function storyCoverSource(story, getUploadUrl) {
         story?.cover_type === "upload" &&
         story.cover_path
     ) {
-        const publicUrl = getUploadUrl(story.cover_path);
-
-        if (publicUrl) {
-            return publicUrl;
+        try {
+            const signedUrl = await getUploadUrl(story.cover_path);
+            if (signedUrl) {
+                return signedUrl;
+            }
+        } catch (error) {
+            console.warn("Não foi possível gerar uma URL temporária para a capa.", error);
         }
     }
 

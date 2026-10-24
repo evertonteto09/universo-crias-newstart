@@ -1,3 +1,6 @@
+import { getStoryCoverUrl } from "./services/storage.service.js";
+import { saveUserPreferencePatch, syncUserPreferences } from "./services/user-preferences.service.js";
+
 const DEFAULT_COVER = "./assets/img/default-story-cover.svg";
 
 const THEMES = ["neblina", "preto", "branco", "vermelho", "amarelo", "roxo"];
@@ -18,33 +21,46 @@ export function setupTheme() {
     const stored = localStorage.getItem("hdc-theme");
     const saved = THEMES.includes(stored) ? stored : "neblina";
     document.documentElement.dataset.theme = saved;
-
     const button = document.querySelector("#theme-toggle");
-    if (!button) return;
-    button.addEventListener("click", () => {
-        const current = document.documentElement.dataset.theme || "neblina";
-        const index = THEMES.indexOf(current);
-        const next = THEMES[(index + 1) % THEMES.length];
-        document.documentElement.dataset.theme = next;
-        localStorage.setItem("hdc-theme", next);
-        button.textContent = `Tema: ${themeLabel(next)}`;
-    });
+    const updateLabel = () => {
+        if (button) button.textContent = `Tema: ${themeLabel(document.documentElement.dataset.theme || "neblina")}`;
+    };
 
-    button.textContent = `Tema: ${themeLabel(saved)}`;
+    if (button && button.dataset.themeHandlerAttached !== "true") {
+        button.dataset.themeHandlerAttached = "true";
+        button.addEventListener("click", () => {
+            const current = document.documentElement.dataset.theme || "neblina";
+            const index = THEMES.indexOf(current);
+            const next = THEMES[(index + 1) % THEMES.length];
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem("hdc-theme", next);
+            updateLabel();
+            saveUserPreferencePatch({ theme: next }).catch((error) => console.warn("Não foi possível sincronizar o tema:", error));
+        });
+    }
+
+    window.addEventListener("hdc-user-preferences-applied", (event) => {
+        const remoteTheme = event.detail?.preferences?.theme;
+        if (!THEMES.includes(remoteTheme)) return;
+        document.documentElement.dataset.theme = remoteTheme;
+        updateLabel();
+    });
+    updateLabel();
+    syncUserPreferences().catch((error) => console.warn("Não foi possível carregar as preferências da conta:", error));
 }
 
-export function coverForStory(story) {
+export async function coverForStory(story) {
     if (story?.cover_type === "url" && story.cover_url) {
         return story.cover_url;
     }
 
     if (story?.cover_type === "upload" && story.cover_path) {
-        // O SDK pode gerar a URL pública. O front pode substituir essa função
-        // depois por uma chamada a getPublicUrl() quando o Storage estiver ativo.
-        const { data } = window.__supabase.storage
-            .from("story-covers")
-            .getPublicUrl(story.cover_path);
-        if (data?.publicUrl) return data.publicUrl;
+        try {
+            const signedUrl = await getStoryCoverUrl(story.cover_path);
+            if (signedUrl) return signedUrl;
+        } catch (error) {
+            console.warn("Não foi possível carregar a capa enviada ao Storage.", error);
+        }
     }
 
     return DEFAULT_COVER;

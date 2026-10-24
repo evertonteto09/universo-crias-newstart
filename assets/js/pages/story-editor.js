@@ -14,6 +14,7 @@ import {
 import {
     getWriterStoryById,
     updateStory,
+    updateStoryStatus,
     deleteStory,
 } from "../services/story.service.js";
 
@@ -33,6 +34,8 @@ import {
     getStoryCoverUrl,
     uploadStoryCover,
     removeStoryCover,
+    downloadStoryCover,
+    restoreStoryCover,
 } from "../services/storage.service.js";
 
 import {
@@ -70,7 +73,7 @@ let seasons = [];
 let news = [];
 let criasPresence = null;
 
-function getCover(storyData) {
+async function getCover(storyData) {
     return storyCoverSource(
         storyData,
         getStoryCoverUrl,
@@ -95,6 +98,9 @@ function seasonHtml(season) {
                     <h3 class="editable-season-title">
                         ${escapeHtml(season.title)}
                     </h3>
+                    <span class="status-pill season-status-pill ${season.status === "published" ? "published" : "draft"}" data-season-status-pill>
+                        ${season.status === "published" ? "Publicada" : "Rascunho"}
+                    </span>
                 </div>
 
                 <div class="main-nav">
@@ -281,9 +287,9 @@ function renderNewsSection() {
 }
 
 
-function render() {
+async function render() {
     const cover =
-        getCover(story);
+        await getCover(story);
 
     root.innerHTML = `
         <div class="editor-topbar">
@@ -318,6 +324,45 @@ function render() {
                 </a>
             </div>
         </div>
+
+        <section class="story-publication-panel">
+            <div class="story-publication-main">
+                <div class="story-publication-copy">
+                    <span class="eyebrow">PUBLICAÇÃO</span>
+                    <h2>Visibilidade da história</h2>
+                    <p class="muted">
+                        Publique esta obra independentemente dos episódios.
+                        Ela poderá aparecer na página inicial mesmo sem temporadas
+                        ou episódios publicados. Cada episódio só fica visível
+                        quando a história, a temporada e o próprio episódio estão publicados. A temporada é sincronizada automaticamente pelo banco quando há episódios publicados.
+                    </p>
+                </div>
+
+                <div class="story-publication-controls">
+                    <span
+                        id="story-status-pill"
+                        class="status-pill ${story.status === "published" ? "published" : "draft"}"
+                    >
+                        ${story.status === "published" ? "Publicada" : "Rascunho"}
+                    </span>
+
+                    <button
+                        id="toggle-story-publication-button"
+                        class="${story.status === "published" ? "secondary-button" : "primary-button"}"
+                        type="button"
+                    >
+                        ${story.status === "published" ? "Voltar para rascunho" : "Publicar história"}
+                    </button>
+                </div>
+            </div>
+
+            <p
+                id="story-publication-message"
+                class="form-message"
+                role="alert"
+                aria-live="polite"
+            ></p>
+        </section>
 
         <section class="editor-grid">
             <form
@@ -370,7 +415,7 @@ function render() {
                     <img
                         id="story-cover-preview"
                         class="editor-cover-preview"
-                        src="${getCover(story)}"
+                        src="${escapeHtml(cover)}"
                         alt=""
                     >
 
@@ -486,10 +531,10 @@ function render() {
                 <div class="editor-help">
                     <strong>Como funciona</strong>
                     <p>
-                        Crie o episódio, escreva no editor e use
-                        <b>Salvar rascunho</b> até ficar pronto.
-                        Só <b>Publicar</b> faz o episódio aparecer
-                        para os leitores.
+                        Crie o episódio e use <b>Salvar rascunho</b> até ficar pronto.
+                        Ao publicar o primeiro episódio, a temporada é publicada
+                        automaticamente. Se todos os episódios voltarem para rascunho
+                        ou forem excluídos, a temporada também volta para rascunho.
                     </p>
                 </div>
             </aside>
@@ -522,6 +567,7 @@ function render() {
         </section>
     `;
 
+    bindStoryPublication();
     bindStorySettings();
     bindSeasons();
     bindNews();
@@ -680,7 +726,7 @@ function openNewsForm(existingNews = null) {
                 ];
             }
 
-            render();
+            await render();
         },
     });
 }
@@ -775,11 +821,95 @@ function bindNews() {
                                     newsItem.id !== item.id
                             );
 
-                        render();
+                        await render();
                     },
                 });
             }
         );
+    });
+}
+
+
+function updateStoryPublicationUi() {
+    const pill = root.querySelector("#story-status-pill");
+    const button = root.querySelector("#toggle-story-publication-button");
+    if (!pill || !button) return;
+
+    const published = story.status === "published";
+    pill.className = `status-pill ${published ? "published" : "draft"}`;
+    pill.textContent = published ? "Publicada" : "Rascunho";
+
+    button.className = published ? "secondary-button" : "primary-button";
+    button.textContent = published ? "Voltar para rascunho" : "Publicar história";
+    button.setAttribute(
+        "aria-label",
+        published ? "Voltar a história para rascunho" : "Publicar história para os leitores",
+    );
+}
+
+function updateSeasonStatusPills() {
+    for (const season of seasons) {
+        const card = root.querySelector(
+            `[data-season-id="${Number(season.id)}"]`,
+        );
+        const pill = card?.querySelector("[data-season-status-pill]");
+        if (!pill) continue;
+
+        const published = season.status === "published";
+        pill.className = `status-pill season-status-pill ${published ? "published" : "draft"}`;
+        pill.textContent = published ? "Publicada" : "Rascunho";
+    }
+}
+
+function bindStoryPublication() {
+    const button = root.querySelector("#toggle-story-publication-button");
+    const message = root.querySelector("#story-publication-message");
+    if (!button || !message) return;
+
+    button.addEventListener("click", async () => {
+        const nextStatus = story.status === "published" ? "draft" : "published";
+        const publishing = nextStatus === "published";
+        const prompt = publishing
+            ? `Publicar a história “${story.title}”? Ela aparecerá na página inicial mesmo que ainda não tenha episódios publicados.`
+            : `Voltar “${story.title}” para rascunho? A história deixará de aparecer publicamente, e seus episódios ficarão indisponíveis aos leitores até ela ser publicada novamente.`;
+
+        if (!confirm(prompt)) return;
+
+        button.disabled = true;
+        showMessage(
+            message,
+            publishing
+                ? "Publicando história..."
+                : "Voltando a história para rascunho...",
+        );
+
+        try {
+            // O estado da história é independente do estado das temporadas.
+            // As temporadas são sincronizadas no banco quando episódios mudam.
+            const updated = await updateStoryStatus(story.id, nextStatus);
+            story = { ...story, ...updated };
+            seasons = await getWriterSeasons(story.id);
+
+            updateStoryPublicationUi();
+            updateSeasonStatusPills();
+
+            showMessage(
+                message,
+                publishing
+                    ? "História publicada! Ela já pode aparecer na página inicial, mesmo sem episódios publicados."
+                    : "História voltou para rascunho. Ela não aparecerá na página inicial até ser publicada novamente.",
+                "success",
+            );
+        } catch (error) {
+            console.error("Não foi possível alterar a publicação da história:", error);
+            showMessage(
+                message,
+                error.message || "Não foi possível alterar o estado da história.",
+                "error",
+            );
+        } finally {
+            button.disabled = false;
+        }
     });
 }
 
@@ -838,7 +968,10 @@ function bindStorySettings() {
                 "Salvando..."
             );
 
+            let newlyUploadedCoverPath = null;
+
             try {
+                const previousCoverPath = story.cover_path;
                 const newType =
                     coverType.value;
 
@@ -872,18 +1005,6 @@ function bindStorySettings() {
                     coverPath = null;
                     coverUrl = null;
 
-                    if (story.cover_path) {
-                        try {
-                            await removeStoryCover(
-                                story.cover_path
-                            );
-                        } catch (cleanupError) {
-                            console.warn(
-                                "Não foi possível remover a capa anterior:",
-                                cleanupError,
-                            );
-                        }
-                    }
                 } else if (newType === "url") {
                     if (!url) {
                         throw new Error(
@@ -904,18 +1025,6 @@ function bindStorySettings() {
                     coverUrl = url;
                     coverPath = null;
 
-                    if (story.cover_path) {
-                        try {
-                            await removeStoryCover(
-                                story.cover_path
-                            );
-                        } catch (cleanupError) {
-                            console.warn(
-                                "Não foi possível remover a capa anterior:",
-                                cleanupError,
-                            );
-                        }
-                    }
                 } else {
                     if (file) {
                         const uploaded =
@@ -924,26 +1033,9 @@ function bindStorySettings() {
                                 file,
                             );
 
-                        const oldPath =
-                            story.cover_path;
-
-                        coverPath =
-                            uploaded.path;
-
+                        coverPath = uploaded.path;
+                        newlyUploadedCoverPath = uploaded.path;
                         coverUrl = null;
-
-                        if (oldPath) {
-                            try {
-                                await removeStoryCover(
-                                    oldPath
-                                );
-                            } catch (cleanupError) {
-                                console.warn(
-                                    "A nova capa foi salva, mas a antiga não pôde ser removida:",
-                                    cleanupError,
-                                );
-                            }
-                        }
                     } else if (
                         story.cover_type !== "upload" ||
                         !story.cover_path
@@ -976,8 +1068,22 @@ function bindStorySettings() {
                         story.updated_at,
                 };
 
+                // O registro já aponta para a nova configuração; só agora
+                // removemos a capa antiga para evitar quebrar a obra se o UPDATE falhar.
+                newlyUploadedCoverPath = null;
+                if (previousCoverPath && previousCoverPath !== story.cover_path) {
+                    try {
+                        await removeStoryCover(previousCoverPath);
+                    } catch (cleanupError) {
+                        console.warn(
+                            "As informações foram salvas, mas a capa anterior não pôde ser removida:",
+                            cleanupError,
+                        );
+                    }
+                }
+
                 preview.src =
-                    getCover(story);
+                    await getCover(story);
 
                 showMessage(
                     message,
@@ -1003,6 +1109,17 @@ function bindStorySettings() {
                 });
             } catch (error) {
                 console.error(error);
+
+                if (newlyUploadedCoverPath) {
+                    try {
+                        await removeStoryCover(newlyUploadedCoverPath);
+                    } catch (cleanupError) {
+                        console.warn(
+                            "Não foi possível limpar a nova capa após falha ao salvar a história:",
+                            cleanupError,
+                        );
+                    }
+                }
 
                 showMessage(
                     message,
@@ -1108,7 +1225,7 @@ function bindSeasons() {
 
                         season.title = title;
 
-                        render();
+                        await render();
                     },
                 });
             },
@@ -1163,7 +1280,7 @@ function bindSeasons() {
                                 item.id !== seasonId
                         );
 
-                        render();
+                        await render();
                     },
                 });
             },
@@ -1408,22 +1525,23 @@ function bindSeasons() {
                     `,
                     confirmLabel: "Excluir episódio",
                     onConfirm: async () => {
-                        await deleteChapter(
-                            chapterId
-                        );
+                        const deleted = await deleteChapter(chapterId);
 
                         if (season) {
                             season.chapters =
-                                (
-                                    season.chapters ?? []
-                                ).filter(
-                                    (chapter) =>
-                                        chapter.id !==
-                                        chapterId
+                                (season.chapters ?? []).filter(
+                                    (chapter) => chapter.id !== chapterId
                                 );
+
+                            if (deleted.seasonStatus) {
+                                season.status = deleted.seasonStatus;
+                            } else {
+                                // Fallback visual caso a consulta pós-trigger falhe.
+                                seasons = await getWriterSeasons(story.id);
+                            }
                         }
 
-                        render();
+                        await render();
                     },
                 });
             },
@@ -1485,28 +1603,36 @@ function bindDeleteStory() {
                 confirmLabel:
                     "Excluir história definitivamente",
                 onConfirm: async () => {
-                    const coverPath =
-                        story.cover_path;
+                    const coverPath = story.cover_path;
+                    let coverBackup = null;
 
-                    await deleteStory(
-                        story.id
-                    );
-
+                    // Remove a capa enquanto a história ainda existe, pois a
+                    // política do Storage confirma a propriedade pela história.
                     if (coverPath) {
-                        try {
-                            await removeStoryCover(
-                                coverPath
-                            );
-                        } catch (cleanupError) {
-                            console.warn(
-                                "História excluída, mas a capa não pôde ser removida do Storage:",
-                                cleanupError,
-                            );
-                        }
+                        coverBackup = await downloadStoryCover(coverPath);
+                        await removeStoryCover(coverPath);
                     }
 
-                    location.href =
-                        "./index.html";
+                    try {
+                        await deleteStory(story.id);
+                    } catch (deleteError) {
+                        // Se a exclusão do registro falhar, tenta restaurar a capa
+                        // no mesmo caminho para que a obra não fique quebrada.
+                        if (coverPath && coverBackup) {
+                            try {
+                                await restoreStoryCover(coverPath, coverBackup);
+                            } catch (restoreError) {
+                                console.error(
+                                    "A exclusão da história falhou e a capa também não pôde ser restaurada:",
+                                    restoreError,
+                                );
+                                deleteError.message = `${deleteError.message || "Não foi possível excluir a história."} A capa não pôde ser restaurada; verifique o Storage.`;
+                            }
+                        }
+                        throw deleteError;
+                    }
+
+                    location.href = "./index.html";
                 },
             });
         },
@@ -1569,7 +1695,7 @@ function handleNewSeason() {
                     story.id
                 );
 
-            render();
+            await render();
         },
     });
 }
@@ -1613,7 +1739,7 @@ async function init() {
                 story.id
             );
 
-        render();
+        await render();
 
         // Inicializa a presença somente depois de autenticar o escritor
         // e carregar a história, para evitar criar o painel antes do DOM pronto.

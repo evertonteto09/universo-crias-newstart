@@ -1,5 +1,20 @@
 import { supabase } from "../core/supabase.js";
 import { removeChapterImagesFromContent } from "./storage.service.js";
+import { getSeasonPublicationStatus } from "./season.service.js";
+
+async function readSeasonStatusAfterChapterWrite(seasonId) {
+    try {
+        return await getSeasonPublicationStatus(seasonId);
+    } catch (error) {
+        // O trigger do banco já sincronizou o estado na mesma transação.
+        // Falha nesta leitura auxiliar não deve transformar a gravação em erro.
+        console.warn(
+            "Não foi possível recarregar o estado da temporada após salvar o episódio:",
+            error,
+        );
+        return null;
+    }
+}
 
 export async function getPublishedChapter(
     storySlug,
@@ -13,10 +28,12 @@ export async function getPublishedChapter(
                 id,
                 title,
                 slug,
+                status,
                 seasons (
                     id,
                     number,
                     title,
+                    status,
                     chapters (
                         id,
                         number,
@@ -28,6 +45,7 @@ export async function getPublishedChapter(
                 )
             `)
             .eq("slug", storySlug)
+            .eq("status", "published")
             .single();
 
     if (storyError) {
@@ -38,7 +56,8 @@ export async function getPublishedChapter(
         (story.seasons ?? []).find(
             (item) =>
                 item.number ===
-                Number(seasonNumber),
+                    Number(seasonNumber) &&
+                item.status === "published",
         );
 
     const chapter =
@@ -135,7 +154,9 @@ export async function createChapter({
         throw error;
     }
 
-    return data;
+    const seasonStatus = await readSeasonStatusAfterChapterWrite(seasonId);
+
+    return { ...data, seasonStatus };
 }
 
 export async function updateChapter(
@@ -145,6 +166,7 @@ export async function updateChapter(
         content,
         status,
     },
+    { fetchSeasonStatus = false } = {},
 ) {
     const cleanTitle =
         String(title ?? "").trim();
@@ -158,8 +180,13 @@ export async function updateChapter(
     const cleanContent =
         String(content ?? "");
 
+    const nextStatus =
+        status === "published"
+            ? "published"
+            : "draft";
+
     if (
-        status === "published" &&
+        nextStatus === "published" &&
         !cleanContent.trim()
     ) {
         throw new Error(
@@ -167,37 +194,36 @@ export async function updateChapter(
         );
     }
 
-    const updates = {
-        title: cleanTitle,
-        content: cleanContent,
-        status:
-            status === "published"
-                ? "published"
-                : "draft",
-        content_format: "plain_text",
-    };
-
-    const { data, error } =
-        await supabase
-            .from("chapters")
-            .update(updates)
-            .eq("id", chapterId)
-            .select()
-            .single();
+    const { data, error } = await supabase
+        .from("chapters")
+        .update({
+            title: cleanTitle,
+            content: cleanContent,
+            status: nextStatus,
+            content_format: "plain_text",
+        })
+        .eq("id", chapterId)
+        .select()
+        .single();
 
     if (error) {
         throw error;
     }
 
-    return data;
-}
+    // A mudança em chapters.status dispara a sincronização no banco.
+    // Aqui apenas lemos o estado resultante para exibi-lo ao escritor.
+    const seasonStatus = fetchSeasonStatus
+        ? await readSeasonStatusAfterChapterWrite(data.season_id)
+        : null;
 
+    return { ...data, seasonStatus };
+}
 
 export async function deleteChapter(chapterId) {
     const { data: chapter, error: chapterError } =
         await supabase
             .from("chapters")
-            .select("id, content")
+            .select("id, content, season_id, status")
             .eq("id", chapterId)
             .single();
 
@@ -229,5 +255,9 @@ export async function deleteChapter(chapterId) {
         throw error;
     }
 
-    return data;
+    // O trigger do banco recalcula a temporada após a exclusão.
+    const seasonStatus = await readSeasonStatusAfterChapterWrite(
+        chapter.season_id,
+    );
+    return { ...data, seasonStatus };
 }

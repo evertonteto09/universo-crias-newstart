@@ -7,7 +7,7 @@ import {
     showMessage,
 } from "../core/utils.js";
 
-import { signOut } from "../services/auth.service.js";
+import { signOut, linkDiscordIdentity, getCurrentUserIdentities } from "../services/auth.service.js";
 import {
     getMyWriterAccount,
     getMyStories,
@@ -44,6 +44,8 @@ const writerName =
     document.querySelector(
         "#writer-name"
     );
+const linkDiscordButton = document.querySelector("#link-discord-button");
+const discordLinkControl = document.querySelector("#discord-link-control");
 
 const grid =
     document.querySelector(
@@ -173,9 +175,9 @@ document.querySelector(
     }
 );
 
-function storyCard(story, summary) {
+async function storyCard(story, summary) {
     const cover =
-        storyCoverSource(
+        await storyCoverSource(
             story,
             getStoryCoverUrl
         );
@@ -187,15 +189,18 @@ function storyCard(story, summary) {
         >
             <img
                 class="story-cover"
-                src="${cover}"
+                src="${escapeHtml(cover)}"
                 alt=""
                 loading="lazy"
             >
 
             <div>
-                <span class="eyebrow">
-                    MINHA OBRA
-                </span>
+                <div class="writer-story-meta">
+                    <span class="eyebrow">MINHA OBRA</span>
+                    <span class="status-pill ${story.status === "published" ? "published" : "draft"}">
+                        ${story.status === "published" ? "Publicada" : "Rascunho"}
+                    </span>
+                </div>
 
                 <h3>
                     ${escapeHtml(
@@ -397,6 +402,58 @@ async function loadReviews(
     }
 }
 
+async function refreshDiscordLinkStatus() {
+    if (!linkDiscordButton) return;
+
+    try {
+        const identities = await getCurrentUserIdentities();
+        const linked = identities.some((identity) => identity.provider === "discord");
+
+        // O botão indica o estado; a explicação fica disponível no hover.
+        linkDiscordButton.disabled = linked;
+        linkDiscordButton.dataset.discordLinked = String(linked);
+        linkDiscordButton.textContent = linked ? "Discord vinculado ✓" : "Vincular Discord";
+
+        const tooltip = linked
+            ? "Conta conectada ao Discord"
+            : "Vincule uma vez para entrar pelo Discord nas próximas visitas.";
+        if (discordLinkControl) discordLinkControl.title = tooltip;
+        linkDiscordButton.setAttribute(
+            "aria-label",
+            linked
+                ? "Discord vinculado. Conta conectada ao Discord."
+                : "Vincular Discord à conta atual.",
+        );
+    } catch (error) {
+        console.warn("[Writer Dashboard] Não foi possível consultar o vínculo do Discord:", error);
+        const message = "Não foi possível consultar o vínculo do Discord.";
+        if (discordLinkControl) discordLinkControl.title = message;
+        linkDiscordButton.setAttribute("aria-label", message);
+    }
+}
+
+if (linkDiscordButton) {
+    linkDiscordButton.addEventListener("click", async () => {
+        // Uma conta já vinculada usa o botão apenas como indicador de estado.
+        if (linkDiscordButton.dataset.discordLinked === "true") return;
+
+        linkDiscordButton.disabled = true;
+        if (discordLinkControl) {
+            discordLinkControl.title = "Abrindo o Discord para vincular…";
+        }
+        try {
+            const redirectTo = new URL("./index.html?discord-linked=1", window.location.href).href;
+            await linkDiscordIdentity(redirectTo);
+        } catch (error) {
+            console.error("[Writer Dashboard] Falha ao vincular Discord:", error);
+            const message = error.message || "Não foi possível vincular o Discord. Verifique se o vínculo manual está habilitado no Supabase.";
+            if (discordLinkControl) discordLinkControl.title = message;
+            linkDiscordButton.setAttribute("aria-label", message);
+            linkDiscordButton.disabled = false;
+        }
+    });
+}
+
 async function loadStories() {
     try {
         const writer =
@@ -440,7 +497,7 @@ async function loadStories() {
                             );
                         }
 
-                        return storyCard(
+                        return await storyCard(
                             story,
                             summary
                         );
@@ -547,11 +604,24 @@ async function init() {
         await getMyWriterAccount();
 
     if (!writer) {
-        location.href =
-            "./login.html";
+        location.href = "./login.html?error=not-writer";
         return;
     }
 
+    await refreshDiscordLinkStatus();
+    const params = new URLSearchParams(location.search);
+    if (params.get("discord-linked") === "1") {
+        if (discordLinkControl) {
+            discordLinkControl.title = "Conta conectada ao Discord";
+        }
+        if (linkDiscordButton) {
+            linkDiscordButton.setAttribute(
+                "aria-label",
+                "Discord vinculado. Conta conectada ao Discord.",
+            );
+        }
+        history.replaceState({}, "", location.pathname);
+    }
     await loadStories();
 }
 

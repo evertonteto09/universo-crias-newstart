@@ -13,11 +13,13 @@ export async function getMyWriterAccount() {
         .from("writer_accounts")
         .select("writer_id, auth_user_id")
         .eq("auth_user_id", user.id)
-        .single();
+        .maybeSingle();
 
     if (error) {
         throw error;
     }
+
+    if (!data) return null;
 
     return {
         ...data,
@@ -43,6 +45,8 @@ export async function getMyStories() {
             cover_type,
             cover_url,
             cover_path,
+            status,
+            published_at,
             created_at,
             updated_at
         `)
@@ -98,6 +102,8 @@ export async function createStory({
                 description
                     ? String(description).trim()
                     : null,
+            status: "draft",
+            published_at: null,
             cover_type: coverType,
             cover_url:
                 coverType === "url"

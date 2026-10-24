@@ -42,6 +42,7 @@ const writerFilterMenu =
 let allStories = [];
 let storyRatingSummaries = {};
 let selectedWriter = "all";
+let renderSequence = 0;
 
 function normalizeSearchText(value) {
     return String(value ?? "")
@@ -67,9 +68,9 @@ function getAuthorKey(story) {
     );
 }
 
-function storyCard(story) {
+async function storyCard(story) {
     const cover =
-        storyCoverSource(
+        await storyCoverSource(
             story,
             getStoryCoverUrl,
         );
@@ -98,7 +99,7 @@ function storyCard(story) {
         >
             <img
                 class="story-cover"
-                src="${cover}"
+                src="${escapeHtml(cover)}"
                 alt="Capa de ${escapeHtml(story.title)}"
             >
 
@@ -138,6 +139,32 @@ function storyCard(story) {
     `;
 }
 
+function storyCardFallback(story) {
+    const publishedCount = (story.seasons ?? []).reduce(
+        (sum, season) => sum + (season.chapters ?? []).length,
+        0,
+    );
+    const authorName = getAuthorName(story);
+    const summary = storyRatingSummaries[String(story.id)] || { average: 0, count: 0 };
+    const defaultCover = "./assets/img/default-story-cover.svg";
+    return `
+        <a class="story-card" href="./historia.html?slug=${encodeURIComponent(story.slug)}">
+            <img class="story-cover" src="${defaultCover}" alt="Capa de ${escapeHtml(story.title)}">
+            <div class="story-card-body">
+                <span class="eyebrow">OBRA</span>
+                <h3>${escapeHtml(story.title)}</h3>
+                <p class="story-author">por ${escapeHtml(authorName)}</p>
+                <p>${escapeHtml(story.description || "Sem descrição disponível.")}</p>
+                <div class="rating-line">
+                    <span title="${summary.count} avaliações">${ratingStars(summary.average)}</span>
+                    <strong class="rating-score">${summary.count ? `${summary.average.toFixed(1)}/10` : "Sem notas"}</strong>
+                    <span class="muted">${publishedCount} ${publishedCount === 1 ? "episódio publicado" : "episódios publicados"}</span>
+                </div>
+            </div>
+        </a>
+    `;
+}
+
 function updateCount(stories) {
     count.textContent =
         `${stories.length} ${
@@ -147,7 +174,8 @@ function updateCount(stories) {
         }`;
 }
 
-function renderStories(stories, context = {}) {
+async function renderStories(stories, context = {}) {
+    const renderId = ++renderSequence;
     updateCount(stories);
 
     if (!stories.length) {
@@ -186,8 +214,15 @@ function renderStories(stories, context = {}) {
         return;
     }
 
-    grid.innerHTML =
-        stories.map(storyCard).join("");
+    try {
+        const cards = await Promise.all(stories.map(storyCard));
+        if (renderId !== renderSequence) return;
+        grid.innerHTML = cards.join("");
+    } catch (error) {
+        console.error("Não foi possível preparar as capas das histórias.", error);
+        if (renderId !== renderSequence) return;
+        grid.innerHTML = stories.map((story) => storyCardFallback(story)).join("");
+    }
 }
 
 function getWriterOptions() {

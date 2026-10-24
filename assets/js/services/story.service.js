@@ -9,6 +9,8 @@ export async function getPublishedStories() {
             title,
             slug,
             description,
+            status,
+            published_at,
             cover_type,
             cover_url,
             cover_path,
@@ -21,6 +23,8 @@ export async function getPublishedStories() {
                 id,
                 number,
                 title,
+                status,
+                published_at,
                 chapters (
                     id,
                     number,
@@ -29,6 +33,7 @@ export async function getPublishedStories() {
                 )
             )
         `)
+        .eq("status", "published")
         .order("title");
 
     if (error) {
@@ -38,6 +43,7 @@ export async function getPublishedStories() {
     return (data ?? []).map((story) => ({
         ...story,
         seasons: (story.seasons ?? [])
+            .filter((season) => season.status === "published")
             .map((season) => ({
                 ...season,
                 chapters: (season.chapters ?? [])
@@ -65,6 +71,8 @@ export async function getPublishedStoryBySlug(slug) {
             title,
             slug,
             description,
+            status,
+            published_at,
             cover_type,
             cover_url,
             cover_path,
@@ -77,6 +85,8 @@ export async function getPublishedStoryBySlug(slug) {
                 id,
                 number,
                 title,
+                status,
+                published_at,
                 chapters (
                     id,
                     number,
@@ -86,6 +96,7 @@ export async function getPublishedStoryBySlug(slug) {
             )
         `)
         .eq("slug", slug)
+        .eq("status", "published")
         .single();
 
     if (error) {
@@ -95,6 +106,7 @@ export async function getPublishedStoryBySlug(slug) {
     return {
         ...data,
         seasons: (data.seasons ?? [])
+            .filter((season) => season.status === "published")
             .map((season) => ({
                 ...season,
                 chapters: (season.chapters ?? [])
@@ -125,6 +137,8 @@ export async function getWriterStoryById(storyId) {
             cover_type,
             cover_url,
             cover_path,
+            status,
+            published_at,
             created_at,
             updated_at,
             seasons (
@@ -132,6 +146,8 @@ export async function getWriterStoryById(storyId) {
                 story_id,
                 number,
                 title,
+                status,
+                published_at,
                 chapters (
                     id,
                     season_id,
@@ -212,6 +228,34 @@ export async function updateStory(
 
     return data;
 }
+
+export async function updateStoryStatus(storyId, status) {
+    if (status !== "draft" && status !== "published") {
+        throw new Error("Estado de publicação inválido.");
+    }
+
+    const payload = {
+        status,
+        published_at:
+            status === "published"
+                ? new Date().toISOString()
+                : null,
+    };
+
+    const { data, error } = await supabase
+        .from("stories")
+        .update(payload)
+        .eq("id", storyId)
+        .select("id, status, published_at, updated_at")
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
 
 export async function getStoryReviewSummary(storyId) {
     const { data, error } = await supabase

@@ -1,3 +1,5 @@
+import { saveUserPreferencePatch, syncUserPreferences } from "../services/user-preferences.service.js";
+
 const STORAGE_KEY = "hdc-profanity-filter";
 
 let enabled =
@@ -88,6 +90,10 @@ export function setProfanityFilter(nextValue) {
         enabled ? "on" : "off",
     );
 
+    saveUserPreferencePatch({ profanity_filter_enabled: enabled }).catch((error) => {
+        console.warn("Não foi possível sincronizar a preferência do filtro:", error);
+    });
+
     window.dispatchEvent(
         new CustomEvent(
             "hdc-profanity-filter-changed",
@@ -131,11 +137,28 @@ export function setupProfanityFilter() {
             "[data-profanity-toggle]"
         )
         .forEach((button) => {
-            button.addEventListener(
-                "click",
-                toggleProfanityFilter,
-            );
+            if (button.dataset.profanityHandlerAttached === "true") return;
+            button.dataset.profanityHandlerAttached = "true";
+            button.addEventListener("click", toggleProfanityFilter);
         });
 
+    const applyRemoteFilterPreference = (remoteValue) => {
+        if (typeof remoteValue !== "boolean") return;
+        enabled = remoteValue;
+        localStorage.setItem(STORAGE_KEY, enabled ? "on" : "off");
+        window.dispatchEvent(new CustomEvent("hdc-profanity-filter-changed", {
+            detail: { enabled },
+        }));
+        updateFilterButtons();
+    };
+
+    window.addEventListener("hdc-user-preferences-applied", (event) => {
+        applyRemoteFilterPreference(event.detail?.preferences?.profanity_filter_enabled);
+    });
+
     updateFilterButtons();
+    // Recupera também quando o carregamento da conta terminou antes do listener.
+    syncUserPreferences().then((account) => {
+        if (account?.preferences) applyRemoteFilterPreference(account.preferences.profanity_filter_enabled);
+    }).catch((error) => console.warn("Não foi possível carregar o filtro salvo na conta:", error));
 }

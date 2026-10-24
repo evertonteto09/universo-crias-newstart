@@ -7,15 +7,32 @@ const COVER_BUCKET =
 const CHAPTER_IMAGE_BUCKET =
     "chapter-images";
 
-export function getStoryCoverUrl(path) {
+const COVER_SIGNED_URL_TTL_SECONDS = 15 * 60;
+const coverUrlCache = new Map();
+
+export async function getStoryCoverUrl(path) {
     if (!path) return null;
 
-    const { data } =
-        supabase.storage
-            .from(COVER_BUCKET)
-            .getPublicUrl(path);
+    const cached = coverUrlCache.get(path);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.url;
+    }
 
-    return data?.publicUrl || null;
+    const { data, error } = await supabase.storage
+        .from(COVER_BUCKET)
+        .createSignedUrl(path, COVER_SIGNED_URL_TTL_SECONDS);
+
+    if (error) throw error;
+
+    const url = data?.signedUrl || null;
+    if (url) {
+        // Renova antes do vencimento para evitar reutilizar uma URL expirada.
+        coverUrlCache.set(path, {
+            url,
+            expiresAt: Date.now() + 13 * 60 * 1000,
+        });
+    }
+    return url;
 }
 
 const chapterImageUrlCache = new Map();
@@ -125,27 +142,44 @@ export async function uploadStoryCover(
         throw error;
     }
 
-    return {
-        path: objectPath,
-        url: getStoryCoverUrl(
-            objectPath
-        ),
-    };
+    return { path: objectPath };
 }
 
-export async function removeStoryCover(
-    path,
-) {
+export async function downloadStoryCover(path) {
+    if (!path) return null;
+
+    const { data, error } = await supabase.storage
+        .from(COVER_BUCKET)
+        .download(path);
+
+    if (error) throw error;
+    return data || null;
+}
+
+export async function restoreStoryCover(path, file) {
+    if (!path || !file) return;
+
+    const { error } = await supabase.storage
+        .from(COVER_BUCKET)
+        .upload(path, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type || "application/octet-stream",
+        });
+
+    if (error) throw error;
+    coverUrlCache.delete(path);
+}
+
+export async function removeStoryCover(path) {
     if (!path) return;
 
-    const { error } =
-        await supabase.storage
-            .from(COVER_BUCKET)
-            .remove([path]);
+    const { error } = await supabase.storage
+        .from(COVER_BUCKET)
+        .remove([path]);
 
-    if (error) {
-        throw error;
-    }
+    if (error) throw error;
+    coverUrlCache.delete(path);
 }
 
 export async function uploadChapterImage(

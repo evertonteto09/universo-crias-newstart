@@ -1,3 +1,5 @@
+import { saveUserPreferencePatch, syncUserPreferences } from "./user-preferences.service.js";
+
 const WS_URL = "ws://127.0.0.1:32145/presence";
 const GITHUB_PAGES_ORIGIN = "https://evertonteto09.github.io";
 const SESSION_KEY = "criasPresenceSession";
@@ -687,12 +689,23 @@ export function initCriasPresence(initialActivity = {}) {
         };
     }
 
-    function saveSettings() {
+    function saveSettings({ syncRemote = true } = {}) {
         try {
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         } catch (error) {
             console.warn("Não foi possível salvar as preferências do Crias Presence:", error);
             setStatus("Não foi possível salvar as preferências neste navegador.", "error");
+        }
+
+        if (syncRemote) {
+            saveUserPreferencePatch({
+                presence_enabled: settings.enabled,
+                presence_show_story_title: settings.showStoryTitle,
+                presence_show_episode_details: settings.showEpisodeDetails,
+                presence_show_writer_activity: settings.showWriterActivity,
+            }).catch((error) => {
+                console.warn("Não foi possível sincronizar as preferências de Presença com a conta:", error);
+            });
         }
     }
 
@@ -1379,6 +1392,36 @@ export function initCriasPresence(initialActivity = {}) {
         const previousSettings = { ...settings };
         settings = readSettings();
         applySettingsChangeFromStorage(previousSettings);
+    });
+
+    function applyAccountPreferences(preferences) {
+        if (!preferences) return;
+        const previousSettings = { ...settings };
+        settings = {
+            enabled: preferences.presence_enabled,
+            showStoryTitle: preferences.presence_show_story_title,
+            showEpisodeDetails: preferences.presence_show_episode_details,
+            showWriterActivity: preferences.presence_show_writer_activity,
+        };
+        // Evita escrever de volta para a nuvem ao aplicar uma mudança recebida dela.
+        try {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        } catch (error) {
+            console.warn("Não foi possível aplicar as preferências de Presença:", error);
+        }
+        applySettingsChangeFromStorage(previousSettings);
+    }
+
+    window.addEventListener("hdc-user-preferences-applied", (event) => {
+        applyAccountPreferences(event.detail?.preferences);
+    });
+
+    // Cobre também o caso em que a leitura da conta terminou antes de este
+    // widget registrar o evento global de preferências.
+    syncUserPreferences().then((account) => {
+        if (account?.preferences) applyAccountPreferences(account.preferences);
+    }).catch((error) => {
+        console.warn("Não foi possível recuperar as preferências de Presença da conta:", error);
     });
 
     function applySettingsChangeFromStorage(previousSettings) {

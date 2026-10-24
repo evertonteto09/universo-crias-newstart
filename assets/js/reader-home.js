@@ -7,13 +7,14 @@ setupTheme();
 const grid = document.querySelector("#story-grid");
 const count = document.querySelector("#story-count");
 
-function storyCard(story) {
+async function storyCard(story) {
+    const cover = await coverForStory(story);
     const average = story.average_rating ?? 0;
     const reviews = story.review_count ?? 0;
 
     return `
         <a class="story-card" href="./historia.html?slug=${encodeURIComponent(story.slug)}">
-            <img class="story-cover" src="${coverForStory(story)}" alt="Capa de ${escapeHtml(story.title)}">
+            <img class="story-cover" src="${escapeHtml(cover)}" alt="Capa de ${escapeHtml(story.title)}">
             <div class="story-card-body">
                 <span class="eyebrow">OBRA</span>
                 <h3>${escapeHtml(story.title)}</h3>
@@ -35,10 +36,12 @@ async function loadStories() {
             title,
             slug,
             description,
+            status,
             cover_type,
             cover_url,
             cover_path
         `)
+        .eq("status", "published")
         .order("title");
 
     if (error) {
@@ -55,9 +58,10 @@ async function loadStories() {
     }
 
     // A média será ligada depois por uma view/RPC dedicada.
-    grid.innerHTML = data
-        .map((story) => storyCard({ ...story, average_rating: 0, review_count: 0 }))
-        .join("");
+    const cards = await Promise.all(
+        data.map((story) => storyCard({ ...story, average_rating: 0, review_count: 0 }))
+    );
+    grid.innerHTML = cards.join("");
 }
 
 loadStories();

@@ -951,9 +951,7 @@ function setStatusUi(
     }
 }
 
-async function save(
-    status,
-) {
+async function save(status) {
     const message =
         document.querySelector(
             "#chapter-message"
@@ -967,6 +965,7 @@ async function save(
     );
 
     try {
+        const previousStatus = chapter.status;
         const updated =
             await updateChapter(
                 chapter.id,
@@ -980,6 +979,9 @@ async function save(
                             "#chapter-content"
                         ).value,
                     status,
+                },
+                {
+                    fetchSeasonStatus: chapter.status !== status,
                 },
             );
 
@@ -999,11 +1001,38 @@ async function save(
             updated.status
         );
 
+        let successMessage =
+            updated.status === "published"
+                ? (previousStatus === "published"
+                    ? "Alterações do episódio publicadas."
+                    : "Episódio publicado!")
+                : (previousStatus === "published"
+                    ? "Episódio voltou para rascunho."
+                    : "Rascunho salvo!");
+
+        // Só anunciamos a mudança automática da temporada quando o status do episódio mudou.
+        if (previousStatus !== updated.status) {
+            if (
+                updated.status === "published" &&
+                updated.seasonStatus === "published"
+            ) {
+                successMessage = "Episódio publicado! A temporada foi publicada automaticamente.";
+            } else if (
+                updated.status === "draft" &&
+                updated.seasonStatus === "published"
+            ) {
+                successMessage = "Episódio voltou para rascunho. A temporada continua publicada porque ainda possui outros episódios publicados.";
+            } else if (
+                updated.status === "draft" &&
+                updated.seasonStatus === "draft"
+            ) {
+                successMessage = "Episódio voltou para rascunho. A temporada também voltou para rascunho automaticamente.";
+            }
+        }
+
         showMessage(
             message,
-            updated.status === "published"
-                ? "Episódio publicado!"
-                : "Rascunho salvo!",
+            successMessage,
             "success",
         );
 
@@ -1798,9 +1827,7 @@ function bind() {
                 return;
             }
 
-            await save(
-                "published"
-            );
+            await save("published");
         }
     );
 
@@ -1809,9 +1836,7 @@ function bind() {
     ).addEventListener(
         "click",
         async () => {
-            await save(
-                "draft"
-            );
+            await save("draft");
         }
     );
 

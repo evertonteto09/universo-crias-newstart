@@ -106,6 +106,28 @@ async function renderStoryReviewForm(
     story,
     reviews,
 ) {
+    const hasPublishedEpisode = (story.seasons ?? []).some(
+        (season) =>
+            season.status === "published" &&
+            (season.chapters ?? []).some(
+                (chapter) => chapter.status === "published",
+            ),
+    );
+
+    if (!hasPublishedEpisode) {
+        return `
+            <article class="empty-card">
+                <span class="eyebrow">AVALIAÇÕES</span>
+                <h3>A obra já está publicada!</h3>
+                <p class="muted">
+                    As avaliações serão liberadas quando o escritor publicar
+                    o primeiro episódio. Por enquanto, você já pode conhecer
+                    a história e voltar mais tarde para acompanhar as novidades.
+                </p>
+            </article>
+        `;
+    }
+
     const summaryAverage =
         calculateAverage(reviews);
 
@@ -515,7 +537,7 @@ async function load() {
         });
 
         const cover =
-            storyCoverSource(
+            await storyCoverSource(
                 story,
                 getStoryCoverUrl,
             );
@@ -644,7 +666,7 @@ async function load() {
             <section class="story-hero">
                 <img
                     class="story-hero-cover"
-                    src="${cover}"
+                    src="${escapeHtml(cover)}"
                     alt="Capa de ${escapeHtml(story.title)}"
                 >
 
@@ -727,7 +749,12 @@ async function load() {
                     ${
                         seasons ||
                         `<article class="empty-card">
-                            Nenhum episódio publicado.
+                            <span class="eyebrow">EM BREVE</span>
+                            <h3>Esta história já está publicada!</h3>
+                            <p class="muted">
+                                O escritor ainda não disponibilizou temporadas ou episódios.
+                                Volte mais tarde para acompanhar a leitura.
+                            </p>
                         </article>`
                     }
                 </div>

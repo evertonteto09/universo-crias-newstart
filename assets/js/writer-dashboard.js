@@ -1,37 +1,37 @@
-import { setupTheme } from "../core/theme.js";
-import { openConfirmModal } from "../core/modal.js";
+import { setupTheme } from "./core/theme.js";
+import { openConfirmModal } from "./core/modal.js";
 import {
     escapeHtml,
     storyCoverSource,
     ratingStars,
     showMessage,
-} from "../core/utils.js";
+} from "./core/utils.js";
 
-import { signOut } from "../services/auth.service.js";
+import { signOut } from "./services/auth.service.js";
 import {
     getMyWriterAccount,
     getMyStories,
     createStory,
-} from "../services/writer.service.js";
+} from "./services/writer.service.js";
 
 import {
     getStoryReviewSummary,
     getWriterStoryById,
-} from "../services/story.service.js";
+} from "./services/story.service.js";
 
 import {
     getWriterReviews,
     deleteReview,
-} from "../services/review.service.js";
+} from "./services/review.service.js";
 
 import {
     getStoryCoverUrl,
     uploadStoryCover,
-} from "../services/storage.service.js";
+} from "./services/storage.service.js";
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js";
+} from "./services/crias-presence.service.js";
 
 setupTheme();
 
@@ -186,9 +186,9 @@ document.querySelector(
     }
 );
 
-function storyCard(story, summary) {
+async function storyCard(story, summary) {
     const cover =
-        storyCoverSource(
+        await storyCoverSource(
             story,
             getStoryCoverUrl
         );
@@ -200,7 +200,7 @@ function storyCard(story, summary) {
         >
             <img
                 class="story-cover"
-                src="${cover}"
+                src="${escapeHtml(cover)}"
                 alt=""
                 loading="lazy"
             >
@@ -453,7 +453,7 @@ async function loadStories() {
                             );
                         }
 
-                        return storyCard(
+                        return await storyCard(
                             story,
                             summary
                         );
