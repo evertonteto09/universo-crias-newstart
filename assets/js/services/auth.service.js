@@ -78,3 +78,42 @@ export async function getCurrentUserIdentities() {
     if (error) throw error;
     return data?.identities ?? [];
 }
+
+/**
+ * Desvincula uma identidade Discord que pertence ao usuário autenticado atual.
+ * Recebe apenas o ID da identidade (não aceita um objeto arbitrário do navegador),
+ * relê a lista no servidor e verifica que a identidade é do usuário atual.
+ */
+export async function unlinkDiscordIdentity(identityId) {
+    if (typeof identityId !== "string" || !identityId.trim()) {
+        throw new Error("Identidade inválida. Atualize a página e tente novamente.");
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    const user = userData?.user;
+    if (!user) {
+        throw new Error("Sua sessão expirou. Entre novamente antes de gerenciar as identidades.");
+    }
+
+    const { data: identitiesData, error: identitiesError } = await supabase.auth.getUserIdentities();
+    if (identitiesError) throw identitiesError;
+
+    const identities = identitiesData?.identities ?? [];
+    if (identities.length <= 1) {
+        const error = new Error("Esta conta precisa manter pelo menos uma identidade de login. Adicione outro método de acesso antes de desvincular o Discord.");
+        error.code = "single_identity_not_deletable";
+        throw error;
+    }
+
+    const identity = identities.find((item) => item.id === identityId);
+    if (!identity || identity.provider !== "discord" || identity.user_id !== user.id) {
+        const error = new Error("Essa identidade Discord não pertence à sessão atual. Atualize a página e tente novamente.");
+        error.code = "identity_not_found";
+        throw error;
+    }
+
+    const { data, error } = await supabase.auth.unlinkIdentity(identity);
+    if (error) throw error;
+    return data;
+}

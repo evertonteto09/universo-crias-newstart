@@ -2433,3 +2433,89 @@ textarea { resize: vertical; }
 .discord-link-feedback.error {
     border-color: rgba(255, 126, 126, .5);
 }
+
+/* Gerenciamento de identidades de autenticação na página Minha conta. */
+.account-identities-section {
+    margin-top: 34px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+.account-identities-section .account-settings-heading {
+    display: block;
+    margin: 0 0 16px;
+}
+.account-identities-section .account-settings-heading h2 {
+    margin: 5px 0;
+}
+.account-identities-list {
+    display: grid;
+    gap: 10px;
+}
+.account-identity-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--surface-2);
+}
+.account-identity-details {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.account-identity-details strong {
+    overflow-wrap: anywhere;
+}
+.account-identity-details small {
+    color: var(--muted);
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+.account-identity-actions {
+    flex: 0 0 auto;
+}
+.account-identity-unlink {
+    border-color: var(--border);
+}
+.account-identity-unlink:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+.account-identity-note {
+    margin: 12px 0 0;
+    line-height: 1.55;
+    font-size: .9rem;
+}
+@media (max-width: 560px) {
+    .account-identity-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .account-identity-actions, .account-identity-unlink {
+        width: 100%;
+    }
+}
+
+
+/* Avisos de prevenção de contas Discord órfãs durante o primeiro vínculo. */
+.account-linking-warning {
+    margin: 0.85rem 0 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
+    border-radius: 0.9rem;
+    background: var(--surface, rgba(255, 255, 255, 0.04));
+    color: var(--text-muted, inherit);
+    line-height: 1.55;
+    font-size: 0.94em;
+}
+.account-linking-warning strong {
+    color: var(--text, inherit);
+}
+
+/* Botões OAuth ficam realmente ocultos até que a lógica da página decida exibi-los. */
+#discord-login-button[hidden] { display: none !important; }
+#reader-discord-guard[hidden] { display: none !important; }

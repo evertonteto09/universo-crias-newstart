@@ -8,6 +8,7 @@ import {
 } from "../core/utils.js";
 
 import { signOut, linkDiscordIdentity, getCurrentUserIdentities, getCurrentUser } from "../services/auth.service.js";
+import { rememberWriterLoginState, readPendingDiscordLogin, clearPendingDiscordLogin, clearPendingDiscordLoginIfExpired, invalidateRememberedDiscordLink } from "../services/local-account-state.service.js?v=20261024-local-login-state-2";
 import {
     getMyWriterAccount,
     getMyStories,
@@ -438,6 +439,8 @@ async function refreshDiscordLinkStatus() {
     try {
         const identities = await getCurrentUserIdentities();
         const linked = identities.some((identity) => identity.provider === "discord");
+        const user = await getCurrentUser();
+        if (user) rememberWriterLoginState(user, { isWriter: true, identities });
         setDiscordButtonState(linked);
         return linked;
     } catch (error) {
@@ -678,10 +681,40 @@ form.addEventListener(
     }
 );
 
-async function init() {
-    const writer =
-        await getMyWriterAccount();
+async function validatePendingDiscordLogin() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("discord-login") !== "1") {
+        // Remove tentativas expiradas que tenham ficado no navegador.
+        clearPendingDiscordLoginIfExpired();
+        return true;
+    }
 
+    const pending = readPendingDiscordLogin();
+    clearPendingDiscordLogin();
+    const user = await getCurrentUser();
+
+    // O login por Discord só deve abrir o portal se retornar exatamente para a
+    // conta de escritor que foi verificada antes de iniciar o OAuth.
+    if (!pending || !user || user.id !== pending.authUserId) {
+        if (pending) invalidateRememberedDiscordLink(pending.email, pending.authUserId);
+        try { await signOut(); } catch (error) {
+            console.warn("[Writer Dashboard] Não foi possível encerrar a sessão Discord inesperada:", error);
+        }
+        location.replace("./login.html?error=discord-account-mismatch");
+        return false;
+    }
+
+    params.delete("discord-login");
+    const cleanUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
+    history.replaceState({}, "", cleanUrl);
+    return true;
+}
+
+async function init() {
+    // Valida a identidade retornada pelo OAuth antes de carregar dados do portal.
+    if (!(await validatePendingDiscordLogin())) return;
+
+    const writer = await getMyWriterAccount();
     if (!writer) {
         location.href = "./login.html?error=not-writer";
         return;

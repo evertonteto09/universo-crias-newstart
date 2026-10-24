@@ -25,8 +25,10 @@
                 </label>
 
                 <button class="primary-button" type="submit">Entrar com e-mail e senha</button>
-                <p class="muted">Se o Discord já estiver vinculado à sua conta de escritor, você também pode entrar por ele.</p>
-                <button id="discord-login-button" class="secondary-button" type="button">🎮 Entrar com Discord</button>
+                <p class="muted">O login pelo Discord só aparece quando este navegador já confirmou que ele está vinculado à conta de escritor informada.</p>
+                <p id="discord-login-hint" class="form-message" role="status" aria-live="polite">No primeiro acesso neste dispositivo, entre com e-mail e senha para verificar o vínculo.</p>
+                <p class="account-linking-warning" role="note">Para vincular pela primeira vez, entre com e-mail e senha e use <strong>Vincular Discord</strong> dentro do portal. Assim evitamos criar uma conta de leitor separada.</p>
+                <button id="discord-login-button" class="secondary-button" type="button" hidden>🎮 Entrar com Discord (já vinculado)</button>
                 <p id="login-message" class="form-message" role="alert" aria-live="polite"></p>
             </form>
 
@@ -36,6 +38,6 @@
         </section>
     </main>
 
-    <script type="module" src="../assets/js/pages/writer-login.js"></script>
+    <script type="module" src="../assets/js/pages/writer-login.js?v=20261024-local-login-state-2"></script>
 </body>
 </html>
