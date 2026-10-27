@@ -14,7 +14,7 @@ export async function getPublishedStories() {
             cover_type,
             cover_url,
             cover_path,
-            writers (
+            writers!stories_writer_id_fkey (
                 id,
                 name,
                 username
@@ -76,7 +76,7 @@ export async function getPublishedStoryBySlug(slug) {
             cover_type,
             cover_url,
             cover_path,
-            writers (
+            writers!stories_writer_id_fkey (
                 id,
                 name,
                 username

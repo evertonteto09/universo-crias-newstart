@@ -9,7 +9,7 @@ import {
 
 import {
     getPublishedStoryBySlug,
-} from "../services/story.service.js";
+} from "../services/story.service.js?v=20261027-pgrst201-github-fix";
 
 import {
     getStoryCoverUrl,

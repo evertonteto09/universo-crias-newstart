@@ -5,7 +5,7 @@ import {
     ratingStars,
     storyCoverSource,
 } from "../core/utils.js";
-import { getPublishedStories } from "../services/story.service.js";
+import { getPublishedStories } from "../services/story.service.js?v=20261027-pgrst201-github-fix";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
 import { initCriasPresence } from "../services/crias-presence.service.js";
