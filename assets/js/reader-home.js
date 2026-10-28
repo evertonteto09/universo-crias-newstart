@@ -1,5 +1,5 @@
 import { supabase } from "./supabase-client.js";
-import { setupTheme, coverForStory, escapeHtml, ratingStars } from "./ui.js";
+import { setupTheme, coverForStory, escapeHtml, ratingStars } from "./ui.js?v=20261027-custom-background-crop-1";
 
 window.__supabase = supabase;
 setupTheme();

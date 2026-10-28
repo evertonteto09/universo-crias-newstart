@@ -1,3 +1,5 @@
+import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-genres-1";
+
 import { supabase } from "../core/supabase.js";
 
 export async function getPublishedStories() {
@@ -9,6 +11,7 @@ export async function getPublishedStories() {
             title,
             slug,
             description,
+            genres,
             status,
             published_at,
             cover_type,
@@ -18,6 +21,14 @@ export async function getPublishedStories() {
                 id,
                 name,
                 username
+            ),
+            story_collaborators (
+                writer_id,
+                writers!story_collaborators_writer_id_fkey (
+                    id,
+                    name,
+                    username
+                )
             ),
             seasons (
                 id,
@@ -81,6 +92,14 @@ export async function getPublishedStoryBySlug(slug) {
                 name,
                 username
             ),
+            story_collaborators (
+                writer_id,
+                writers!story_collaborators_writer_id_fkey (
+                    id,
+                    name,
+                    username
+                )
+            ),
             seasons (
                 id,
                 number,
@@ -134,6 +153,7 @@ export async function getWriterStoryById(storyId) {
             title,
             slug,
             description,
+            genres,
             cover_type,
             cover_url,
             cover_path,
@@ -141,6 +161,21 @@ export async function getWriterStoryById(storyId) {
             published_at,
             created_at,
             updated_at,
+            writers!stories_writer_id_fkey (
+                id,
+                name,
+                username
+            ),
+            story_collaborators (
+                story_id,
+                writer_id,
+                created_at,
+                writers!story_collaborators_writer_id_fkey (
+                    id,
+                    name,
+                    username
+                )
+            ),
             seasons (
                 id,
                 story_id,
@@ -154,6 +189,7 @@ export async function getWriterStoryById(storyId) {
                     number,
                     title,
                     status,
+                    scheduled_publish_at,
                     content_format
                 )
             )
@@ -188,6 +224,7 @@ export async function updateStory(
         coverType,
         coverUrl,
         coverPath,
+        genres,
     },
 ) {
     const cleanTitle =
@@ -214,6 +251,11 @@ export async function updateStory(
                 ? String(coverPath ?? "").trim() || null
                 : null,
     };
+
+    // Permite que chamadas futuras que não conheçam gêneros não apaguem o campo.
+    if (genres !== undefined) {
+        payload.genres = normalizeStoryGenres(genres);
+    }
 
     const { data, error } = await supabase
         .from("stories")

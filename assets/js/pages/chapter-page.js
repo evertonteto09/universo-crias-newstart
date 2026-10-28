@@ -1,8 +1,8 @@
-import { setupTheme } from "../core/theme.js";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-3";
 import {
     setupProfanityFilter,
     filterProfanity,
-} from "../core/profanity-filter.js";
+} from "../core/profanity-filter.js?v=20261028-crias-presence-images-3";
 
 import {
     escapeHtml,
@@ -13,11 +13,11 @@ import {
 import {
     renderDynamicContent,
     bindDynamicText,
-} from "../core/dynamic-text.js";
+} from "../core/dynamic-text.js?v=20261028-spoiler-news-images-1";
 
 import {
     getPublishedChapter,
-} from "../services/chapter.service.js";
+} from "../services/chapter.service.js?v=20261028-crias-presence-images-3";
 
 import {
     getPublishedChapterReviews,
@@ -34,7 +34,13 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js";
+} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-3";
+
+import {
+    CRIAS_PRESENCE_LOGO_URL,
+    getPresenceStoryCoverUrl,
+    getPresenceChapterImageUrl,
+} from "../services/crias-presence-images.service.js?v=20261028-crias-presence-images-3";
 
 import {
     setupReadingBookmarkUI,
@@ -74,6 +80,7 @@ async function renderContent(content) {
     return renderDynamicContent(
         filterProfanity(source),
         source,
+        { episodeCover: true },
     );
 }
 
@@ -632,9 +639,22 @@ async function load() {
                 ? "Piloto"
                 : `Episódio ${currentChapter.number}`;
         
+        const [storyCoverUrl, episodeImageUrl] = await Promise.all([
+            getPresenceStoryCoverUrl(currentStory),
+            getPresenceChapterImageUrl(currentChapter.content, currentChapter),
+        ]);
+        const primaryImageUrl = episodeImageUrl || storyCoverUrl || CRIAS_PRESENCE_LOGO_URL;
+        const primaryImageText = episodeImageUrl
+            ? (currentChapter.title || episodeLabel)
+            : (currentStory.title || "Universo dos Crias");
+
         criasPresence.update({
             details: `Lendo: ${currentStory.title || "uma história"}`,
             state: `${episodeLabel}: ${currentChapter.title || "Sem título"}`,
+            largeImageUrl: primaryImageUrl,
+            largeImageText: primaryImageText,
+            smallImageUrl: episodeImageUrl ? (storyCoverUrl || CRIAS_PRESENCE_LOGO_URL) : CRIAS_PRESENCE_LOGO_URL,
+            smallImageText: episodeImageUrl ? (currentStory.title || "Universo dos Crias") : "Universo dos Crias",
         });
 
         publishedChapters =

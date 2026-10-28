@@ -1,19 +1,25 @@
-import { setupTheme } from "../core/theme.js";
-import { setupProfanityFilter } from "../core/profanity-filter.js";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
+import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261028-spoiler-news-images-1";
+import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261028-spoiler-news-images-1";
 import {
     escapeHtml,
     ratingStars,
     storyCoverSource,
     showMessage,
 } from "../core/utils.js";
+import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-genres-1";
 
 import {
     getPublishedStoryBySlug,
-} from "../services/story.service.js?v=20261027-pgrst201-github-fix";
+} from "../services/story.service.js?v=20261028-story-genres-1";
+import {
+    getStoryAuthors,
+    renderStoryAuthorNames,
+} from "../core/story-authors.js?v=20261027-coauthor-2";
 
 import {
     getStoryCoverUrl,
-} from "../services/storage.service.js";
+} from "../services/storage.service.js?v=20261028-spoiler-news-images-1";
 
 import {
     getCurrentUser,
@@ -35,7 +41,12 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js";
+} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
+
+import {
+    CRIAS_PRESENCE_LOGO_URL,
+    getPresenceStoryCoverUrl,
+} from "../services/crias-presence-images.service.js?v=20261028-crias-presence-images-2";
 
 import {
     getReadingBookmark,
@@ -56,6 +67,53 @@ const page =
 const slug =
     new URLSearchParams(location.search)
         .get("slug");
+
+let storyPresenceData = null;
+const STORY_SECTION_BUTTONS = Object.freeze({
+    chapters: "Ver episódios",
+    news: "Ler notícias",
+    reviews: "Ver avaliações",
+});
+
+function normalizeStorySection(value) {
+    return ["chapters", "news", "reviews"].includes(value) ? value : "chapters";
+}
+
+function updateStorySectionPresence(section) {
+    if (!storyPresenceData) return;
+    const targetSection = normalizeStorySection(section);
+    const pageUrl = new URL(window.location.href);
+    if (targetSection === "chapters") pageUrl.searchParams.delete("tab");
+    else pageUrl.searchParams.set("tab", targetSection);
+    window.history.replaceState(window.history.state, "", pageUrl);
+
+    criasPresence.update({
+        details: "Lendo uma história",
+        state: storyPresenceData.story.title || "Universo dos Crias",
+        storyTitle: storyPresenceData.story.title || "",
+        pageContext: "story",
+        storySection: targetSection,
+        currentPageUrl: pageUrl.href,
+        currentPageButtonLabel: STORY_SECTION_BUTTONS[targetSection],
+        largeImageUrl: storyPresenceData.coverUrl || CRIAS_PRESENCE_LOGO_URL,
+        largeImageText: storyPresenceData.story.title || "Universo dos Crias",
+        smallImageUrl: CRIAS_PRESENCE_LOGO_URL,
+        smallImageText: "Universo dos Crias",
+    });
+}
+
+function renderStoryGenres(genres) {
+    const normalized = normalizeStoryGenres(genres);
+    if (!normalized.length) return "";
+    return `
+        <section class="story-genres-public" aria-label="Gêneros da história">
+            <span class="story-genres-public-label">Gêneros</span>
+            <div class="story-genre-tags">
+                ${normalized.map((genre) => `<span class="story-genre-tag">${escapeHtml(genre)}</span>`).join("")}
+            </div>
+        </section>
+    `;
+}
 
 function notFound() {
     page.innerHTML = `
@@ -144,12 +202,15 @@ async function renderStoryReviewForm(
             const writer =
                 await getMyWriterAccount();
 
-            isOwnStory =
-                Boolean(
-                    writer &&
-                    writer.writer_id ===
-                        story.writer_id
-                );
+            const writerId = Number(writer?.writer_id);
+            isOwnStory = Boolean(
+                writerId && (
+                    writerId === Number(story.writer_id) ||
+                    getStoryAuthors(story).some(
+                        (author) => Number(author.id) === writerId
+                    )
+                )
+            );
         }
     } catch (error) {
         // Leitor anônimo não precisa de conta.
@@ -321,77 +382,51 @@ function formatNewsDate(value) {
     ).format(date);
 }
 
-function renderNews(news) {
+async function renderNews(news) {
+    const safeContent = await renderDynamicContent(
+        filterProfanity(String(news.content ?? "")),
+        String(news.content ?? ""),
+    );
+
     return `
         <article class="news-card">
             <div class="news-card-meta">
-                <span class="eyebrow">
-                    NOTÍCIA DA OBRA
-                </span>
-
+                <span class="eyebrow">NOTÍCIA DA OBRA</span>
                 <time datetime="${escapeHtml(news.created_at || "")}">
-                    ${escapeHtml(
-                        formatNewsDate(news.created_at)
-                    )}
+                    ${escapeHtml(formatNewsDate(news.created_at))}
                 </time>
             </div>
-
-            <h3>
-                ${escapeHtml(news.title)}
-            </h3>
-
-            <div class="news-card-content">${escapeHtml(
-                String(news.content ?? "").trim()
-            )}</div>
+            <h3>${escapeHtml(news.title)}</h3>
+            <div class="news-card-content dynamic-content-root">${safeContent}</div>
         </article>
     `;
 }
 
-function renderNewsPanel(news) {
-    const content =
-        news.length
-            ? `
-                <div class="news-list">
-                    ${news.map(renderNews).join("")}
-                </div>
-              `
-            : `
-                <article class="empty-card">
-                    <span class="eyebrow">
-                        NOTÍCIAS
-                    </span>
-
-                    <h3>
-                        Nenhuma novidade publicada ainda.
-                    </h3>
-
-                    <p class="muted">
-                        Quando o escritor publicar uma novidade
-                        sobre esta obra, ela aparecerá aqui.
-                    </p>
-                </article>
-              `;
+async function renderNewsPanel(news) {
+    const renderedNews = news.length
+        ? (await Promise.all(news.map(renderNews))).join("")
+        : `
+            <article class="empty-card">
+                <span class="eyebrow">NOTÍCIAS</span>
+                <h3>Nenhuma novidade publicada ainda.</h3>
+                <p class="muted">
+                    Quando o escritor publicar uma novidade sobre esta obra, ela aparecerá aqui.
+                </p>
+            </article>
+        `;
 
     return `
         <section class="story-tab-panel" data-story-tab-panel="news" hidden>
             <div class="section-heading">
                 <div>
-                    <span class="eyebrow">
-                        NOVIDADES
-                    </span>
-
-                    <h2>
-                        Notícias da história
-                    </h2>
+                    <span class="eyebrow">NOVIDADES</span>
+                    <h2>Notícias da história</h2>
                 </div>
-
                 <span class="muted">
-                    ${news.length}
-                    ${news.length === 1 ? "publicação" : "publicações"}
+                    ${news.length} ${news.length === 1 ? "publicação" : "publicações"}
                 </span>
             </div>
-
-            ${content}
+            ${news.length ? `<div class="news-list">${renderedNews}</div>` : renderedNews}
         </section>
     `;
 }
@@ -412,6 +447,7 @@ function setupStoryTabs() {
     }
 
     const activate = (target) => {
+        target = normalizeStorySection(target);
         for (const tab of tabs) {
             const active =
                 tab.dataset.storyTab === target;
@@ -431,6 +467,7 @@ function setupStoryTabs() {
             panel.hidden =
                 panel.dataset.storyTabPanel !== target;
         }
+        updateStorySectionPresence(target);
     };
 
     for (const tab of tabs) {
@@ -444,7 +481,8 @@ function setupStoryTabs() {
         );
     }
 
-    activate("chapters");
+    const initialTab = normalizeStorySection(new URLSearchParams(location.search).get("tab"));
+    activate(initialTab);
 }
 
 function renderReadingBookmarkResume(story) {
@@ -531,16 +569,14 @@ async function load() {
                 slug,
             );
 
-        criasPresence.update({
-            details: "Lendo uma história",
-            state: story.title || "Universo dos Crias",
-        });
-
         const cover =
             await storyCoverSource(
                 story,
                 getStoryCoverUrl,
             );
+        const presenceCover = await getPresenceStoryCoverUrl(story);
+        storyPresenceData = { story, coverUrl: presenceCover };
+        updateStorySectionPresence(normalizeStorySection(new URLSearchParams(location.search).get("tab")));
 
         let chapterRatingSummaries = {};
         const publishedChapterIds = (story.seasons ?? [])
@@ -684,6 +720,13 @@ async function load() {
                         )}
                     </p>
 
+                    ${renderStoryGenres(story.genres)}
+
+                    <p class="story-author-credits">
+                        <strong>${getStoryAuthors(story).length > 1 ? "Autores:" : "Autor:"}</strong>
+                        ${renderStoryAuthorNames(story)}
+                    </p>
+
                     <div
                         id="story-rating-summary"
                         class="rating-summary"
@@ -760,7 +803,7 @@ async function load() {
                 </div>
             </section>
 
-            ${renderNewsPanel(news)}
+            ${await renderNewsPanel(news)}
 
             <section
                 class="review-section story-tab-panel"
@@ -784,6 +827,7 @@ async function load() {
         `;
 
         setupStoryTabs();
+        bindDynamicText(page);
         renderReadingBookmarkResume(story);
 
         const reviewsRoot =

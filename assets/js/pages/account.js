@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-final-1";
 import { getCurrentUser, signInWithDiscord, signOut, getCurrentUserIdentities, unlinkDiscordIdentity } from "../services/auth.service.js?v=20261024-identity-management";
 import { getMyWriterAccount } from "../services/writer.service.js";
 import { getLastWriterLoginEmail, getRememberedAccountState, rememberWriterLoginState } from "../services/local-account-state.service.js?v=20261024-local-login-state-2";
@@ -7,9 +7,21 @@ import {
     saveUserPreferencePatch,
     syncUserPreferences,
     preferenceDefaults,
-} from "../services/user-preferences.service.js";
+} from "../services/user-preferences.service.js?v=20261028-crias-presence-final-1";
+import { getCachedCustomThemeSettings, normalizeCustomThemeSettings } from "../services/custom-theme.service.js?v=20261028-theme-label-link-colors-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261028-crias-presence-final-1";
+import { deleteReaderAccount } from "../services/account-deletion.service.js?v=20261028-reader-data-deletion-1";
 
 setupTheme();
+
+// Minha Conta não é uma página de leitura: atualiza a atividade para remover
+// o botão contextual de história/episódio que possa ter ficado da navegação anterior.
+initCriasPresence({
+    details: "No Universo dos Crias",
+    state: "Minha conta",
+    pageContext: "other",
+});
+document.getElementById("crias-presence-control")?.setAttribute("hidden", "");
 
 const loginSection = document.querySelector("#account-login");
 const profileSection = document.querySelector("#account-profile");
@@ -18,14 +30,21 @@ const readerDiscordGuard = document.querySelector("#reader-discord-guard");
 const readerDiscordOverride = document.querySelector("#reader-discord-override");
 const loginMessage = document.querySelector("#account-login-message");
 const displayName = document.querySelector("#account-display-name");
+const discordAvatar = document.querySelector("#account-discord-avatar");
 const emailLabel = document.querySelector("#account-email");
 const roleLabel = document.querySelector("#account-role");
 const roleActions = document.querySelector("#account-role-actions");
 const prefsMessage = document.querySelector("#account-preferences-message");
 const logoutButton = document.querySelector("#account-logout-button");
+const deleteAccountSection = document.querySelector("#account-delete-section");
+const deleteAccountButton = document.querySelector("#account-delete-button");
+const deleteAccountMessage = document.querySelector("#account-delete-message");
 const identitiesList = document.querySelector("#account-identities-list");
 const identitiesMessage = document.querySelector("#account-identities-message");
 let identityMutationInProgress = false;
+let currentAccountIsVerifiedReader = false;
+let accountRoleWasVerified = false;
+let currentCustomThemeSettings = getCachedCustomThemeSettings();
 
 const controls = {
     theme: document.querySelector("#account-theme"),
@@ -34,6 +53,9 @@ const controls = {
     presence_show_story_title: document.querySelector("#account-show-story-title"),
     presence_show_episode_details: document.querySelector("#account-show-episode-details"),
     presence_show_writer_activity: document.querySelector("#account-show-writer-activity"),
+    presence_show_images: document.querySelector("#account-show-images"),
+    presence_show_story_section: document.querySelector("#account-show-story-section"),
+    presence_show_current_page_button: document.querySelector("#account-show-current-page-button"),
 };
 
 function setMessage(element, message, kind = "") {
@@ -80,22 +102,30 @@ function displayNameFor(user) {
 }
 
 function fillControls(preferences) {
+    currentCustomThemeSettings = normalizeCustomThemeSettings(preferences);
     controls.theme.value = preferences.theme;
     controls.profanity_filter_enabled.checked = preferences.profanity_filter_enabled;
     controls.presence_enabled.checked = preferences.presence_enabled;
     controls.presence_show_story_title.checked = preferences.presence_show_story_title;
     controls.presence_show_episode_details.checked = preferences.presence_show_episode_details;
     controls.presence_show_writer_activity.checked = preferences.presence_show_writer_activity;
+    controls.presence_show_images.checked = preferences.presence_show_images;
+    controls.presence_show_story_section.checked = preferences.presence_show_story_section;
+    controls.presence_show_current_page_button.checked = preferences.presence_show_current_page_button;
 }
 
 function preferencesFromControls() {
     return {
+        ...currentCustomThemeSettings,
         theme: controls.theme.value,
         profanity_filter_enabled: controls.profanity_filter_enabled.checked,
         presence_enabled: controls.presence_enabled.checked,
         presence_show_story_title: controls.presence_show_story_title.checked,
         presence_show_episode_details: controls.presence_show_episode_details.checked,
         presence_show_writer_activity: controls.presence_show_writer_activity.checked,
+        presence_show_images: controls.presence_show_images.checked,
+        presence_show_story_section: controls.presence_show_story_section.checked,
+        presence_show_current_page_button: controls.presence_show_current_page_button.checked,
     };
 }
 
@@ -126,6 +156,95 @@ function identitySecondaryLabel(identity) {
     if (email) return email;
     if (identity?.provider === "discord") return "Identidade Discord vinculada à conta";
     return `Método de acesso: ${identityProviderLabels[identity?.provider] || identity?.provider || "desconhecido"}`;
+}
+
+function safeDiscordAvatarUrl(value) {
+    if (typeof value !== "string" || !value.trim()) return "";
+    try {
+        const url = new URL(value, window.location.href);
+        const hostname = url.hostname.toLowerCase();
+        const trustedHost = hostname === "discordapp.com"
+            || hostname.endsWith(".discordapp.com")
+            || hostname === "discordapp.net"
+            || hostname.endsWith(".discordapp.net");
+        if (url.protocol !== "https:" || !trustedHost) return "";
+        return url.href;
+    } catch {
+        return "";
+    }
+}
+
+function discordDefaultAvatarUrl(discordUserId) {
+    const id = String(discordUserId || "").trim();
+    if (!/^\d{5,25}$/.test(id)) return "";
+    try {
+        // Discord snowflake: índice do avatar padrão = (id >> 22) % 6.
+        const index = Number((BigInt(id) >> 22n) % 6n);
+        return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+    } catch {
+        return "";
+    }
+}
+
+function resolveDiscordAvatar(identity) {
+    if (!identity || identity.provider !== "discord") return { url: "", fallbackUrl: "" };
+
+    const data = identity.identity_data || {};
+    const discordUserId = String(
+        identity.provider_id || data.provider_id || data.sub || data.id || ""
+    ).trim();
+
+    const candidateUrls = [data.avatar_url, data.picture, data.avatarURL, data.image_url];
+    let url = candidateUrls.map(safeDiscordAvatarUrl).find(Boolean) || "";
+
+    if (!url && discordUserId && typeof data.avatar === "string" && /^[a-zA-Z0-9_]+$/.test(data.avatar)) {
+        const extension = data.avatar.startsWith("a_") ? "gif" : "webp";
+        url = `https://cdn.discordapp.com/avatars/${encodeURIComponent(discordUserId)}/${encodeURIComponent(data.avatar)}.${extension}?size=128`;
+    }
+
+    const fallbackUrl = discordDefaultAvatarUrl(discordUserId);
+    return { url: url || fallbackUrl, fallbackUrl };
+}
+
+function renderDiscordAvatar(user, identities) {
+    if (!discordAvatar) return;
+    const discordIdentity = Array.isArray(identities)
+        ? identities.find((identity) => identity?.provider === "discord")
+        : null;
+
+    if (!user || !discordIdentity) {
+        discordAvatar.hidden = true;
+        discordAvatar.removeAttribute("src");
+        discordAvatar.removeAttribute("data-fallback-url");
+        discordAvatar.removeAttribute("data-fallback-attempted");
+        discordAvatar.alt = "";
+        return;
+    }
+
+    const { url, fallbackUrl } = resolveDiscordAvatar(discordIdentity);
+    if (!url) {
+        discordAvatar.hidden = true;
+        discordAvatar.removeAttribute("src");
+        return;
+    }
+
+    const discordName = identityDisplayName(discordIdentity);
+    discordAvatar.alt = `Avatar do Discord de ${discordName}`;
+    discordAvatar.title = `Avatar do Discord de ${discordName}`;
+    discordAvatar.dataset.fallbackUrl = fallbackUrl;
+    discordAvatar.dataset.fallbackAttempted = "false";
+    discordAvatar.onerror = () => {
+        const fallback = discordAvatar.dataset.fallbackUrl || "";
+        const current = discordAvatar.src;
+        if (fallback && discordAvatar.dataset.fallbackAttempted !== "true" && current !== new URL(fallback, window.location.href).href) {
+            discordAvatar.dataset.fallbackAttempted = "true";
+            discordAvatar.src = fallback;
+            return;
+        }
+        discordAvatar.hidden = true;
+    };
+    discordAvatar.hidden = false;
+    discordAvatar.src = url;
 }
 
 function identityErrorMessage(error) {
@@ -283,8 +402,22 @@ async function handleUnlinkIdentity(identity, button) {
         } catch (stateError) {
             console.warn("[Account] Não foi possível atualizar o estado local do login:", stateError);
         }
-        // A lista é refeita a partir do Supabase depois da operação, seja sucesso ou erro.
-        await renderIdentities({ preserveMessage: true });
+        // A lista e o avatar são refeitos a partir do Supabase depois da operação,
+        // seja sucesso ou erro, para não manter um avatar de identidade já removida.
+        const refreshedIdentities = await renderIdentities({ preserveMessage: true });
+        try {
+            const refreshedUser = await getCurrentUser();
+            const refreshedDiscordIdentity = Array.isArray(refreshedIdentities)
+                ? refreshedIdentities.find((item) => item?.provider === "discord")
+                : null;
+            renderDiscordAvatar(refreshedUser, refreshedIdentities);
+            displayName.textContent = refreshedDiscordIdentity
+                ? identityDisplayName(refreshedDiscordIdentity)
+                : displayNameFor(refreshedUser);
+        } catch (refreshError) {
+            console.warn("[Account] Não foi possível atualizar avatar Discord:", refreshError);
+            renderDiscordAvatar(null, []);
+        }
     }
 }
 
@@ -298,7 +431,15 @@ async function updatePreference(key, value) {
         await saveUserPreferencePatch({ [key]: value });
         setMessage(prefsMessage, "Preferência salva na sua conta.", "success");
     } catch (error) {
-        console.error("[Account] Falha ao salvar preferência:", error);
+        // Mostra os campos úteis do erro PostgREST (por exemplo, violação de CHECK)
+        // sem imprimir tokens de sessão ou outros dados de autenticação.
+        console.error("[Account] Falha ao salvar preferência:", {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint,
+            status: error?.status,
+        });
         setMessage(prefsMessage, "Não foi possível sincronizar agora. A preferência continua aplicada neste navegador.", "error");
     }
 }
@@ -324,15 +465,36 @@ async function renderAccount() {
     emailLabel.textContent = user.email || "Conta do Discord conectada";
 
     let isWriter = false;
+    accountRoleWasVerified = false;
+    currentAccountIsVerifiedReader = false;
     try {
         isWriter = Boolean(await getMyWriterAccount());
+        accountRoleWasVerified = true;
     } catch (error) {
+        // Falha na verificação nunca libera a opção destrutiva por padrão.
         console.warn("[Account] Não foi possível consultar a conta de escritor:", error);
     }
 
-    roleLabel.textContent = isWriter ? "Escritor" : "Leitor";
-    visible(roleActions, isWriter);
+    if (accountRoleWasVerified) {
+        roleLabel.textContent = isWriter ? "Escritor" : "Leitor";
+        visible(roleActions, isWriter);
+        currentAccountIsVerifiedReader = !isWriter;
+        visible(deleteAccountSection, currentAccountIsVerifiedReader);
+        if (currentAccountIsVerifiedReader) setMessage(deleteAccountMessage, "Você pode solicitar a exclusão da sua conta de leitor e das preferências associadas.");
+    } else {
+        roleLabel.textContent = "Papel não verificado";
+        visible(roleActions, false);
+        visible(deleteAccountSection, false);
+        setMessage(deleteAccountMessage, "Não foi possível confirmar o tipo da conta. A exclusão fica indisponível até a verificação funcionar.", "error");
+    }
     const identities = await renderIdentities();
+    const discordIdentity = Array.isArray(identities)
+        ? identities.find((identity) => identity?.provider === "discord")
+        : null;
+    renderDiscordAvatar(user, identities);
+    // Se o Discord estiver vinculado, exibimos o nome correspondente ao avatar.
+    // Caso contrário, preservamos o nome já disponível na conta do Supabase.
+    displayName.textContent = discordIdentity ? identityDisplayName(discordIdentity) : displayNameFor(user);
     if (isWriter && identities) {
         rememberWriterLoginState(user, { isWriter: true, identities });
     }
@@ -385,10 +547,43 @@ logoutButton.addEventListener("click", async () => {
     }
 });
 
+
+deleteAccountButton?.addEventListener("click", async () => {
+    if (!accountRoleWasVerified || !currentAccountIsVerifiedReader || deleteAccountButton.disabled) return;
+
+    const confirmed = window.confirm(
+        "Apagar permanentemente sua conta de leitor e suas preferências salvas? Esta ação não pode ser desfeita. Contas de escritor não são apagadas por esta opção."
+    );
+    if (!confirmed) return;
+
+    const typedConfirmation = window.prompt('Para confirmar a exclusão permanente, digite APAGAR:');
+    if (typedConfirmation?.trim() !== "APAGAR") {
+        setMessage(deleteAccountMessage, "Confirmação não concluída. Nenhum dado foi apagado.");
+        return;
+    }
+
+    deleteAccountButton.disabled = true;
+    logoutButton.disabled = true;
+    setMessage(deleteAccountMessage, "Apagando a conta e as preferências…");
+
+    try {
+        await deleteReaderAccount();
+        window.location.replace("./conta.html?account_deleted=1");
+    } catch (error) {
+        console.error("[Account] Falha ao apagar a conta de leitor:", error?.message || error);
+        setMessage(deleteAccountMessage, error?.message || "Não foi possível apagar os dados. Tente novamente.", "error");
+        deleteAccountButton.disabled = false;
+        logoutButton.disabled = false;
+    }
+});
+
 configureReaderDiscordEntry();
 await renderAccount();
 
 const params = new URLSearchParams(location.search);
 if (params.has("error_description")) {
     setMessage(loginMessage, "O Discord não concluiu a autorização. Tente novamente.", "error");
+}
+if (params.get("account_deleted") === "1") {
+    setMessage(loginMessage, "Sua conta de leitor e as preferências associadas foram apagadas.", "success");
 }

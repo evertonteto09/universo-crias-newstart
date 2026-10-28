@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Gerencie sua conta e suas preferências no Histórias dos Crias.">
     <title>Minha conta | Histórias dos Crias</title>
-    <link rel="stylesheet" href="./assets/css/style.css">
+    <link rel="stylesheet" href="./assets/css/style.css?v=20261028-reader-data-deletion-1">
 </head>
 <body>
     <header class="site-header">
@@ -47,10 +47,21 @@
 
         <section id="account-profile" class="account-card" hidden>
             <div class="account-profile-heading">
-                <div>
-                    <span class="eyebrow">SESSÃO ATIVA</span>
-                    <h2 id="account-display-name">Conta conectada</h2>
-                    <p id="account-email" class="muted"></p>
+                <div class="account-profile-identity">
+                    <img
+                        id="account-discord-avatar"
+                        class="account-discord-avatar"
+                        alt="Avatar do Discord"
+                        title="Avatar da conta Discord vinculada"
+                        referrerpolicy="no-referrer"
+                        decoding="async"
+                        hidden
+                    >
+                    <div class="account-profile-copy">
+                        <span class="eyebrow">SESSÃO ATIVA</span>
+                        <h2 id="account-display-name">Conta conectada</h2>
+                        <p id="account-email" class="muted"></p>
+                    </div>
                 </div>
                 <span id="account-role" class="account-role">Leitor</span>
             </div>
@@ -90,6 +101,8 @@
                         <option value="vermelho">Vermelho</option>
                         <option value="amarelo">Amarelo</option>
                         <option value="roxo">Roxo</option>
+                        <option value="ciano">Preto-ciano</option>
+                        <option value="personalizado">Personalizado (gradiente)</option>
                     </select>
                 </label>
 
@@ -117,7 +130,34 @@
                     <span><strong>Mostrar atividade de escritor</strong><small>Permite mostrar quando você está escrevendo ou gerenciando obras.</small></span>
                     <input id="account-show-writer-activity" type="checkbox">
                 </label>
+
+                <label class="account-setting-row" for="account-show-images">
+                    <span><strong>Mostrar imagens da atividade</strong><small>Compartilha capas de histórias e episódios no Discord. Desativado por padrão.</small></span>
+                    <input id="account-show-images" type="checkbox">
+                </label>
+
+                <label class="account-setting-row" for="account-show-story-section">
+                    <span><strong>Mostrar seção atual da história</strong><small>Na página de uma obra, mostra se você está vendo episódios, notícias ou avaliações. Desative para exibir apenas “Lendo uma história”.</small></span>
+                    <input id="account-show-story-section" type="checkbox">
+                </label>
+
+                <label class="account-setting-row" for="account-show-current-page-button">
+                    <span><strong>Mostrar botão da página atual</strong><small>Permite que outras pessoas abram a página de leitura atual pelo Rich Presence. Não aparece no Portal do Escritor.</small></span>
+                    <input id="account-show-current-page-button" type="checkbox">
+                </label>
             </div>
+
+
+            <section id="account-delete-section" class="account-danger-zone" aria-labelledby="account-delete-title" hidden>
+                <div class="account-danger-copy">
+                    <span class="eyebrow">ZONA DE PERIGO</span>
+                    <h2 id="account-delete-title">Apagar meus dados</h2>
+                    <p>Exclui permanentemente sua conta de leitor, as preferências salvas na sua conta e a imagem de fundo enviada para o tema personalizado. Esta ação não pode ser desfeita. A opção não está disponível para contas de escritor.</p>
+                    <p class="muted">As preferências locais deste navegador também serão redefinidas.</p>
+                </div>
+                <button id="account-delete-button" class="danger-button" type="button">Apagar meus dados</button>
+                <p id="account-delete-message" class="form-message" role="status" aria-live="polite"></p>
+            </section>
 
             <p id="account-preferences-message" class="form-message" role="status" aria-live="polite"></p>
             <div class="account-footer-actions">
@@ -128,6 +168,6 @@
         <p class="muted account-back-link"><a class="text-link" href="./index.html">← Voltar para as histórias</a></p>
     </main>
 
-    <script type="module" src="./assets/js/pages/account.js?v=20261024-local-login-state-2"></script>
+    <script type="module" src="./assets/js/pages/account.js?v=20261028-reader-data-deletion-1"></script>
 </body>
 </html>

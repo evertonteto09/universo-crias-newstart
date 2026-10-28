@@ -6,8 +6,8 @@
     <meta name="description" content="Baixe e configure o Crias Presence para mostrar sua leitura do Universo dos Crias no Discord.">
     <meta name="theme-color" content="#181a21">
     <title>Crias Presence — Instalação e download | Histórias dos Crias</title>
-    <link rel="stylesheet" href="./assets/css/style.css">
-    <link rel="stylesheet" href="./assets/css/crias-presence-download.css">
+    <link rel="stylesheet" href="./assets/css/style.css?v=20261028-theme-label-credit-underline-2">
+    <link rel="stylesheet" href="./assets/css/crias-presence-download.css?v=20261028-final-download-dual-version-1">
 </head>
 <body>
     <header class="site-header">
@@ -23,16 +23,16 @@
     <main class="page-shell fade-in presence-download-page">
         <section class="presence-download-hero">
             <div class="presence-download-intro">
-                <span class="eyebrow">CRIAS PRESENCE · BETA</span>
+                <span class="eyebrow">CRIAS PRESENCE · VERSÃO ATUAL</span>
                 <h1>Sua leitura também pode aparecer no Discord.</h1>
                 <p>
                     O Crias Presence conecta o Universo dos Crias ao Discord instalado no seu computador
                     e atualiza sua atividade enquanto você navega pelas histórias e episódios.
                 </p>
                 <div class="presence-badges" aria-label="Informações do aplicativo">
-                    <span>Versão 1.1.4</span>
+                    <span>Versão 1.3.0</span>
                     <span>Windows x64</span>
-                    <span>Versão beta</span>
+                    <span>Imagens e botões dinâmicos</span>
                 </div>
             </div>
 
@@ -45,16 +45,27 @@
                     desta página para vincular o navegador usando um código temporário.
                 </p>
                 <a
-                    class="presence-download-button"
-                    href="https://github.com/evertonteto09/universo-crias-newstart/releases/download/v1.1.4/Crias-Presence-Setup-1.1.4-x64.exe"
+                    class="presence-download-button presence-download-button--latest"
+                    href="https://github.com/evertonteto09/universo-crias-newstart/releases/download/v1.3.0/Crias-Presence-Setup-1.3.0-x64.exe"
                     target="_blank"
                     rel="noopener noreferrer"
                     id="presence-download-installer"
                 >
                     <span aria-hidden="true">⬇</span>
-                    Baixar instalador para Windows
+                    Baixar versão mais recente · 1.3.0
                 </a>
-                <p class="presence-download-meta">Versão 1.1.4 · Windows x64 · aproximadamente 107 MiB</p>
+                <p class="presence-download-meta">Versão 1.3.0 · Windows x64</p>
+                <a
+                    class="presence-secondary-button presence-download-previous"
+                    href="https://github.com/evertonteto09/universo-crias-newstart/releases/download/v1.1.4/Crias-Presence-Setup-1.1.4-x64.exe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    id="presence-download-previous"
+                >
+                    <span aria-hidden="true">↩</span>
+                    Baixar versão anterior · 1.1.4
+                </a>
+                <p class="presence-download-meta">Use a versão anterior se precisar voltar da 1.3.0 para a 1.1.4.</p>
                 <a class="presence-release-link" href="https://github.com/evertonteto09/universo-crias-newstart/releases" target="_blank" rel="noopener noreferrer">
                     Ver versões e notas de atualização no GitHub
                 </a>
@@ -130,7 +141,7 @@
             <div>
                 <h2 id="safety-title">Antes de instalar</h2>
                 <p>
-                    Esta é uma versão beta. Baixe o instalador somente pelo link oficial desta página.
+                    Baixe o instalador somente pelos links oficiais desta página.
                     Como o aplicativo pode não ter assinatura digital reconhecida, o Windows pode mostrar
                     um aviso de editor desconhecido. Não desative o Microsoft Defender nem ignore uma detecção
                     de malware; em caso de bloqueio ou dúvida, interrompa a instalação e avise o responsável pelo projeto.
@@ -140,15 +151,15 @@
                     nem o digite em páginas diferentes do Universo dos Crias.
                 </p>
                 <details class="presence-checksum">
-                    <summary>Conferir integridade do instalador (SHA-256)</summary>
+                    <summary>SHA-256 da versão anterior 1.1.4</summary>
                     <code>d3f18d4211a80cc36651e177b04f1e9ae21cbdbb64a63843a5b09a8a97fc78ea</code>
-                    <p>Esse valor corresponde ao instalador 1.1.4 que acompanha o pacote fornecido para esta integração. Ele só serve para comparar o arquivo se o mesmo executável for publicado na versão oficial.</p>
+                    <p>Este hash corresponde apenas ao instalador 1.1.4. Ainda é necessário calcular e publicar o SHA-256 do instalador 1.3.0 depois de compilá-lo.</p>
                 </details>
             </div>
         </section>
 
         <section class="presence-beta-note">
-            <span class="eyebrow">TESTE BETA</span>
+            <span class="eyebrow">SUPORTE</span>
             <h2>Encontrou algum problema?</h2>
             <p>Informe no servidor o que aconteceu, qual versão do Windows está usando e em que etapa ocorreu a falha. Não envie seu código temporário nem tokens de sessão.</p>
             <a class="presence-secondary-button" href="./index.html">Voltar para as histórias</a>
@@ -156,10 +167,10 @@
     </main>
 
     <footer class="site-footer">
-        <span>Histórias dos Crias · Crias Presence Beta</span>
+        <span>Histórias dos Crias · Crias Presence</span>
         <a href="./index.html">← Voltar para a biblioteca</a>
     </footer>
 
-    <script type="module" src="./assets/js/pages/crias-presence-download.js"></script>
+    <script type="module" src="./assets/js/pages/crias-presence-download.js?v=20261028-final-download-dual-version-1"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { saveUserPreferencePatch, syncUserPreferences } from "../services/user-preferences.service.js";
+import { saveUserPreferencePatch, syncUserPreferences } from "../services/user-preferences.service.js?v=20261028-crias-presence-images-1";
 
 const STORAGE_KEY = "hdc-profanity-filter";
 

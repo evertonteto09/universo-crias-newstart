@@ -1,6 +1,7 @@
 import { supabase } from "../core/supabase.js";
 import { getCurrentUser } from "./auth.service.js";
 import { slugify } from "../core/utils.js";
+import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-genres-1";
 
 export async function getMyWriterAccount() {
     const user = await getCurrentUser();
@@ -34,30 +35,68 @@ export async function getMyStories() {
         return [];
     }
 
-    const { data, error } = await supabase
-        .from("stories")
-        .select(`
-            id,
-            writer_id,
-            title,
-            slug,
-            description,
-            cover_type,
-            cover_url,
-            cover_path,
-            status,
-            published_at,
-            created_at,
-            updated_at
-        `)
-        .eq("writer_id", writer.writer_id)
-        .order("title");
+    const storyFields = `
+        id,
+        writer_id,
+        title,
+        slug,
+        description,
+        cover_type,
+        cover_url,
+        cover_path,
+        status,
+        published_at,
+        created_at,
+        updated_at
+    `;
 
-    if (error) {
-        throw error;
+    const [ownedResult, collaborationsResult] = await Promise.all([
+        supabase
+            .from("stories")
+            .select(storyFields)
+            .eq("writer_id", writer.writer_id)
+            .order("title"),
+        supabase
+            .from("story_collaborators")
+            .select("story_id")
+            .eq("writer_id", writer.writer_id),
+    ]);
+
+    if (ownedResult.error) throw ownedResult.error;
+    if (collaborationsResult.error) throw collaborationsResult.error;
+
+    const ownedStories = (ownedResult.data ?? []).map((story) => ({
+        ...story,
+        collaboration_role: "owner",
+    }));
+
+    const ownedIds = new Set(ownedStories.map((story) => String(story.id)));
+    const collaboratedIds = [...new Set(
+        (collaborationsResult.data ?? [])
+            .map((row) => Number(row.story_id))
+            .filter((id) => Number.isSafeInteger(id) && id > 0)
+            .filter((id) => !ownedIds.has(String(id))),
+    )];
+
+    if (!collaboratedIds.length) {
+        return ownedStories;
     }
 
-    return data ?? [];
+    const { data: collaboratedStories, error: collaboratedError } = await supabase
+        .from("stories")
+        .select(storyFields)
+        .in("id", collaboratedIds)
+        .order("title");
+
+    if (collaboratedError) throw collaboratedError;
+
+    return [
+        ...ownedStories,
+        ...(collaboratedStories ?? []).map((story) => ({
+            ...story,
+            collaboration_role: "coauthor",
+        })),
+    ].sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? ""), "pt-BR", { sensitivity: "base" }));
 }
 
 export async function createStory({
@@ -66,6 +105,7 @@ export async function createStory({
     coverType = "none",
     coverUrl = null,
     coverPath = null,
+    genres = [],
 }) {
     const writer = await getMyWriterAccount();
 
@@ -113,6 +153,7 @@ export async function createStory({
                 coverType === "upload"
                     ? coverPath
                     : null,
+            genres: normalizeStoryGenres(genres),
         })
         .select()
         .single();

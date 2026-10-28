@@ -105,6 +105,25 @@
     transition: transform .16s ease, filter .16s ease;
 }
 
+
+/* Versão atual em destaque; a versão anterior permanece disponível como alternativa. */
+.presence-download-button--latest {
+    border-color: #ed5557;
+    background: linear-gradient(135deg, #f04a45, #c3293a);
+    color: #fff;
+}
+.presence-download-button--latest:hover {
+    filter: brightness(1.08);
+}
+.presence-download-card .presence-download-previous {
+    display: flex;
+    width: 100%;
+    margin-top: 10px;
+    text-align: center;
+    gap: 9px;
+    border-color: var(--border);
+}
+
 .presence-download-button:hover {
     transform: translateY(-2px);
     filter: brightness(1.06);

@@ -1,14 +1,16 @@
-import { setupTheme } from "../core/theme.js";
-import { setupProfanityFilter } from "../core/profanity-filter.js";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
+import { setupProfanityFilter } from "../core/profanity-filter.js?v=20261028-crias-presence-images-2";
+import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-genres-home-1";
 import {
     escapeHtml,
     ratingStars,
     storyCoverSource,
 } from "../core/utils.js";
-import { getPublishedStories } from "../services/story.service.js?v=20261027-pgrst201-github-fix";
+import { getPublishedStories } from "../services/story.service.js?v=20261027-coauthor-2";
+import { getStoryAuthors } from "../core/story-authors.js?v=20261027-coauthor-2";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
-import { initCriasPresence } from "../services/crias-presence.service.js";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
 
 setupTheme();
 setupProfanityFilter();
@@ -52,20 +54,25 @@ function normalizeSearchText(value) {
         .trim();
 }
 
-function getAuthorName(story) {
-    return (
-        story.writers?.name ||
-        story.writers?.username ||
-        "Autor não informado"
-    );
+function getAuthorEntries(story) {
+    return getStoryAuthors(story);
 }
 
-function getAuthorKey(story) {
-    return String(
-        story.writer_id ??
-        story.writers?.id ??
-        "unknown",
-    );
+function getAuthorLabel(story) {
+    return getAuthorEntries(story)
+        .map((author) => author.name)
+        .join(", ") || "Autor não informado";
+}
+
+function renderStoryGenresLine(story) {
+    const genres = normalizeStoryGenres(story?.genres);
+    if (!genres.length) return "";
+
+    return `
+        <p class="story-card-genres">
+            <strong>Gêneros:</strong> ${escapeHtml(genres.join(", "))}
+        </p>
+    `;
 }
 
 async function storyCard(story) {
@@ -83,8 +90,8 @@ async function storyCard(story) {
             0,
         );
 
-    const authorName =
-        getAuthorName(story);
+    const authorLabel =
+        getAuthorLabel(story);
 
     const ratingSummary =
         storyRatingSummaries[String(story.id)] || {
@@ -108,7 +115,8 @@ async function storyCard(story) {
                 <h3>${escapeHtml(story.title)}</h3>
 
                 <p class="story-author">
-                    por ${escapeHtml(authorName)}
+                    ${getAuthorEntries(story).length > 1 ? "Autores:" : "por"}
+                    ${escapeHtml(authorLabel)}
                 </p>
 
                 <p>
@@ -117,6 +125,8 @@ async function storyCard(story) {
                         "Sem descrição disponível."
                     )}
                 </p>
+
+                ${renderStoryGenresLine(story)}
 
                 <div class="rating-line">
                     <span title="${ratingSummary.count} avaliações">
@@ -144,7 +154,8 @@ function storyCardFallback(story) {
         (sum, season) => sum + (season.chapters ?? []).length,
         0,
     );
-    const authorName = getAuthorName(story);
+    const authorLabel = getAuthorLabel(story);
+    const authorCount = getAuthorEntries(story).length;
     const summary = storyRatingSummaries[String(story.id)] || { average: 0, count: 0 };
     const defaultCover = "./assets/img/default-story-cover.svg";
     return `
@@ -153,8 +164,9 @@ function storyCardFallback(story) {
             <div class="story-card-body">
                 <span class="eyebrow">OBRA</span>
                 <h3>${escapeHtml(story.title)}</h3>
-                <p class="story-author">por ${escapeHtml(authorName)}</p>
+                <p class="story-author">${authorCount > 1 ? "Autores:" : "por"} ${escapeHtml(authorLabel)}</p>
                 <p>${escapeHtml(story.description || "Sem descrição disponível.")}</p>
+                ${renderStoryGenresLine(story)}
                 <div class="rating-line">
                     <span title="${summary.count} avaliações">${ratingStars(summary.average)}</span>
                     <strong class="rating-score">${summary.count ? `${summary.average.toFixed(1)}/10` : "Sem notas"}</strong>
@@ -229,15 +241,17 @@ function getWriterOptions() {
     const writers = new Map();
 
     allStories.forEach((story) => {
-        const key = getAuthorKey(story);
-        if (writers.has(key)) {
-            return;
-        }
+        getAuthorEntries(story).forEach((author) => {
+            const key = String(author.id ?? author.username ?? "");
+            if (!key || writers.has(key)) {
+                return;
+            }
 
-        writers.set(key, {
-            key,
-            name: getAuthorName(story),
-            username: story.writers?.username || "",
+            writers.set(key, {
+                key,
+                name: author.name,
+                username: author.username || "",
+            });
         });
     });
 
@@ -273,8 +287,9 @@ function renderWriterFilterMenu() {
 
         ${writers.map((writer) => {
             const storyCount = allStories.filter(
-                (story) =>
-                    getAuthorKey(story) === writer.key
+                (story) => getAuthorEntries(story).some(
+                    (author) => String(author.id ?? author.username ?? "") === writer.key
+                )
             ).length;
 
             return `
@@ -372,25 +387,22 @@ function applyFilters() {
                     story.title,
                 );
 
-            const authorName =
-                normalizeSearchText(
-                    story.writers?.name,
-                );
-
-            const authorUsername =
-                normalizeSearchText(
-                    story.writers?.username,
-                );
+            const authors = getAuthorEntries(story);
+            const matchesAuthorSearch = authors.some((author) =>
+                normalizeSearchText(author.name).includes(searchTerm) ||
+                normalizeSearchText(author.username).includes(searchTerm)
+            );
 
             const matchesSearch =
                 !searchTerm ||
                 title.includes(searchTerm) ||
-                authorName.includes(searchTerm) ||
-                authorUsername.includes(searchTerm);
+                matchesAuthorSearch;
 
             const matchesWriter =
                 selectedWriter === "all" ||
-                getAuthorKey(story) === selectedWriter;
+                authors.some((author) =>
+                    String(author.id ?? author.username ?? "") === selectedWriter
+                );
 
             return (
                 matchesSearch &&

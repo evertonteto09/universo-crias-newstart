@@ -1,5 +1,8 @@
 import { escapeHtml } from "./utils.js";
-import { getChapterImageUrl } from "../services/storage.service.js";
+import {
+    getChapterImageUrl,
+    getStoryNewsImageUrl,
+} from "../services/storage.service.js?v=20261028-spoiler-news-images-1";
 
 const TOKEN_PREFIX = "@@@HDC_DYN_";
 
@@ -146,43 +149,40 @@ function renderHeading(line, anchorLine = line) {
     `;
 }
 
-async function renderImage(line) {
-    const match = line.match(
+async function renderImage(line, { ignoreSpoiler = false } = {}) {
+    const match = String(line ?? "").match(
         /^\s*\[\[image:([^\]\n|]+)(?:\|([^\]\n]*))?\]\]\s*$/i,
     );
-
     if (!match) return null;
 
-    const source =
-        String(match[1] ?? "").trim();
-
-    const alt =
-        String(match[2] ?? "Imagem da cena").trim() ||
-        "Imagem da cena";
+    const source = String(match[1] ?? "").trim();
+    const metadata = String(match[2] ?? "").split("|");
+    const alt = String(metadata[0] ?? "Imagem da cena").trim() || "Imagem da cena";
+    const isSpoiler = !ignoreSpoiler && metadata
+        .slice(1)
+        .some((item) => item.trim().toLowerCase() === "spoiler");
 
     if (!source) return null;
 
     let url = source;
-
     if (!/^https?:\/\//i.test(source)) {
-        if (!source.startsWith("chapters/")) {
-            return `
-                <p class="dynamic-image-error" role="status">
-                    Imagem da cena indisponível.
-                </p>
-            `;
-        }
-
         try {
-            url = await getChapterImageUrl(source);
+            if (source.startsWith("chapters/")) {
+                url = await getChapterImageUrl(source);
+            } else if (/^stories\/\d+\/news\/[a-f0-9-]{36}\.(?:jpg|jpeg|png|webp|gif|avif)$/i.test(source)) {
+                url = await getStoryNewsImageUrl(source);
+            } else {
+                return `
+                    <p class="dynamic-image-error" role="status">
+                        Imagem indisponível.
+                    </p>
+                `;
+            }
         } catch (error) {
-            console.warn(
-                "Não foi possível gerar a URL da imagem da cena.",
-                error,
-            );
+            console.warn("Não foi possível gerar a URL da imagem.", error);
             return `
                 <p class="dynamic-image-error" role="status">
-                    Imagem da cena indisponível.
+                    Imagem indisponível.
                 </p>
             `;
         }
@@ -191,33 +191,49 @@ async function renderImage(line) {
     if (!url) {
         return `
             <p class="dynamic-image-error" role="status">
-                Imagem da cena indisponível.
+                Imagem indisponível.
             </p>
         `;
     }
 
     let safeUrl = "";
-
     try {
         const parsed = new URL(url, location.href);
-
-        if (!/^https?:$/i.test(parsed.protocol)) {
-            return null;
-        }
-
+        if (!/^https?:$/i.test(parsed.protocol)) return null;
         safeUrl = parsed.href;
     } catch {
         return null;
     }
 
+    const image = `
+        <img
+            src="${escapeHtml(safeUrl)}"
+            alt="${escapeHtml(alt)}"
+            loading="lazy"
+            decoding="async"
+        >
+    `;
+
+    if (isSpoiler) {
+        return `
+            <figure class="dynamic-scene-image dynamic-scene-image-spoiler">
+                <button
+                    type="button"
+                    class="dynamic-image-spoiler"
+                    aria-expanded="false"
+                    aria-label="Imagem marcada como spoiler. Clique para revelar."
+                    title="Clique para revelar a imagem"
+                >
+                    ${image}
+                    <span class="dynamic-image-spoiler-label" aria-hidden="true">SPOILER · clique para revelar</span>
+                </button>
+            </figure>
+        `;
+    }
+
     return `
         <figure class="dynamic-scene-image">
-            <img
-                src="${escapeHtml(safeUrl)}"
-                alt="${escapeHtml(alt)}"
-                loading="lazy"
-                decoding="async"
-            >
+            ${image}
         </figure>
     `;
 }
@@ -255,11 +271,17 @@ function renderQuote(lines, anchorLines = lines) {
  *  - < ... > para blocos com linha lateral;
  *  - marcações inline via renderDynamicInlineText().
  */
-export async function renderDynamicContent(value, anchorValue = value) {
+export async function renderDynamicContent(value, anchorValue = value, options = {}) {
     const normalized = String(value ?? "").replaceAll("\r\n", "\n");
     const anchorNormalized = String(anchorValue ?? value ?? "").replaceAll("\r\n", "\n");
     const lines = normalized.split("\n");
     const anchorLines = anchorNormalized.split("\n");
+    const firstNonEmptyLineIndex = lines.findIndex((line) => line.trim().length > 0);
+    const firstNonEmptyLineIsImage = firstNonEmptyLineIndex >= 0 &&
+        /^\s*\[\[image:[^\]\n|]+(?:\|[^\]\n]*)?\]\]\s*$/i.test(lines[firstNonEmptyLineIndex]);
+    const episodeCoverLineIndex = options.episodeCover && firstNonEmptyLineIsImage
+        ? firstNonEmptyLineIndex
+        : -1;
 
     const output = [];
     let paragraph = [];
@@ -288,7 +310,7 @@ export async function renderDynamicContent(value, anchorValue = value) {
         const anchorLine = anchorLines[lineIndex] ?? line;
         const trimmed = line.trim();
 
-        const image = await renderImage(line);
+        const image = await renderImage(line, { ignoreSpoiler: lineIndex === episodeCoverLineIndex });
 
         if (image) {
             flushParagraph();
@@ -356,19 +378,18 @@ export function bindDynamicText(root) {
 
     root.addEventListener("click", (event) => {
         const spoiler = event.target.closest(
-            ".dynamic-spoiler",
+            ".dynamic-spoiler, .dynamic-image-spoiler",
         );
 
-        if (!spoiler || !root.contains(spoiler)) {
-            return;
+        if (!spoiler || !root.contains(spoiler)) return;
+
+        const revealed = spoiler.classList.toggle("is-revealed");
+        spoiler.setAttribute("aria-expanded", String(revealed));
+        if (spoiler.classList.contains("dynamic-image-spoiler")) {
+            spoiler.setAttribute(
+                "aria-label",
+                revealed ? "Imagem revelada. Clique para ocultar novamente." : "Imagem marcada como spoiler. Clique para revelar.",
+            );
         }
-
-        const revealed =
-            spoiler.classList.toggle("is-revealed");
-
-        spoiler.setAttribute(
-            "aria-expanded",
-            String(revealed),
-        );
     });
 }

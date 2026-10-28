@@ -1,4 +1,4 @@
-import { setupTheme } from "./core/theme.js";
+import { setupTheme } from "./core/theme.js?v=20261028-crias-presence-images-2";
 import { openConfirmModal } from "./core/modal.js";
 import {
     escapeHtml,
@@ -17,10 +17,11 @@ import {
 import {
     getStoryReviewSummary,
     getWriterStoryById,
-} from "./services/story.service.js";
+} from "./services/story.service.js?v=20261027-coauthor-2";
 
 import {
     getWriterReviews,
+    moderateReview,
     deleteReview,
 } from "./services/review.service.js";
 
@@ -31,7 +32,7 @@ import {
 
 import {
     initCriasPresence,
-} from "./services/crias-presence.service.js";
+} from "./services/crias-presence.service.js?v=20261028-crias-presence-images-2";
 
 setupTheme();
 
@@ -207,7 +208,7 @@ async function storyCard(story, summary) {
 
             <div>
                 <span class="eyebrow">
-                    MINHA OBRA
+                    ${story.collaboration_role === "coauthor" ? "COAUTORIA" : "MINHA OBRA"}
                 </span>
 
                 <h3>
@@ -255,6 +256,13 @@ async function storyCard(story, summary) {
                     >
                         Ver publicação
                     </a>
+                    <button
+                        type="button"
+                        class="secondary-button manage-story-reviews-button"
+                        data-manage-story-reviews="${Number(story.id)}"
+                    >
+                        Gerenciar avaliações
+                    </button>
                 </div>
             </div>
         </article>
@@ -321,14 +329,24 @@ async function loadReviews(
                                     </small>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    class="danger-icon-button delete-review-button"
-                                    aria-label="Excluir avaliação de ${escapeHtml(review.reader_name)}"
-                                    title="Excluir avaliação"
-                                >
-                                    ×
-                                </button>
+                                <div class="review-writer-actions">
+                                    <button
+                                        type="button"
+                                        class="secondary-button toggle-review-status-button"
+                                        data-next-status="${review.status === "published" ? "hidden" : "published"}"
+                                        aria-label="${review.status === "published" ? "Ocultar" : "Restaurar"} avaliação de ${escapeHtml(review.reader_name)}"
+                                    >
+                                        ${review.status === "published" ? "Ocultar avaliação" : "Restaurar avaliação"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="danger-icon-button delete-review-button"
+                                        aria-label="Excluir avaliação de ${escapeHtml(review.reader_name)}"
+                                        title="Excluir avaliação"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             </article>
                         `
                     )
@@ -338,6 +356,35 @@ async function loadReviews(
                         Essa história ainda não recebeu avaliações.
                     </article>
                 `;
+
+        document.querySelectorAll(".toggle-review-status-button").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = event.currentTarget.closest("[data-review-id]");
+                const reviewId = Number(card?.dataset.reviewId);
+                const nextStatus = event.currentTarget.dataset.nextStatus;
+                const readerName = card?.querySelector(".review-meta strong")?.textContent?.trim() || "este leitor";
+                if (!Number.isSafeInteger(reviewId) || !["published", "hidden"].includes(nextStatus)) return;
+
+                const hiding = nextStatus === "hidden";
+                openConfirmModal({
+                    eyebrow: "MODERAÇÃO",
+                    title: hiding ? "Ocultar avaliação?" : "Restaurar avaliação?",
+                    message: hiding
+                        ? `Ocultar a avaliação de <strong>${escapeHtml(readerName)}</strong>?`
+                        : `Tornar a avaliação de <strong>${escapeHtml(readerName)}</strong> visível novamente?`,
+                    details: hiding
+                        ? "A avaliação continuará no painel de moderação, mas deixará de aparecer publicamente."
+                        : "A avaliação voltará a aparecer publicamente na obra ou no episódio correspondente.",
+                    confirmLabel: hiding ? "Ocultar avaliação" : "Restaurar avaliação",
+                    onConfirm: async () => {
+                        await moderateReview(reviewId, nextStatus);
+                        await loadReviews(storyId);
+                    },
+                });
+            });
+        });
 
         document
             .querySelectorAll(
@@ -477,11 +524,7 @@ async function loadStories() {
                 card.addEventListener(
                     "click",
                     (event) => {
-                        if (
-                            event.target.closest(
-                                "a"
-                            )
-                        ) {
+                        if (event.target.closest("a, button")) {
                             return;
                         }
 
@@ -489,6 +532,15 @@ async function loadStories() {
                     }
                 );
             });
+
+        document.querySelectorAll("[data-manage-story-reviews]").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const storyId = Number(button.dataset.manageStoryReviews);
+                if (Number.isSafeInteger(storyId) && storyId > 0) loadReviews(storyId);
+            });
+        });
 
         // Mostra feedback da primeira história
         // para não deixar a seção vazia no desktop.

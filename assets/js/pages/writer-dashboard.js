@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
 import { openConfirmModal } from "../core/modal.js";
 import {
     escapeHtml,
@@ -6,6 +6,10 @@ import {
     ratingStars,
     showMessage,
 } from "../core/utils.js";
+import {
+    renderStoryGenreChoices,
+    readSelectedStoryGenres,
+} from "../core/story-genres.js?v=20261028-story-genres-1";
 
 import { signOut, linkDiscordIdentity, getCurrentUserIdentities, getCurrentUser } from "../services/auth.service.js";
 import { rememberWriterLoginState, readPendingDiscordLogin, clearPendingDiscordLogin, clearPendingDiscordLoginIfExpired, invalidateRememberedDiscordLink } from "../services/local-account-state.service.js?v=20261024-local-login-state-2";
@@ -13,15 +17,16 @@ import {
     getMyWriterAccount,
     getMyStories,
     createStory,
-} from "../services/writer.service.js";
+} from "../services/writer.service.js?v=20261028-story-genres-1";
 
 import {
     getStoryReviewSummary,
     getWriterStoryById,
-} from "../services/story.service.js";
+} from "../services/story.service.js?v=20261028-story-genres-1";
 
 import {
     getWriterReviews,
+    moderateReview,
     deleteReview,
 } from "../services/review.service.js";
 
@@ -32,13 +37,14 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js";
+} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
 
 setupTheme();
 
 const criasPresence = initCriasPresence({
     details: "No portal do Escritor",
     state: "Universo dos Crias",
+    pageContext: "writer",
 });
 
 const writerName =
@@ -105,6 +111,15 @@ dialog.innerHTML = `
                 rows="5"
             ></textarea>
         </label>
+
+        <section class="story-genres-editor story-genres-create" aria-labelledby="new-story-genres-title">
+            <div class="story-genres-editor-heading">
+                <span class="eyebrow">CLASSIFICAÇÃO</span>
+                <h3 id="new-story-genres-title">Gêneros da história</h3>
+                <p class="muted">Selecione os gêneros agora ou deixe para definir depois no editor.</p>
+            </div>
+            ${renderStoryGenreChoices([])}
+        </section>
 
         <p class="muted">
             A história será criada sem capa e com a
@@ -186,10 +201,13 @@ async function storyCard(story, summary) {
             getStoryCoverUrl
         );
 
+    const isCoauthor = story.collaboration_role === "coauthor";
+
     return `
         <article
-            class="writer-story-card"
+            class="writer-story-card ${isCoauthor ? "writer-story-card-coauthor" : ""}"
             data-story-id="${story.id}"
+            data-collaboration-role="${isCoauthor ? "coauthor" : "owner"}"
         >
             <img
                 class="story-cover"
@@ -200,7 +218,8 @@ async function storyCard(story, summary) {
 
             <div>
                 <div class="writer-story-meta">
-                    <span class="eyebrow">MINHA OBRA</span>
+                    <span class="eyebrow">${isCoauthor ? "COAUTORIA" : "MINHA OBRA"}</span>
+                    ${isCoauthor ? '<span class="collaboration-role-pill">Coautor</span>' : ""}
                     <span class="status-pill ${story.status === "published" ? "published" : "draft"}">
                         ${story.status === "published" ? "Publicada" : "Rascunho"}
                     </span>
@@ -251,15 +270,48 @@ async function storyCard(story, summary) {
                     >
                         Ver publicação
                     </a>
+                    <button
+                        type="button"
+                        class="secondary-button manage-story-reviews-button"
+                        data-manage-story-reviews="${Number(story.id)}"
+                        aria-pressed="false"
+                    >
+                        Gerenciar avaliações
+                    </button>
                 </div>
             </div>
         </article>
     `;
 }
 
-async function loadReviews(
-    storyId,
-) {
+async function loadReviews(storyId) {
+    const normalizedStoryId = Number(storyId);
+    if (!Number.isSafeInteger(normalizedStoryId) || normalizedStoryId <= 0) {
+        throw new Error("Selecione uma história válida para consultar as avaliações.");
+    }
+
+    const selectedStory = stories.find(
+        (story) => Number(story.id) === normalizedStoryId,
+    );
+    const selectionHint = document.querySelector("#review-selection-hint");
+
+    if (selectionHint) {
+        if (selectedStory) {
+            const roleLabel = selectedStory.collaboration_role === "coauthor"
+                ? "Coautoria"
+                : "Autoria principal";
+            selectionHint.textContent = `Avaliações de “${selectedStory.title}” · ${roleLabel}`;
+        } else {
+            selectionHint.textContent = "Avaliações da história selecionada";
+        }
+    }
+
+    document.querySelectorAll("[data-manage-story-reviews]").forEach((button) => {
+        const isSelected = Number(button.dataset.manageStoryReviews) === normalizedStoryId;
+        button.classList.toggle("is-selected", isSelected);
+        button.setAttribute("aria-pressed", String(isSelected));
+    });
+
     reviewList.innerHTML = `
         <article class="loading-card">
             Carregando avaliações...
@@ -267,140 +319,122 @@ async function loadReviews(
     `;
 
     try {
-        const reviews =
-            await getWriterReviews(
-                storyId
-            );
+        const reviews = await getWriterReviews(normalizedStoryId);
 
-        reviewList.innerHTML =
-            reviews.length
-                ? reviews
-                    .map(
-                        (review) => `
-                            <article
-                                class="review-card review-card-writer"
-                                data-review-id="${review.id}"
+        reviewList.innerHTML = reviews.length
+            ? reviews.map((review) => {
+                const isPublished = review.status === "published";
+                return `
+                    <article
+                        class="review-card review-card-writer"
+                        data-review-id="${Number(review.id)}"
+                    >
+                        <div class="review-card-content">
+                            <div class="review-meta">
+                                <strong>${escapeHtml(review.reader_name)}</strong>
+                                <span class="review-rating-display" title="${Number(review.rating)}/10">
+                                    ${ratingStars(review.rating)}
+                                    <strong>${Number(review.rating)}/10</strong>
+                                </span>
+                            </div>
+                            <p>${escapeHtml(review.content)}</p>
+                            <small class="muted">
+                                ${review.chapter_id ? "Episódio específico" : "Obra completa"}
+                                · ${isPublished ? "Visível" : "Oculta"}
+                            </small>
+                        </div>
+                        <div class="review-writer-actions">
+                            <button
+                                type="button"
+                                class="secondary-button toggle-review-status-button"
+                                data-next-status="${isPublished ? "hidden" : "published"}"
+                                aria-label="${isPublished ? "Ocultar" : "Restaurar"} avaliação de ${escapeHtml(review.reader_name)}"
                             >
-                                <div class="review-card-content">
-                                    <div class="review-meta">
-                                        <strong>
-                                            ${escapeHtml(
-                                                review.reader_name
-                                            )}
-                                        </strong>
-
-                                        <span class="review-rating-display" title="${review.rating}/10">
-                                            ${ratingStars(review.rating)}
-                                            <strong>${Number(review.rating)}/10</strong>
-                                        </span>
-                                    </div>
-
-                                    <p>
-                                        ${escapeHtml(
-                                            review.content
-                                        )}
-                                    </p>
-
-                                    <small class="muted">
-                                        ${
-                                            review.chapter_id
-                                                ? "Episódio específico"
-                                                : "Obra completa"
-                                        }
-                                        ·
-                                        ${
-                                            review.status ===
-                                            "published"
-                                                ? "Visível"
-                                                : "Oculta"
-                                        }
-                                    </small>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    class="danger-icon-button delete-review-button"
-                                    aria-label="Excluir avaliação de ${escapeHtml(review.reader_name)}"
-                                    title="Excluir avaliação"
-                                >
-                                    ×
-                                </button>
-                            </article>
-                        `
-                    )
-                    .join("")
-                : `
-                    <article class="empty-card">
-                        Essa história ainda não recebeu avaliações.
+                                ${isPublished ? "Ocultar avaliação" : "Restaurar avaliação"}
+                            </button>
+                            <button
+                                type="button"
+                                class="danger-icon-button delete-review-button"
+                                aria-label="Excluir avaliação de ${escapeHtml(review.reader_name)}"
+                                title="Excluir avaliação"
+                            >
+                                ×
+                            </button>
+                        </div>
                     </article>
                 `;
+            }).join("")
+            : `
+                <article class="empty-card">
+                    Essa história ainda não recebeu avaliações.
+                </article>
+            `;
 
-        document
-            .querySelectorAll(
-                ".delete-review-button"
-            )
-            .forEach((button) => {
-                button.addEventListener(
-                    "click",
-                    (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
+        reviewList.querySelectorAll(".toggle-review-status-button").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
 
-                        const card =
-                            event.currentTarget.closest(
-                                "[data-review-id]"
-                            );
+                const card = event.currentTarget.closest("[data-review-id]");
+                const reviewId = Number(card?.dataset.reviewId);
+                const nextStatus = event.currentTarget.dataset.nextStatus;
+                const readerName = card?.querySelector(".review-meta strong")?.textContent?.trim() || "este leitor";
+                if (!Number.isSafeInteger(reviewId) || !["published", "hidden"].includes(nextStatus)) return;
 
-                        const reviewId =
-                            Number(
-                                card.dataset.reviewId
-                            );
-
-                        const readerName =
-                            card.querySelector(
-                                ".review-meta strong"
-                            )?.textContent?.trim() ||
-                            "este leitor";
-
-                        const reviewText =
-                            card.querySelector(
-                                ".review-card-content p"
-                            )?.textContent?.trim() ||
-                            "";
-
-                        openConfirmModal({
-                            eyebrow: "MODERAÇÃO",
-                            title: "Excluir avaliação?",
-                            message: `Excluir permanentemente a avaliação de <strong>${escapeHtml(readerName)}</strong>?`,
-                            details: `
-                                <div class="review-delete-preview">
-                                    “${escapeHtml(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
-                                </div>
-                                <span>
-                                    Use esta opção para remover avaliações ofensivas,
-                                    ataques ou spam da obra.
-                                </span>
-                            `,
-                            confirmLabel: "Excluir avaliação",
-                            onConfirm: async () => {
-                                await deleteReview(
-                                    reviewId
-                                );
-
-                                await loadReviews(
-                                    storyId
-                                );
-                            },
-                        });
+                const hiding = nextStatus === "hidden";
+                openConfirmModal({
+                    eyebrow: "MODERAÇÃO",
+                    title: hiding ? "Ocultar avaliação?" : "Restaurar avaliação?",
+                    message: hiding
+                        ? `Ocultar a avaliação de <strong>${escapeHtml(readerName)}</strong>?`
+                        : `Tornar a avaliação de <strong>${escapeHtml(readerName)}</strong> visível novamente?`,
+                    details: hiding
+                        ? "A avaliação continuará no painel de moderação, mas deixará de aparecer publicamente."
+                        : "A avaliação voltará a aparecer publicamente na obra ou no episódio correspondente.",
+                    confirmLabel: hiding ? "Ocultar avaliação" : "Restaurar avaliação",
+                    danger: false,
+                    onConfirm: async () => {
+                        await moderateReview(reviewId, nextStatus);
+                        await loadReviews(normalizedStoryId);
                     },
-                );
+                });
             });
-    } catch (error) {
-        console.error(error);
+        });
 
+        reviewList.querySelectorAll(".delete-review-button").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card = event.currentTarget.closest("[data-review-id]");
+                const reviewId = Number(card?.dataset.reviewId);
+                const readerName = card?.querySelector(".review-meta strong")?.textContent?.trim() || "este leitor";
+                const reviewText = card?.querySelector(".review-card-content p")?.textContent?.trim() || "";
+                if (!Number.isSafeInteger(reviewId) || reviewId <= 0) return;
+
+                openConfirmModal({
+                    eyebrow: "MODERAÇÃO",
+                    title: "Excluir avaliação?",
+                    message: `Excluir permanentemente a avaliação de <strong>${escapeHtml(readerName)}</strong>?`,
+                    details: `
+                        <div class="review-delete-preview">
+                            “${escapeHtml(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
+                        </div>
+                        <span>Use esta opção para remover avaliações ofensivas, ataques ou spam da obra.</span>
+                    `,
+                    confirmLabel: "Excluir avaliação",
+                    onConfirm: async () => {
+                        await deleteReview(reviewId);
+                        await loadReviews(normalizedStoryId);
+                    },
+                });
+            });
+        });
+    } catch (error) {
+        console.error("[Writer Dashboard] Falha ao carregar/moderar avaliações:", error);
         reviewList.innerHTML = `
             <article class="error-card">
-                Não foi possível carregar as avaliações.
+                Não foi possível carregar as avaliações desta obra. Verifique a conexão ou as permissões do Supabase e tente novamente.
             </article>
         `;
     }
@@ -551,7 +585,14 @@ async function loadStories() {
         if (!stories.length) {
             grid.innerHTML = `
                 <article class="empty-card">
-                    Você ainda não possui histórias.
+                    Você ainda não possui histórias ou obras compartilhadas.
+                </article>
+            `;
+            const selectionHint = document.querySelector("#review-selection-hint");
+            if (selectionHint) selectionHint.textContent = "Nenhuma obra disponível para acompanhar.";
+            reviewList.innerHTML = `
+                <article class="empty-card">
+                    Crie uma história ou peça para ser adicionado como coautor para acompanhar as avaliações.
                 </article>
             `;
             return;
@@ -590,37 +631,31 @@ async function loadStories() {
         grid.innerHTML =
             cards.join("");
 
-        document
-            .querySelectorAll(
-                ".writer-story-card"
-            )
-            .forEach((card) => {
-                const id =
-                    Number(
-                        card.dataset.storyId
-                    );
-
-                card.addEventListener(
-                    "click",
-                    (event) => {
-                        if (
-                            event.target.closest(
-                                "a"
-                            )
-                        ) {
-                            return;
-                        }
-
-                        loadReviews(id);
-                    }
-                );
+        document.querySelectorAll(".writer-story-card").forEach((card) => {
+            const id = Number(card.dataset.storyId);
+            card.addEventListener("click", (event) => {
+                if (event.target.closest("a, button")) return;
+                loadReviews(id);
             });
+        });
 
-        // Mostra feedback da primeira história
-        // para não deixar a seção vazia no desktop.
-        await loadReviews(
-            stories[0].id
-        );
+        document.querySelectorAll("[data-manage-story-reviews]").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const storyId = Number(button.dataset.manageStoryReviews);
+                if (!Number.isSafeInteger(storyId) || storyId <= 0) return;
+                loadReviews(storyId);
+                reviewList.closest(".panel-section")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+            });
+        });
+
+        // Carrega uma história inicial (própria ou em coautoria), mas o usuário
+        // também pode trocar explicitamente pelo botão de cada card.
+        await loadReviews(stories[0].id);
     } catch (error) {
         console.error(error);
 
@@ -652,11 +687,13 @@ form.addEventListener(
                 dialog.querySelector(
                     "#new-story-description"
                 ).value.trim();
+            const genres = readSelectedStoryGenres(form);
 
             const story =
                 await createStory({
                     title,
                     description,
+                    genres,
                     coverType: "none",
                     coverUrl: null,
                     coverPath: null,

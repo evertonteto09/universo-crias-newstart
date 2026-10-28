@@ -17,6 +17,7 @@ export async function getWriterSeasons(
                 number,
                 title,
                 status,
+                scheduled_publish_at,
                 content_format
             )
         `)

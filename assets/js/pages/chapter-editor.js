@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js";
+import { setupTheme } from "../core/theme.js?v=20261028-spoiler-news-images-1";
 import {
     escapeHtml,
     showMessage,
@@ -12,22 +12,30 @@ import {
 import {
     getWriterChapter,
     updateChapter,
+    scheduleChapterPublication,
+    cancelChapterPublicationSchedule,
     deleteChapter,
-} from "../services/chapter.service.js";
+} from "../services/chapter.service.js?v=20261028-spoiler-news-images-1";
 
 import {
     getWriterStoryById,
-} from "../services/story.service.js";
+} from "../services/story.service.js?v=20261027-scheduled-release-1";
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js";
+} from "../services/crias-presence.service.js?v=20261028-spoiler-news-images-1";
+
+import {
+    CRIAS_PRESENCE_LOGO_URL,
+    getPresenceStoryCoverUrl,
+    getPresenceChapterImageUrl,
+} from "../services/crias-presence-images.service.js?v=20261028-spoiler-news-images-1";
 
 import { supabase } from "../core/supabase.js";
 import {
     getChapterImageUrl,
     removeChapterImage,
-} from "../services/storage.service.js";
+} from "../services/storage.service.js?v=20261028-spoiler-news-images-1";
 
 import {
     openConfirmModal,
@@ -62,6 +70,7 @@ let story = null;
 let criasPresence = null;
 let presenceTitleTimer = null;
 let saveTimer = null;
+let scheduleRefreshTimer = null;
 let imageInsertSelection = { start: 0, end: 0 };
 let protectedImageSnapshot = {
     value: "",
@@ -191,6 +200,27 @@ function ensureChapterImageStyles() {
             opacity: 0.68;
         }
 
+        .chapter-image-spoiler-control {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-top: 5px;
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+
+        .chapter-image-spoiler-control input {
+            width: auto;
+            min-height: 0;
+            flex: 0 0 auto;
+        }
+
+        .chapter-image-spoiler-note {
+            margin: 4px 0 0;
+            line-height: 1.5;
+            font-size: 0.84rem;
+        }
+
         .chapter-image-manager-empty {
             padding: 22px;
             border: 1px dashed rgba(127, 102, 255, 0.24);
@@ -227,34 +257,42 @@ function ensureChapterImageStyles() {
     document.head.appendChild(style);
 }
 
-function updateChapterEditorPresence(titleOverride = null) {
-    if (!criasPresence || !chapter) {
-        return;
-    }
+let chapterPresenceUpdateSequence = 0;
 
-    const storyTitle =
-        String(story?.title ?? "").trim();
+async function updateChapterEditorPresence(titleOverride = null) {
+    if (!criasPresence || !chapter) return;
 
-    const chapterTitle =
-        String(titleOverride ?? chapter.title ?? "").trim() ||
-        "Episódio sem título";
-
+    const sequence = ++chapterPresenceUpdateSequence;
+    const storyTitle = String(story?.title ?? "").trim();
+    const titleInput = document.querySelector("#chapter-title");
+    const chapterTitle = String(titleOverride ?? titleInput?.value ?? chapter.title ?? "").trim() || "Episódio sem título";
+    const contentInput = document.querySelector("#chapter-content");
+    const content = contentInput ? contentInput.value : chapter.content;
     const chapterNumber = Number(chapter.number);
-
-    const episodeLabel =
-        chapterNumber === 0
-            ? "Piloto"
-            : Number.isFinite(chapterNumber) && chapterNumber > 0
-                ? `Episódio ${chapterNumber}`
-                : "Episódio";
-
+    const episodeLabel = chapterNumber === 0
+        ? "Piloto"
+        : Number.isFinite(chapterNumber) && chapterNumber > 0
+            ? `Episódio ${chapterNumber}`
+            : "Episódio";
     const context = storyTitle
         ? `${storyTitle} · ${episodeLabel}: ${chapterTitle}`
         : `${episodeLabel}: ${chapterTitle}`;
 
+    const [storyCoverUrl, episodeImageUrl] = await Promise.all([
+        getPresenceStoryCoverUrl(story),
+        getPresenceChapterImageUrl(content, chapter),
+    ]);
+    // Evita que uma consulta de imagem iniciada antes de outra atualize a presença por último.
+    if (sequence !== chapterPresenceUpdateSequence || !criasPresence) return;
+
+    const primaryImageUrl = episodeImageUrl || storyCoverUrl || CRIAS_PRESENCE_LOGO_URL;
     criasPresence.update({
         details: "Editando um episódio",
         state: context,
+        largeImageUrl: primaryImageUrl,
+        largeImageText: episodeImageUrl ? chapterTitle : (storyTitle || "Universo dos Crias"),
+        smallImageUrl: episodeImageUrl ? (storyCoverUrl || CRIAS_PRESENCE_LOGO_URL) : CRIAS_PRESENCE_LOGO_URL,
+        smallImageText: episodeImageUrl ? (storyTitle || "Universo dos Crias") : "Universo dos Crias",
     });
 }
 
@@ -268,6 +306,170 @@ function scheduleChapterPresenceTitleUpdate(value) {
         presenceTitleTimer = null;
         updateChapterEditorPresence(value);
     }, 900);
+}
+
+function isChapterScheduled(chapterData = chapter) {
+    return Boolean(
+        chapterData &&
+        chapterData.status !== "published" &&
+        chapterData.scheduled_publish_at
+    );
+}
+
+function chapterStatusLabel(chapterData = chapter) {
+    if (chapterData?.status === "published") return "Publicado";
+    if (isChapterScheduled(chapterData)) return "Estreia agendada";
+    return "Rascunho";
+}
+
+function formatScheduleDate(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "data inválida";
+    return new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "long",
+        timeStyle: "short",
+    }).format(date);
+}
+
+function dateToLocalInputValue(date) {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+}
+
+function getScheduleInitialValue() {
+    const existing = chapter?.scheduled_publish_at
+        ? new Date(chapter.scheduled_publish_at)
+        : null;
+    if (existing && Number.isFinite(existing.getTime()) && existing.getTime() > Date.now()) {
+        return dateToLocalInputValue(existing);
+    }
+    return dateToLocalInputValue(new Date(Date.now() + 60 * 60 * 1000));
+}
+
+function updateScheduledNote(scheduledPublishAt = chapter?.scheduled_publish_at) {
+    const note = document.querySelector("#scheduled-publication-note");
+    const dateNode = document.querySelector("#scheduled-publication-date");
+    if (!note || !dateNode) return;
+    const scheduled = chapter?.status !== "published" && Boolean(scheduledPublishAt);
+    note.hidden = !scheduled;
+    if (scheduled) dateNode.textContent = formatScheduleDate(scheduledPublishAt);
+}
+
+function startScheduledPublicationRefresh() {
+    if (scheduleRefreshTimer) {
+        clearTimeout(scheduleRefreshTimer);
+        scheduleRefreshTimer = null;
+    }
+    if (!isChapterScheduled()) return;
+
+    const scheduledTime = new Date(chapter.scheduled_publish_at).getTime();
+    const untilDue = Number.isFinite(scheduledTime) ? scheduledTime - Date.now() : 0;
+    const delay = Math.max(5000, Math.min(60000, untilDue + 1500));
+
+    scheduleRefreshTimer = setTimeout(async () => {
+        try {
+            const previousSchedule = chapter?.scheduled_publish_at;
+            const fresh = await getWriterChapter(chapter.id);
+            chapter = { ...chapter, ...fresh };
+            setStatusUi(chapter.status, chapter.scheduled_publish_at);
+            if (previousSchedule && chapter.status === "published" && !chapter.scheduled_publish_at) {
+                showMessage(
+                    document.querySelector("#chapter-message"),
+                    "A estreia foi publicada automaticamente pelo servidor.",
+                    "success",
+                );
+            }
+        } catch (error) {
+            console.warn("Não foi possível atualizar o estado da estreia agendada:", error);
+        }
+        startScheduledPublicationRefresh();
+    }, delay);
+}
+
+function openSchedulePublicationModal() {
+    if (chapter?.status === "published") {
+        throw new Error("Volte o episódio para rascunho antes de agendar uma nova estreia.");
+    }
+
+    const initialValue = getScheduleInitialValue();
+    const minValue = dateToLocalInputValue(new Date(Date.now() + 60 * 1000));
+
+    const modal = openFormModal({
+        eyebrow: chapter.number === 0 ? "PILOTO" : `EPISÓDIO ${chapter.number}`,
+        title: isChapterScheduled() ? "Alterar estreia" : "Agendar estreia",
+        width: "600px",
+        html: `
+            <div class="modal-context modal-context-accent">
+                <span class="modal-context-icon">◷</span>
+                <div>
+                    <strong>Publicação automática</strong>
+                    <span>O episódio continuará como rascunho até o horário escolhido. O servidor verificará os agendamentos a cada minuto.</span>
+                </div>
+            </div>
+            <label>
+                Data e horário de estreia
+                <input id="scheduled-publication-input" type="datetime-local" min="${minValue}" value="${initialValue}" required>
+                <small class="field-help">O horário usa o fuso local deste dispositivo: ${escapeHtml(Intl.DateTimeFormat().resolvedOptions().timeZone || "fuso local")}.</small>
+            </label>
+            <p class="muted">A estreia pode ocorrer até aproximadamente um minuto depois do horário escolhido, conforme o ciclo do agendador.</p>
+        `,
+        onSubmit: async (form) => {
+            const localValue = form.querySelector("#scheduled-publication-input")?.value;
+            if (!localValue) throw new Error("Escolha a data e o horário da estreia.");
+            const scheduledDate = new Date(localValue);
+            if (!Number.isFinite(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+                throw new Error("Escolha uma data e um horário futuros.");
+            }
+
+            const updated = await scheduleChapterPublication(chapter.id, {
+                title: document.querySelector("#chapter-title").value,
+                content: document.querySelector("#chapter-content").value,
+                scheduledPublishAt: scheduledDate.toISOString(),
+            });
+
+            chapter = { ...chapter, ...updated };
+            if (presenceTitleTimer) {
+                clearTimeout(presenceTitleTimer);
+                presenceTitleTimer = null;
+            }
+            updateChapterEditorPresence(updated.title);
+            setStatusUi(chapter.status, chapter.scheduled_publish_at);
+            showMessage(
+                document.querySelector("#chapter-message"),
+                `Estreia agendada para ${formatScheduleDate(chapter.scheduled_publish_at)}.`,
+                "success",
+            );
+            startScheduledPublicationRefresh();
+        },
+    });
+    return modal;
+}
+
+function confirmCancelSchedule() {
+    if (!isChapterScheduled()) return;
+    openConfirmModal({
+        eyebrow: "ESTREIA AGENDADA",
+        title: "Cancelar agendamento?",
+        message: `Cancelar a estreia programada de <strong>${escapeHtml(chapter.title)}</strong>?`,
+        details: `<p>O episódio continuará salvo como rascunho e não será publicado automaticamente.</p>`,
+        confirmLabel: "Cancelar estreia",
+        danger: true,
+        onConfirm: async () => {
+            const updated = await cancelChapterPublicationSchedule(chapter.id, {
+                title: document.querySelector("#chapter-title").value,
+                content: document.querySelector("#chapter-content").value,
+            });
+            chapter = { ...chapter, ...updated };
+            setStatusUi(chapter.status, chapter.scheduled_publish_at);
+            showMessage(
+                document.querySelector("#chapter-message"),
+                "Estreia cancelada. O episódio continua como rascunho.",
+                "success",
+            );
+            startScheduledPublicationRefresh();
+        },
+    });
 }
 
 function render() {
@@ -301,12 +503,7 @@ function render() {
                     }
                     ·
                     <span id="save-state">
-                        ${
-                            chapter.status ===
-                            "published"
-                                ? "Publicado"
-                                : "Rascunho"
-                        }
+                        ${chapterStatusLabel(chapter)}
                     </span>
                 </p>
             </div>
@@ -340,16 +537,17 @@ function render() {
                     </div>
 
                     <span
-                        class="status-pill ${chapter.status}"
+                        class="status-pill ${isChapterScheduled(chapter) ? "scheduled" : chapter.status}"
                         id="chapter-status-pill"
                     >
-                        ${
-                            chapter.status ===
-                            "published"
-                                ? "Publicado"
-                                : "Rascunho"
-                        }
+                        ${chapterStatusLabel(chapter)}
                     </span>
+                </div>
+
+                <div class="chapter-scheduled-note" id="scheduled-publication-note" ${isChapterScheduled(chapter) ? "" : "hidden"}>
+                    <span class="eyebrow">ESTREIA AGENDADA</span>
+                    <strong id="scheduled-publication-date">${escapeHtml(formatScheduleDate(chapter.scheduled_publish_at))}</strong>
+                    <p>O servidor publicará este episódio automaticamente no horário programado. Até lá, ele continua indisponível para leitores.</p>
                 </div>
 
                 <div class="chapter-media-tools">
@@ -431,7 +629,25 @@ function render() {
                     class="primary-button"
                     type="button"
                 >
-                    Publicar episódio
+                    Publicar episódio agora
+                </button>
+
+                <button
+                    id="schedule-publication-button"
+                    class="secondary-button"
+                    type="button"
+                    ${chapter.status === "published" ? "hidden" : ""}
+                >
+                    ${isChapterScheduled(chapter) ? "Alterar estreia" : "Agendar estreia"}
+                </button>
+
+                <button
+                    id="cancel-schedule-button"
+                    class="secondary-button"
+                    type="button"
+                    ${isChapterScheduled(chapter) ? "" : "hidden"}
+                >
+                    Cancelar estreia
                 </button>
 
                 <button
@@ -914,41 +1130,29 @@ function updateCounter() {
 
 function setStatusUi(
     status,
+    scheduledPublishAt = chapter?.scheduled_publish_at,
 ) {
-    const pill =
-        document.querySelector(
-            "#chapter-status-pill"
-        );
-
-    const saveState =
-        document.querySelector(
-            "#save-state"
-        );
-
-    const unpublish =
-        document.querySelector(
-            "#unpublish-button"
-        );
+    const pill = document.querySelector("#chapter-status-pill");
+    const saveState = document.querySelector("#save-state");
+    const unpublish = document.querySelector("#unpublish-button");
+    const scheduleButton = document.querySelector("#schedule-publication-button");
+    const cancelScheduleButton = document.querySelector("#cancel-schedule-button");
 
     if (!pill || !saveState) return;
 
-    pill.className =
-        `status-pill ${status}`;
+    const scheduled = status !== "published" && Boolean(scheduledPublishAt);
+    const label = status === "published" ? "Publicado" : scheduled ? "Estreia agendada" : "Rascunho";
+    pill.className = `status-pill ${scheduled ? "scheduled" : status}`;
+    pill.textContent = label;
+    saveState.textContent = label;
 
-    pill.textContent =
-        status === "published"
-            ? "Publicado"
-            : "Rascunho";
-
-    saveState.textContent =
-        status === "published"
-            ? "Publicado"
-            : "Rascunho";
-
-    if (unpublish) {
-        unpublish.hidden =
-            status !== "published";
+    if (unpublish) unpublish.hidden = status !== "published";
+    if (scheduleButton) {
+        scheduleButton.hidden = status === "published";
+        scheduleButton.textContent = scheduled ? "Alterar estreia" : "Agendar estreia";
     }
+    if (cancelScheduleButton) cancelScheduleButton.hidden = !scheduled;
+    updateScheduledNote(scheduledPublishAt);
 }
 
 async function save(status) {
@@ -957,11 +1161,18 @@ async function save(status) {
             "#chapter-message"
         );
 
+    const scheduledBeforeSave = chapter.scheduled_publish_at;
+    // Durante um agendamento, salvar o conteúdo não deve forçar status=draft:
+    // o Cron pode ter publicado o episódio entre dois autosaves.
+    const effectiveStatus = status === "draft" && scheduledBeforeSave
+        ? undefined
+        : status;
+
     showMessage(
         message,
-        status === "published"
+        effectiveStatus === "published"
             ? "Publicando..."
-            : "Salvando rascunho..."
+            : "Salvando alterações..."
     );
 
     try {
@@ -970,18 +1181,12 @@ async function save(status) {
             await updateChapter(
                 chapter.id,
                 {
-                    title:
-                        document.querySelector(
-                            "#chapter-title"
-                        ).value,
-                    content:
-                        document.querySelector(
-                            "#chapter-content"
-                        ).value,
-                    status,
+                    title: document.querySelector("#chapter-title").value,
+                    content: document.querySelector("#chapter-content").value,
+                    status: effectiveStatus,
                 },
                 {
-                    fetchSeasonStatus: chapter.status !== status,
+                    fetchSeasonStatus: Boolean(effectiveStatus && chapter.status !== effectiveStatus),
                 },
             );
 
@@ -998,14 +1203,17 @@ async function save(status) {
         updateChapterEditorPresence(updated.title);
 
         setStatusUi(
-            updated.status
+            updated.status,
+            updated.scheduled_publish_at,
         );
+        startScheduledPublicationRefresh();
 
-        let successMessage =
-            updated.status === "published"
-                ? (previousStatus === "published"
-                    ? "Alterações do episódio publicadas."
-                    : "Episódio publicado!")
+        let successMessage = updated.status === "published"
+            ? (previousStatus === "published"
+                ? "Alterações do episódio publicadas."
+                : "Episódio publicado!")
+            : updated.scheduled_publish_at
+                ? `Alterações salvas. Estreia agendada para ${formatScheduleDate(updated.scheduled_publish_at)}.`
                 : (previousStatus === "published"
                     ? "Episódio voltou para rascunho."
                     : "Rascunho salvo!");
@@ -1205,36 +1413,87 @@ function insertImageToken(token) {
 }
 
 
+function parseImageMetadata(rawMetadata) {
+    const fields = String(rawMetadata ?? "").split("|");
+    return {
+        alt: String(fields[0] ?? "Imagem da cena").trim() || "Imagem da cena",
+        spoiler: fields.slice(1).some((value) => value.trim().toLowerCase() === "spoiler"),
+    };
+}
+
 function parseChapterImageTokens(content) {
-    const source = String(content ?? "");
-
-    const regex =
-        /^\s*\[\[image:([^\]\n|]+)(?:\|([^\]\n]*))?\]\]\s*$/gim;
-
+    const source = String(content ?? "").replaceAll("\r\n", "\n");
+    const lines = source.split("\n");
+    const firstNonEmptyLineIndex = lines.findIndex((line) => line.trim().length > 0);
     const images = [];
+    const regex = /^\s*\[\[image:([^\]\n|]+)(?:\|([^\]\n]*))?\]\]\s*$/i;
 
-    for (const match of source.matchAll(regex)) {
-        const path =
-            String(match[1] ?? "").trim();
+    lines.forEach((line, lineIndex) => {
+        const match = line.match(regex);
+        if (!match) return;
 
-        const alt =
-            String(match[2] ?? "").trim() ||
-            "Imagem da cena";
+        const path = String(match[1] ?? "").trim();
+        if (!path) return;
 
-        if (!path) {
-            continue;
-        }
-
+        const metadata = parseImageMetadata(match[2]);
         images.push({
             path,
-            alt,
-            internal:
-                path.startsWith("chapters/") &&
-                !/^https?:\/\//i.test(path),
+            alt: metadata.alt,
+            spoiler: metadata.spoiler,
+            // A primeira linha não vazia só é a capa quando ela própria é uma imagem.
+            isCover: lineIndex === firstNonEmptyLineIndex,
+            internal: path.startsWith("chapters/") && !/^https?:\/\//i.test(path),
         });
-    }
+    });
 
     return images;
+}
+
+function updateChapterImageSpoiler(path, enabled) {
+    const textarea = document.querySelector("#chapter-content");
+    if (!textarea) return;
+
+    const source = String(textarea.value ?? "").replaceAll("\r\n", "\n");
+    const lines = source.split("\n");
+    const firstNonEmptyLineIndex = lines.findIndex((line) => line.trim().length > 0);
+    const regex = /^(\s*)\[\[image:([^\]\n|]+)(?:\|([^\]\n]*))?\]\](\s*)$/i;
+    const lineIndex = lines.findIndex((line) => {
+        const match = line.match(regex);
+        return match && String(match[2] ?? "").trim() === String(path ?? "").trim();
+    });
+
+    if (lineIndex < 0) return;
+    if (lineIndex === firstNonEmptyLineIndex) {
+        showMessage(
+            document.querySelector("#chapter-message"),
+            "A imagem da primeira linha é a capa do episódio e não pode ser marcada como spoiler.",
+            "error",
+        );
+        renderChapterImages();
+        return;
+    }
+
+    const match = lines[lineIndex].match(regex);
+    if (!match) return;
+
+    const metadata = parseImageMetadata(match[3]);
+    const alt = sanitizeImageAlt(metadata.alt) || "Imagem da cena";
+    lines[lineIndex] = `${match[1]}[[image:${String(path).trim()}|${alt}${enabled ? "|spoiler" : ""}]]${match[4]}`;
+
+    bypassProtectedGuard += 1;
+    try {
+        textarea.value = lines.join("\n");
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    } finally {
+        bypassProtectedGuard -= 1;
+    }
+    syncProtectedImageSnapshot(textarea);
+
+    showMessage(
+        document.querySelector("#chapter-message"),
+        `Spoiler ${enabled ? "ativado" : "desativado"}. Salve o episódio para confirmar a alteração.`,
+        "success",
+    );
 }
 
 function removeChapterImageToken(
@@ -1397,11 +1656,34 @@ async function renderChapterImages() {
                                 ${origin}
                                 · imagem ${index + 1} de ${images.length}
                             </span>
+                            ${image.isCover ? `
+                                <p class="chapter-image-spoiler-note muted">
+                                    Esta é a capa do episódio. A opção de spoiler não se aplica a ela.
+                                </p>
+                            ` : `
+                                <label class="chapter-image-spoiler-control">
+                                    <input
+                                        type="checkbox"
+                                        data-toggle-image-spoiler="${escapeHtml(image.path)}"
+                                        ${image.spoiler ? "checked" : ""}
+                                    >
+                                    Marcar como spoiler
+                                </label>
+                            `}
                         </div>
                     </article>
                 `;
             }
         ).join("");
+
+    list.querySelectorAll("[data-toggle-image-spoiler]").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            updateChapterImageSpoiler(
+                checkbox.dataset.toggleImageSpoiler || "",
+                checkbox.checked,
+            );
+        });
+    });
 
     list
         .querySelectorAll(
@@ -1776,6 +2058,7 @@ function bind() {
         () => {
             updateCounter();
             renderChapterImages();
+            scheduleChapterPresenceTitleUpdate();
 
             clearTimeout(
                 saveTimer
@@ -1790,7 +2073,7 @@ function bind() {
                             "published"
                         ) {
                             await save(
-                                "draft"
+                                isChapterScheduled() ? undefined : "draft"
                             );
                         }
                     },
@@ -1814,13 +2097,33 @@ function bind() {
     );
 
     document.querySelector(
+        "#schedule-publication-button"
+    ).addEventListener(
+        "click",
+        () => {
+            try {
+                openSchedulePublicationModal();
+            } catch (error) {
+                showMessage(document.querySelector("#chapter-message"), error.message, "error");
+            }
+        },
+    );
+
+    document.querySelector(
+        "#cancel-schedule-button"
+    ).addEventListener(
+        "click",
+        confirmCancelSchedule,
+    );
+
+    document.querySelector(
         "#publish-button"
     ).addEventListener(
         "click",
         async () => {
             const confirmed =
                 confirm(
-                    "Publicar este episódio para os leitores agora?"
+                    "Publicar este episódio para os leitores agora? O agendamento existente será removido."
                 );
 
             if (!confirmed) {
@@ -1872,6 +2175,12 @@ function bind() {
         },
     );
 }
+
+window.addEventListener("beforeunload", () => {
+    if (scheduleRefreshTimer) clearTimeout(scheduleRefreshTimer);
+    if (saveTimer) clearTimeout(saveTimer);
+    if (presenceTitleTimer) clearTimeout(presenceTitleTimer);
+});
 
 document.querySelector(
     "#logout-button"
@@ -1949,6 +2258,7 @@ async function init() {
         // storyId é usado somente para o caminho visual.
         // A autorização real vem do RLS no capítulo.
         render();
+        startScheduledPublicationRefresh();
     } catch (error) {
         console.error(error);
 

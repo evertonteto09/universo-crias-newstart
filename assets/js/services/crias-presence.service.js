@@ -1,18 +1,32 @@
-import { saveUserPreferencePatch, syncUserPreferences } from "./user-preferences.service.js";
+import { saveUserPreferencePatch, syncUserPreferences } from "./user-preferences.service.js?v=20261028-crias-presence-final-1";
+import { CRIAS_PRESENCE_LOGO_URL } from "./crias-presence-images.service.js?v=20261028-crias-presence-final-1";
 
 const WS_URL = "ws://127.0.0.1:32145/presence";
 const GITHUB_PAGES_ORIGIN = "https://evertonteto09.github.io";
 const SESSION_KEY = "criasPresenceSession";
 const SETTINGS_KEY = "criasPresenceSettings";
 
+const PUBLIC_SITE_BASE_URL = "https://evertonteto09.github.io/universo-crias-newstart/";
+const PUBLIC_SITE_ORIGIN = "https://evertonteto09.github.io";
+const READER_PAGE_CONTEXTS = new Set(["home", "story", "episode"]);
+const STORY_SECTION_DETAILS = Object.freeze({
+    chapters: "Vendo episódios",
+    news: "Lendo notícias",
+    reviews: "Lendo avaliações",
+});
+
 const DEFAULT_SETTINGS = Object.freeze({
     enabled: true,
     showStoryTitle: false,
     showEpisodeDetails: false,
     showWriterActivity: false,
+    showImages: false,
+    showStorySection: true,
+    showCurrentPageButton: false,
 });
 
 const MAX_TEXT_LENGTH = 128;
+const MAX_IMAGE_URL_LENGTH = 300;
 const WIDGET_ID = "crias-presence-control";
 const STYLE_ID = "crias-presence-styles";
 
@@ -27,6 +41,9 @@ function loadSavedSettings() {
             showStoryTitle: typeof saved.showStoryTitle === "boolean" ? saved.showStoryTitle : DEFAULT_SETTINGS.showStoryTitle,
             showEpisodeDetails: typeof saved.showEpisodeDetails === "boolean" ? saved.showEpisodeDetails : DEFAULT_SETTINGS.showEpisodeDetails,
             showWriterActivity: typeof saved.showWriterActivity === "boolean" ? saved.showWriterActivity : DEFAULT_SETTINGS.showWriterActivity,
+            showImages: typeof saved.showImages === "boolean" ? saved.showImages : DEFAULT_SETTINGS.showImages,
+            showStorySection: typeof saved.showStorySection === "boolean" ? saved.showStorySection : DEFAULT_SETTINGS.showStorySection,
+            showCurrentPageButton: typeof saved.showCurrentPageButton === "boolean" ? saved.showCurrentPageButton : DEFAULT_SETTINGS.showCurrentPageButton,
         };
     } catch {
         return { ...DEFAULT_SETTINGS };
@@ -63,6 +80,8 @@ export function initCriasPresence(initialActivity = {}) {
     let socket = null;
     let authorized = false;
     let discordReady = false;
+    let appSupportsImages = false;
+    let appSupportsButtons = false;
     let pageUnloading = false;
     let pendingAction = null;
     let publishTimer = null;
@@ -382,6 +401,30 @@ export function initCriasPresence(initialActivity = {}) {
                 line-height: 1.5;
             }
 
+            /* O tema personalizado controla os fundos do menu e dos cards do widget. */
+            :root[data-theme="personalizado"] #${WIDGET_ID} .cp-popover {
+                background: var(--custom-theme-menu-bg-color, var(--surface)) !important;
+            }
+
+            :root[data-theme="personalizado"] #${WIDGET_ID} .cp-status,
+            :root[data-theme="personalizado"] #${WIDGET_ID} .cp-download-callout,
+            :root[data-theme="personalizado"] #${WIDGET_ID} .cp-setting-row {
+                background: var(--custom-theme-card-bg-color, var(--surface-2)) !important;
+                color: var(--custom-theme-text-color, var(--text));
+            }
+
+            :root[data-theme="personalizado"] #${WIDGET_ID} .cp-code {
+                background: var(--custom-theme-input-bg-color, #0C1218) !important;
+                color: var(--custom-theme-text-color, var(--text)) !important;
+                border-color: color-mix(in srgb, var(--custom-theme-input-bg-color, #0C1218) 78%, var(--custom-theme-text-color, #F4FBFF)) !important;
+            }
+
+            :root[data-theme="personalizado"] #${WIDGET_ID} .cp-button {
+                background: var(--custom-theme-button-bg-color, var(--surface-2)) !important;
+                color: var(--custom-theme-text-color, var(--text)) !important;
+                border-color: color-mix(in srgb, var(--custom-theme-button-bg-color, #16002B) 72%, var(--custom-theme-text-color, #F4FBFF)) !important;
+            }
+
             /* Rich Presence requer o programa e o Discord para computador.
                Oculte o controle em telas pequenas e dispositivos com toque primário. */
             @media (max-width: 680px), (hover: none) and (pointer: coarse) {
@@ -569,10 +612,34 @@ export function initCriasPresence(initialActivity = {}) {
                         </span>
                         <input id="cp-setting-writer-activity" type="checkbox">
                     </label>
+
+                    <label class="cp-setting-row" for="cp-setting-images">
+                        <span class="cp-setting-copy">
+                            <strong>Mostrar imagens das obras</strong>
+                            <small>Exibe a logo ou as capas de histórias e episódios na atividade do Discord.</small>
+                        </span>
+                        <input id="cp-setting-images" type="checkbox">
+                    </label>
+
+                    <label class="cp-setting-row" for="cp-setting-story-section">
+                        <span class="cp-setting-copy">
+                            <strong>Mostrar seção da história</strong>
+                            <small>Na página da obra, exibe “Vendo episódios”, “Lendo notícias” ou “Lendo avaliações”. Desative para usar “Lendo uma história”.</small>
+                        </span>
+                        <input id="cp-setting-story-section" type="checkbox">
+                    </label>
+
+                    <label class="cp-setting-row" for="cp-setting-current-page-button">
+                        <span class="cp-setting-copy">
+                            <strong>Mostrar botão da página atual</strong>
+                            <small>Adiciona um botão para abrir a página atual de leitura. Ele não aparece no Portal do Escritor.</small>
+                        </span>
+                        <input id="cp-setting-current-page-button" type="checkbox">
+                    </label>
                 </div>
 
                 <p class="cp-privacy-note">
-                    As preferências ficam salvas neste navegador. Desativar uma opção atualiza a presença para remover os detalhes correspondentes.
+                    As preferências ficam salvas na sua conta quando você está conectado. Ao ativar imagens, as URLs das capas são enviadas ao Discord para exibição. O botão “Conheça o Universo” é padrão; o botão da página atual é opcional e nunca aparece no Portal do Escritor.
                 </p>
             </div>
 
@@ -664,6 +731,9 @@ export function initCriasPresence(initialActivity = {}) {
         showStoryTitle: host.querySelector("#cp-setting-story-title"),
         showEpisodeDetails: host.querySelector("#cp-setting-episode-details"),
         showWriterActivity: host.querySelector("#cp-setting-writer-activity"),
+        showImages: host.querySelector("#cp-setting-images"),
+        showStorySection: host.querySelector("#cp-setting-story-section"),
+        showCurrentPageButton: host.querySelector("#cp-setting-current-page-button"),
     };
 
     // ==================================================
@@ -682,10 +752,62 @@ export function initCriasPresence(initialActivity = {}) {
             .slice(0, MAX_TEXT_LENGTH);
     }
 
+    function normalizeImageUrl(value) {
+        if (typeof value !== "string" || !value.trim() || value.trim().length > MAX_IMAGE_URL_LENGTH) return "";
+        try {
+            const url = new URL(value.trim(), window.location.href);
+            if (url.protocol !== "https:" || url.username || url.password || url.href.length > MAX_IMAGE_URL_LENGTH) return "";
+            return url.href;
+        } catch {
+            return "";
+        }
+    }
+
+    function normalizePublicPageUrl(value) {
+        if (typeof value !== "string" || !value.trim()) return "";
+        try {
+            const url = new URL(value.trim(), window.location.href);
+            if (url.username || url.password) return "";
+
+            // Em localhost, Rich Presence deve apontar para a versão publicada do
+            // site, não para o computador de quem está desenvolvendo.
+            if (["localhost", "127.0.0.1"].includes(url.hostname) && ["http:", "https:"].includes(url.protocol)) {
+                const relativePath = url.pathname.replace(/^\/+/, "") || "index.html";
+                const publicUrl = new URL(relativePath, PUBLIC_SITE_BASE_URL);
+                publicUrl.search = url.search;
+                publicUrl.hash = url.hash;
+                return publicUrl.href.length <= 512 ? publicUrl.href : "";
+            }
+
+            if (url.protocol !== "https:" || url.origin !== PUBLIC_SITE_ORIGIN ||
+                !url.pathname.startsWith("/universo-crias-newstart/")) return "";
+            return url.href.length <= 512 ? url.href : "";
+        } catch {
+            return "";
+        }
+    }
+
     function normalizeActivity(value = {}) {
+        const pageContext = ["home", "story", "episode", "writer"].includes(value.pageContext)
+            ? value.pageContext
+            : "other";
+        const storySection = Object.hasOwn(STORY_SECTION_DETAILS, value.storySection)
+            ? value.storySection
+            : "chapters";
+        const currentPageButtonLabel = normalizeText(value.currentPageButtonLabel).slice(0, 32);
+
         return {
             details: normalizeText(value.details),
             state: normalizeText(value.state),
+            largeImageUrl: normalizeImageUrl(value.largeImageUrl) || CRIAS_PRESENCE_LOGO_URL,
+            smallImageUrl: normalizeImageUrl(value.smallImageUrl),
+            largeImageText: normalizeText(value.largeImageText) || "Universo dos Crias",
+            smallImageText: normalizeText(value.smallImageText),
+            pageContext,
+            storySection,
+            storyTitle: normalizeText(value.storyTitle),
+            currentPageUrl: normalizePublicPageUrl(value.currentPageUrl),
+            currentPageButtonLabel,
         };
     }
 
@@ -703,6 +825,9 @@ export function initCriasPresence(initialActivity = {}) {
                 presence_show_story_title: settings.showStoryTitle,
                 presence_show_episode_details: settings.showEpisodeDetails,
                 presence_show_writer_activity: settings.showWriterActivity,
+                presence_show_images: settings.showImages,
+                presence_show_story_section: settings.showStorySection,
+                presence_show_current_page_button: settings.showCurrentPageButton,
             }).catch((error) => {
                 console.warn("Não foi possível sincronizar as preferências de Presença com a conta:", error);
             });
@@ -715,51 +840,86 @@ export function initCriasPresence(initialActivity = {}) {
         }
     }
 
-    function getPrivacyFilteredActivity() {
-        if (!settings.enabled) {
-            return null;
+    function withPrivacyFilteredImages(textActivity, { hideArtwork = false } = {}) {
+        const result = { ...textActivity };
+
+        // Só as três páginas de leitura podem acrescentar o botão contextual.
+        // Páginas do portal/editor e páginas auxiliares ficam apenas com o botão
+        // institucional inserido pelo aplicativo desktop.
+        if (
+            settings.showCurrentPageButton &&
+            READER_PAGE_CONTEXTS.has(activity.pageContext) &&
+            activity.currentPageUrl &&
+            activity.currentPageButtonLabel
+        ) {
+            result.currentPageButton = {
+                label: activity.currentPageButtonLabel,
+                url: activity.currentPageUrl,
+            };
         }
+
+        if (!settings.showImages) return result;
+
+        result.largeImageUrl = hideArtwork
+            ? CRIAS_PRESENCE_LOGO_URL
+            : (activity.largeImageUrl || CRIAS_PRESENCE_LOGO_URL);
+        result.largeImageText = hideArtwork
+            ? "Universo dos Crias"
+            : (activity.largeImageText || "Universo dos Crias");
+
+        if (!hideArtwork && activity.smallImageUrl) {
+            result.smallImageUrl = activity.smallImageUrl;
+            if (activity.smallImageText) result.smallImageText = activity.smallImageText;
+        }
+        return result;
+    }
+
+    function getPrivacyFilteredActivity() {
+        if (!settings.enabled) return null;
 
         const details = activity.details;
         const state = activity.state;
-
         const isWriterActivity = /^(No portal do Escritor|Gerenciando histórias|Editando uma história|Editando um episódio|Criando uma história)/i.test(details);
 
+        // Se a atividade de escritor estiver oculta, não compartilhamos a capa
+        // da obra que pode estar em rascunho; a logo genérica é usada no lugar.
         if (isWriterActivity && !settings.showWriterActivity) {
-            return {
+            return withPrivacyFilteredImages({
                 details: "No Universo dos Crias",
                 state: "Universo dos Crias",
-            };
+            }, { hideArtwork: true });
+        }
+
+        if (activity.pageContext === "story") {
+            const sectionDetails = STORY_SECTION_DETAILS[activity.storySection] || STORY_SECTION_DETAILS.chapters;
+            const safeDetails = settings.showStorySection ? sectionDetails : "Lendo uma história";
+            const storyName = activity.storyTitle || state;
+            return withPrivacyFilteredImages({
+                details: safeDetails,
+                state: settings.showStoryTitle && storyName ? `História: ${storyName}` : "Universo dos Crias",
+            });
         }
 
         if (details === "Lendo uma história") {
-            return {
+            return withPrivacyFilteredImages({
                 details,
-                state: settings.showStoryTitle && state
-                    ? state
-                    : "Universo dos Crias",
-            };
+                state: settings.showStoryTitle && state ? state : "Universo dos Crias",
+            });
         }
 
         if (details.startsWith("Lendo: ")) {
             const storyTitle = details.slice("Lendo: ".length).trim();
-            return {
-                details: settings.showStoryTitle && storyTitle
-                    ? `Lendo: ${storyTitle}`
-                    : "Lendo um episódio",
-                state: settings.showEpisodeDetails && state
-                    ? state
-                    : "Universo dos Crias",
-            };
+            return withPrivacyFilteredImages({
+                details: settings.showStoryTitle && storyTitle ? `Lendo: ${storyTitle}` : "Lendo um episódio",
+                state: settings.showEpisodeDetails && state ? state : "Universo dos Crias",
+            });
         }
 
         if (details === "Editando uma história") {
-            return {
+            return withPrivacyFilteredImages({
                 details,
-                state: settings.showStoryTitle && state
-                    ? state
-                    : "Editor de histórias",
-            };
+                state: settings.showStoryTitle && state ? state : "Editor de histórias",
+            });
         }
 
         if (details === "Editando um episódio") {
@@ -767,7 +927,6 @@ export function initCriasPresence(initialActivity = {}) {
             const storyTitle = separator >= 0 ? state.slice(0, separator).trim() : "";
             const episodeLabel = separator >= 0 ? state.slice(separator + 3).trim() : state;
             let safeState = "Editor de episódios";
-
             if (settings.showStoryTitle && storyTitle && settings.showEpisodeDetails && episodeLabel) {
                 safeState = `${storyTitle} · ${episodeLabel}`;
             } else if (settings.showStoryTitle && storyTitle) {
@@ -775,14 +934,10 @@ export function initCriasPresence(initialActivity = {}) {
             } else if (settings.showEpisodeDetails && episodeLabel) {
                 safeState = episodeLabel;
             }
-
-            return {
-                details,
-                state: safeState,
-            };
+            return withPrivacyFilteredImages({ details, state: safeState });
         }
 
-        return { details, state };
+        return withPrivacyFilteredImages({ details, state });
     }
 
     function setStatus(message, state = "info") {
@@ -884,10 +1039,21 @@ export function initCriasPresence(initialActivity = {}) {
 
         setStatus("Enviando atualização para o Discord...");
 
+        const imageFields = appSupportsImages ? {
+            ...(safeActivity.largeImageUrl ? { largeImageUrl: safeActivity.largeImageUrl } : {}),
+            ...(safeActivity.smallImageUrl ? { smallImageUrl: safeActivity.smallImageUrl } : {}),
+            ...(safeActivity.largeImageText ? { largeImageText: safeActivity.largeImageText } : {}),
+            ...(safeActivity.smallImageText ? { smallImageText: safeActivity.smallImageText } : {}),
+        } : {};
+
         return send({
             type: "UPDATE_ACTIVITY",
             details: safeActivity.details,
             state: safeActivity.state,
+            ...imageFields,
+            ...(appSupportsButtons && safeActivity.currentPageButton
+                ? { currentPageButton: safeActivity.currentPageButton }
+                : {}),
         });
     }
 
@@ -1041,6 +1207,8 @@ export function initCriasPresence(initialActivity = {}) {
             switch (data.type) {
                 case "CONNECTED": {
                     discordReady = data.discordReady === true;
+                    appSupportsImages = data.supportsImages === true;
+                    appSupportsButtons = data.supportsButtons === true;
 
                     const existingToken =
                         sessionStorage.getItem(SESSION_KEY);
@@ -1163,7 +1331,11 @@ export function initCriasPresence(initialActivity = {}) {
                         );
                     } else {
                         setStatus(
-                            "Rich Presence atualizada com sucesso!",
+                            settings.showImages && !appSupportsImages
+                                ? "Atividade textual atualizada. Instale o Crias Presence 1.2.0 ou mais recente para exibir imagens."
+                                : !appSupportsButtons
+                                    ? "Atividade atualizada. Instale o Crias Presence 1.3.0 para usar os botões da atividade."
+                                    : "Rich Presence atualizada com sucesso!",
                             "ready"
                         );
                     }
@@ -1232,6 +1404,8 @@ export function initCriasPresence(initialActivity = {}) {
             socket = null;
             authorized = false;
             discordReady = false;
+            appSupportsImages = false;
+            appSupportsButtons = false;
             pendingAction = null;
 
             updateControls();
@@ -1362,7 +1536,10 @@ export function initCriasPresence(initialActivity = {}) {
         const privacyChanged =
             previousSettings.showStoryTitle !== settings.showStoryTitle ||
             previousSettings.showEpisodeDetails !== settings.showEpisodeDetails ||
-            previousSettings.showWriterActivity !== settings.showWriterActivity;
+            previousSettings.showWriterActivity !== settings.showWriterActivity ||
+            previousSettings.showImages !== settings.showImages ||
+            previousSettings.showStorySection !== settings.showStorySection ||
+            previousSettings.showCurrentPageButton !== settings.showCurrentPageButton;
 
         if (authorized && discordReady) {
             if (!previousSettings.enabled || privacyChanged) {
@@ -1390,7 +1567,7 @@ export function initCriasPresence(initialActivity = {}) {
         }
 
         const previousSettings = { ...settings };
-        settings = readSettings();
+        settings = loadSavedSettings();
         applySettingsChangeFromStorage(previousSettings);
     });
 
@@ -1402,6 +1579,9 @@ export function initCriasPresence(initialActivity = {}) {
             showStoryTitle: preferences.presence_show_story_title,
             showEpisodeDetails: preferences.presence_show_episode_details,
             showWriterActivity: preferences.presence_show_writer_activity,
+            showImages: preferences.presence_show_images,
+            showStorySection: preferences.presence_show_story_section,
+            showCurrentPageButton: preferences.presence_show_current_page_button,
         };
         // Evita escrever de volta para a nuvem ao aplicar uma mudança recebida dela.
         try {
@@ -1441,7 +1621,10 @@ export function initCriasPresence(initialActivity = {}) {
             previousSettings.enabled !== settings.enabled ||
             previousSettings.showStoryTitle !== settings.showStoryTitle ||
             previousSettings.showEpisodeDetails !== settings.showEpisodeDetails ||
-            previousSettings.showWriterActivity !== settings.showWriterActivity;
+            previousSettings.showWriterActivity !== settings.showWriterActivity ||
+            previousSettings.showImages !== settings.showImages ||
+            previousSettings.showStorySection !== settings.showStorySection ||
+            previousSettings.showCurrentPageButton !== settings.showCurrentPageButton;
 
         if (privacyChanged && authorized && discordReady) {
             scheduleActivityPublish(0);

@@ -30,6 +30,9 @@ export async function getPublishedChapter(
                 title,
                 slug,
                 status,
+                cover_type,
+                cover_url,
+                cover_path,
                 seasons (
                     id,
                     number,
@@ -93,6 +96,7 @@ export async function getWriterChapter(
             title,
             content,
             status,
+            scheduled_publish_at,
             content_format,
             created_at,
             updated_at
@@ -169,40 +173,36 @@ export async function updateChapter(
     },
     { fetchSeasonStatus = false } = {},
 ) {
-    const cleanTitle =
-        String(title ?? "").trim();
-
+    const cleanTitle = String(title ?? "").trim();
     if (!cleanTitle) {
-        throw new Error(
-            "O título do episódio é obrigatório."
-        );
+        throw new Error("O título do episódio é obrigatório.");
     }
 
-    const cleanContent =
-        String(content ?? "");
+    const cleanContent = String(content ?? "");
+    if (status === "published" && !cleanContent.trim()) {
+        throw new Error("Um episódio precisa ter conteúdo antes de ser publicado.");
+    }
 
-    const nextStatus =
-        status === "published"
-            ? "published"
-            : "draft";
+    const payload = {
+        title: cleanTitle,
+        content: cleanContent,
+        content_format: "plain_text",
+    };
 
-    if (
-        nextStatus === "published" &&
-        !cleanContent.trim()
-    ) {
-        throw new Error(
-            "Um episódio precisa ter conteúdo antes de ser publicado."
-        );
+    // Omite o status quando a operação é apenas salvar conteúdo. Isso evita
+    // que um autosave com uma aba aberta reverta a publicação feita pelo Cron.
+    if (status === "published" || status === "draft") {
+        payload.status = status;
+    }
+
+    // Publicação manual imediata substitui qualquer agendamento anterior.
+    if (status === "published") {
+        payload.scheduled_publish_at = null;
     }
 
     const { data, error } = await supabase
         .from("chapters")
-        .update({
-            title: cleanTitle,
-            content: cleanContent,
-            status: nextStatus,
-            content_format: "plain_text",
-        })
+        .update(payload)
         .eq("id", chapterId)
         .select()
         .single();
@@ -211,13 +211,92 @@ export async function updateChapter(
         throw error;
     }
 
-    // A mudança em chapters.status dispara a sincronização no banco.
-    // Aqui apenas lemos o estado resultante para exibi-lo ao escritor.
     const seasonStatus = fetchSeasonStatus
         ? await readSeasonStatusAfterChapterWrite(data.season_id)
         : null;
 
     return { ...data, seasonStatus };
+}
+
+/**
+ * Agenda a estreia de um episódio já escrito. O update exige que o capítulo
+ * continue em rascunho no banco, evitando alterar acidentalmente um episódio
+ * que o Cron já publicou enquanto o editor estava aberto.
+ */
+export async function scheduleChapterPublication(
+    chapterId,
+    { title, content, scheduledPublishAt },
+) {
+    const cleanTitle = String(title ?? "").trim();
+    const cleanContent = String(content ?? "");
+    const scheduledDate = new Date(scheduledPublishAt);
+
+    if (!cleanTitle) {
+        throw new Error("O título do episódio é obrigatório.");
+    }
+    if (!cleanContent.trim()) {
+        throw new Error("Escreva o conteúdo do episódio antes de agendar a estreia.");
+    }
+    if (!Number.isFinite(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+        throw new Error("Escolha uma data e um horário futuros.");
+    }
+
+    const { data, error } = await supabase
+        .from("chapters")
+        .update({
+            title: cleanTitle,
+            content: cleanContent,
+            content_format: "plain_text",
+            scheduled_publish_at: scheduledDate.toISOString(),
+        })
+        .eq("id", chapterId)
+        .eq("status", "draft")
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+    if (!data) {
+        throw new Error("Este episódio já foi publicado ou não está mais disponível como rascunho. Recarregue o editor e tente novamente.");
+    }
+
+    return { ...data, seasonStatus: null };
+}
+
+/** Cancela um agendamento sem publicar nem apagar o episódio. */
+export async function cancelChapterPublicationSchedule(
+    chapterId,
+    { title, content },
+) {
+    const cleanTitle = String(title ?? "").trim();
+    const cleanContent = String(content ?? "");
+    if (!cleanTitle) {
+        throw new Error("O título do episódio é obrigatório.");
+    }
+
+    const { data, error } = await supabase
+        .from("chapters")
+        .update({
+            title: cleanTitle,
+            content: cleanContent,
+            content_format: "plain_text",
+            scheduled_publish_at: null,
+        })
+        .eq("id", chapterId)
+        .eq("status", "draft")
+        .not("scheduled_publish_at", "is", null)
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+    if (!data) {
+        throw new Error("O agendamento não está mais ativo. A estreia pode já ter sido publicada; recarregue o editor.");
+    }
+
+    return { ...data, seasonStatus: null };
 }
 
 export async function deleteChapter(chapterId) {
