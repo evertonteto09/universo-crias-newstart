@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261028-spoiler-news-images-1";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-final-1";
 import {
     escapeHtml,
     formatDate,
@@ -38,7 +38,7 @@ import {
 import {
     createChapter,
     deleteChapter,
-} from "../services/chapter.service.js?v=20261028-spoiler-news-images-1";
+} from "../services/chapter.service.js?v=20261028-crias-presence-final-1";
 
 import {
     getStoryCoverUrl,
@@ -66,12 +66,12 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-spoiler-news-images-1";
+} from "../services/crias-presence.service.js?v=20261028-crias-presence-final-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
     getPresenceStoryCoverUrl,
-} from "../services/crias-presence-images.service.js?v=20261028-spoiler-news-images-1";
+} from "../services/crias-presence-images.service.js?v=20261028-crias-presence-final-1";
 
 setupTheme();
 

@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-final-1";
 import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261028-spoiler-news-images-1";
 import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261028-spoiler-news-images-1";
 import {
@@ -41,12 +41,12 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
+} from "../services/crias-presence.service.js?v=20261028-crias-presence-final-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
     getPresenceStoryCoverUrl,
-} from "../services/crias-presence-images.service.js?v=20261028-crias-presence-images-2";
+} from "../services/crias-presence-images.service.js?v=20261028-crias-presence-final-1";
 
 import {
     getReadingBookmark,
