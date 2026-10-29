@@ -3961,16 +3961,6 @@ textarea { resize: vertical; }
 .story-genres-create {
     margin-top: 8px;
 }
-.story-card .story-card-genres {
-    margin-top: -4px;
-    font-size: .92rem;
-    line-height: 1.55;
-    overflow-wrap: anywhere;
-}
-.story-card .story-card-genres strong {
-    color: var(--text);
-    font-weight: 750;
-}
 @media (max-width: 600px) {
     .story-genres-editor { padding: 13px; }
     .story-genre-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3978,7 +3968,7 @@ textarea { resize: vertical; }
 }
 
 
-/* Exclusão permanente de conta de leitor — visível somente após confirmação do papel. */
+/* Conta de leitor: zona de exclusão permanente. */
 .account-danger-zone {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -3996,7 +3986,16 @@ textarea { resize: vertical; }
 .account-danger-copy p { margin: 8px 0 0; line-height: 1.7; color: var(--muted); }
 .account-danger-zone .danger-button { flex: 0 0 auto; }
 .account-danger-zone .form-message { grid-column: 1 / -1; margin: 0; overflow-wrap: anywhere; }
-@media (max-width: 700px) {
-    .account-danger-zone { grid-template-columns: minmax(0, 1fr); }
-    .account-danger-zone .danger-button { width: 100%; }
+
+
+/* Gêneros nas histórias da página inicial. A linha só é renderizada quando há gêneros. */
+.story-card .story-card-genres {
+    margin-top: -4px;
+    font-size: .92rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.story-card .story-card-genres strong {
+    color: var(--text);
+    font-weight: 750;
 }

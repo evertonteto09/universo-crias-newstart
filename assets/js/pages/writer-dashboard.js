@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-final-1";
+import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
 import { openConfirmModal } from "../core/modal.js";
 import {
     escapeHtml,
@@ -37,7 +37,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-crias-presence-final-1";
+} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
 
 setupTheme();
 

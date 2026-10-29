@@ -11,6 +11,7 @@ export async function getPublishedStories() {
             title,
             slug,
             description,
+            genres,
             status,
             published_at,
             cover_type,
