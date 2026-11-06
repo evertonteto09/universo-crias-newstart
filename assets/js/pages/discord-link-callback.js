@@ -52,7 +52,7 @@ function goToDashboard(result, reason = "") {
     localStorage.removeItem(PENDING_KEY);
     sessionStorage.removeItem(OAUTH_RESULT_KEY);
 
-    const destination = new URL("./index.html", window.location.href);
+    const destination = new URL("./", window.location.href);
     destination.searchParams.set("discord-link-result", result);
     if (reason) destination.searchParams.set("reason", reason);
     window.location.replace(destination.href);

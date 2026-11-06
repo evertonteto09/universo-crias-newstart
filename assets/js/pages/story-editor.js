@@ -66,7 +66,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-spoiler-news-images-1";
+} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -557,7 +557,7 @@ async function render() {
             <div>
                 <a
                     class="text-link"
-                    href="./index.html"
+                    href="./"
                 >
                     ← Dashboard
                 </a>
@@ -577,7 +577,7 @@ async function render() {
             <div class="main-nav">
                 <a
                     class="secondary-button"
-                    href="../historia.html?slug=${encodeURIComponent(story.slug)}"
+                    href="../historia/?slug=${encodeURIComponent(story.slug)}"
                     target="_blank"
                     rel="noopener"
                 >
@@ -2492,7 +2492,7 @@ document.querySelector(
             await signOut();
         } finally {
             location.href =
-                "./login.html";
+                "./login/";
         }
     }
 );
@@ -2564,7 +2564,7 @@ function bindDeleteStory() {
                         throw deleteError;
                     }
 
-                    location.href = "./index.html";
+                    location.href = "./";
                 },
             });
         },
@@ -2639,7 +2639,7 @@ async function init() {
 
         if (!writer) {
             location.href =
-                "./login.html";
+                "./login/";
             return;
         }
 
@@ -2710,7 +2710,7 @@ async function init() {
                 </p>
                 <a
                     class="primary-button"
-                    href="./index.html"
+                    href="./"
                 >
                     Voltar ao dashboard
                 </a>

@@ -13,6 +13,12 @@ import {
     getPublishedStoryBySlug,
 } from "../services/story.service.js?v=20261028-story-genres-2";
 import {
+    getPublicScheduledChapterPreviews,
+    estimateServerNowMs,
+    formatPremiereCountdown,
+    formatBrasiliaDate,
+} from "../services/premiere.service.js?v=20261105-premiere-server-clock-2";
+import {
     getStoryAuthors,
     renderStoryAuthorNames,
 } from "../core/story-authors.js?v=20261027-coauthor-2";
@@ -41,7 +47,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
+} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -102,6 +108,57 @@ function updateStorySectionPresence(section) {
     });
 }
 
+
+let premiereCountdownInterval = null;
+let publicPremiereServerClock = null;
+
+function setupPublicPremiereCountdowns() {
+    if (premiereCountdownInterval) {
+        clearInterval(premiereCountdownInterval);
+        premiereCountdownInterval = null;
+    }
+
+    const countdowns = [...page.querySelectorAll("[data-premiere-countdown]")];
+    if (!countdowns.length) return;
+
+    const update = () => {
+        const serverNow = estimateServerNowMs(publicPremiereServerClock);
+        if (!Number.isFinite(serverNow)) {
+            countdowns.forEach((node) => {
+                node.textContent = "Sincronizando horário de Brasília...";
+            });
+            return;
+        }
+
+        let hasPendingCountdown = false;
+        for (const countdown of countdowns) {
+            const targetTime = Number(countdown.dataset.premiereAt);
+            if (!Number.isFinite(targetTime)) {
+                countdown.textContent = "Horário de estreia indisponível";
+                continue;
+            }
+
+            const remaining = targetTime - serverNow;
+            if (remaining > 0) {
+                hasPendingCountdown = true;
+                countdown.textContent = `Estreia em ${formatPremiereCountdown(remaining)}`;
+            } else {
+                countdown.textContent = "Aguardando publicação...";
+            }
+        }
+
+        if (!hasPendingCountdown && premiereCountdownInterval) {
+            clearInterval(premiereCountdownInterval);
+            premiereCountdownInterval = null;
+        }
+    };
+
+    update();
+    if (publicPremiereServerClock) {
+        premiereCountdownInterval = setInterval(update, 1000);
+    }
+}
+
 function renderStoryGenres(genres) {
     const normalized = normalizeStoryGenres(genres);
     if (!normalized.length) return "";
@@ -120,7 +177,7 @@ function notFound() {
         <section class="empty-state">
             <span class="eyebrow">404</span>
             <h1>História não encontrada</h1>
-            <a class="primary-button" href="./index.html">
+            <a class="primary-button" href="../">
                 Voltar
             </a>
         </section>
@@ -526,7 +583,7 @@ function renderReadingBookmarkResume(story) {
         actions.className = "reading-bookmark-resume-actions";
         const continueLink = document.createElement("a");
         continueLink.className = "primary-button";
-        continueLink.href = `./episodio.html?slug=${encodeURIComponent(story.slug)}&season=${savedChapter.season_number}&episode=${savedChapter.number}#ponto-de-leitura`;
+        continueLink.href = `../episodio/?slug=${encodeURIComponent(story.slug)}&season=${savedChapter.season_number}&episode=${savedChapter.number}#ponto-de-leitura`;
         continueLink.textContent = "Continuar leitura";
         actions.append(continueLink);
         container.append(actions);
@@ -578,8 +635,51 @@ async function load() {
         storyPresenceData = { story, coverUrl: presenceCover };
         updateStorySectionPresence(normalizeStorySection(new URLSearchParams(location.search).get("tab")));
 
+        let scheduledChapterPreviews = [];
+        publicPremiereServerClock = null;
+        try {
+            const premiereResult = await getPublicScheduledChapterPreviews(story.id);
+            scheduledChapterPreviews = premiereResult.items;
+            publicPremiereServerClock = premiereResult.serverClock;
+        } catch (previewError) {
+            // A falha do recurso opcional não deve impedir a leitura da história.
+            console.warn("Não foi possível carregar as contagens regressivas públicas.", previewError);
+        }
+
+        const displaySeasons = new Map(
+            (story.seasons ?? []).map((season) => [
+                String(season.id),
+                { ...season, chapters: [...(season.chapters ?? [])] },
+            ]),
+        );
+
+        for (const preview of scheduledChapterPreviews) {
+            const seasonKey = String(preview.season_id);
+            if (!displaySeasons.has(seasonKey)) {
+                displaySeasons.set(seasonKey, {
+                    id: preview.season_id,
+                    number: preview.season_number,
+                    title: preview.season_title,
+                    status: "draft",
+                    chapters: [],
+                });
+            }
+
+            const season = displaySeasons.get(seasonKey);
+            season.chapters.push({
+                id: preview.chapter_id,
+                number: preview.chapter_number,
+                title: preview.chapter_title,
+                status: "scheduled_preview",
+                scheduled_publish_at: preview.scheduled_publish_at,
+            });
+        }
+
+        const orderedDisplaySeasons = [...displaySeasons.values()]
+            .sort((a, b) => Number(a.number) - Number(b.number));
+
         let chapterRatingSummaries = {};
-        const publishedChapterIds = (story.seasons ?? [])
+        const publishedChapterIds = orderedDisplaySeasons
             .flatMap((season) => season.chapters ?? [])
             .filter((chapter) => chapter.status === "published")
             .map((chapter) => chapter.id);
@@ -594,76 +694,70 @@ async function load() {
         }
 
         const seasons =
-            (story.seasons ?? [])
+            orderedDisplaySeasons
                 .map((season) => {
                     const chapters =
                         (season.chapters ?? [])
-                            .sort(
-                                (a, b) =>
-                                    a.number -
-                                    b.number,
-                            )
-                            .map(
-                                (chapter) => {
-                                    const chapterSummary =
-                                        chapterRatingSummaries[String(chapter.id)] || {
-                                            average: 0,
-                                            count: 0,
-                                        };
-
+                            .sort((a, b) => a.number - b.number)
+                            .map((chapter) => {
+                                if (chapter.status === "scheduled_preview") {
+                                    const premiereAt = new Date(chapter.scheduled_publish_at).getTime();
+                                    const premiereHref = `../episodio/?slug=${encodeURIComponent(story.slug)}&season=${season.number}&episode=${chapter.number}`;
                                     return `
                                         <a
-                                            class="chapter-row"
-                                            href="./episodio.html?slug=${encodeURIComponent(
-                                                story.slug
-                                            )}&season=${season.number}&episode=${chapter.number}"
+                                            class="chapter-row chapter-premiere-card"
+                                            href="${premiereHref}"
+                                            aria-label="Abrir pré-estreia: ${escapeHtml(chapter.title || "Episódio")}. O conteúdo será liberado no horário programado."
                                         >
                                             <span class="chapter-number">
-                                                ${
-                                                    chapter.number === 0
-                                                        ? "Piloto"
-                                                        : `Ep. ${chapter.number}`
-                                                }
+                                                ${chapter.number === 0 ? "Piloto" : `Ep. ${chapter.number}`}
                                             </span>
-
-                                            <span class="chapter-main">
-                                                <span class="chapter-title">
-                                                    ${escapeHtml(chapter.title)}
-                                                </span>
-                                                <span class="chapter-rating" title="${chapterSummary.count} avaliações">
-                                                    ${ratingStars(chapterSummary.average)}
-                                                    <strong class="rating-score">
-                                                        ${chapterSummary.count ? `${chapterSummary.average.toFixed(1)}/10` : "Sem notas"}
-                                                    </strong>
-                                                </span>
-                                            </span>
+                                            <div class="chapter-main chapter-premiere-main">
+                                                <div class="chapter-premiere-copy">
+                                                    <strong class="chapter-title">${escapeHtml(chapter.title || "Episódio")}</strong>
+                                                    <span class="chapter-premiere-badge">ESTREIA PROGRAMADA</span>
+                                                </div>
+                                                <div class="chapter-premiere-actions">
+                                                    <span class="chapter-premiere-countdown" data-premiere-countdown data-premiere-at="${Number.isFinite(premiereAt) ? premiereAt : ""}" aria-live="off">Sincronizando horário de Brasília...</span>
+                                                    <span class="chapter-premiere-date">${escapeHtml(formatBrasiliaDate(chapter.scheduled_publish_at))} · Horário de Brasília</span>
+                                                    <span class="chapter-premiere-open">Abrir pré-estreia →</span>
+                                                </div>
+                                            </div>
                                         </a>
                                     `;
                                 }
-                            )
+
+                                const chapterSummary =
+                                    chapterRatingSummaries[String(chapter.id)] || { average: 0, count: 0 };
+
+                                return `
+                                    <a
+                                        class="chapter-row"
+                                        href="../episodio/?slug=${encodeURIComponent(story.slug)}&season=${season.number}&episode=${chapter.number}"
+                                    >
+                                        <span class="chapter-number">
+                                            ${chapter.number === 0 ? "Piloto" : `Ep. ${chapter.number}`}
+                                        </span>
+                                        <span class="chapter-main">
+                                            <span class="chapter-title">${escapeHtml(chapter.title)}</span>
+                                            <span class="chapter-rating" title="${chapterSummary.count} avaliações">
+                                                ${ratingStars(chapterSummary.average)}
+                                                <strong class="rating-score">${chapterSummary.count ? `${chapterSummary.average.toFixed(1)}/10` : "Sem notas"}</strong>
+                                            </span>
+                                        </span>
+                                    </a>
+                                `;
+                            })
                             .join("");
 
                     return `
                         <section class="season-card">
                             <div class="season-heading">
-                                <span class="eyebrow">
-                                    TEMPORADA ${season.number}
-                                </span>
-
-                                <h2>
-                                    ${escapeHtml(
-                                        season.title
-                                    )}
-                                </h2>
+                                <span class="eyebrow">TEMPORADA ${season.number}</span>
+                                <h2>${escapeHtml(season.title)}</h2>
                             </div>
-
                             <div class="chapter-list">
-                                ${
-                                    chapters ||
-                                    `<p class="muted">
-                                        Nenhum episódio publicado.
-                                    </p>`
-                                }
+                                ${chapters || `<p class="muted">Nenhum episódio publicado.</p>`}
                             </div>
                         </section>
                     `;
@@ -827,6 +921,21 @@ async function load() {
         `;
 
         setupStoryTabs();
+        setupPublicPremiereCountdowns();
+        if (scheduledChapterPreviews.length) {
+            document.addEventListener("visibilitychange", async () => {
+                if (document.visibilityState !== "visible") return;
+                try {
+                    const refreshedPremiereData = await getPublicScheduledChapterPreviews(story.id);
+                    if (refreshedPremiereData.serverClock) {
+                        publicPremiereServerClock = refreshedPremiereData.serverClock;
+                        setupPublicPremiereCountdowns();
+                    }
+                } catch (clockError) {
+                    console.warn("Não foi possível ressincronizar o relógio da pré-estreia:", clockError);
+                }
+            });
+        }
         bindDynamicText(page);
         renderReadingBookmarkResume(story);
 

@@ -1,0 +1,24 @@
+---
+permalink: /portal-escritor/login.html
+---
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,follow">
+    <title>Portal do Escritor — endereço atualizado</title>
+    <link rel="canonical" href="login/">
+</head>
+<body>
+    <p>Este endereço foi atualizado. <a href="login/">Acessar portal do escritor</a>.</p>
+    <script>
+    (() => {
+        const destination = new URL("login/", window.location.href);
+        destination.search = window.location.search;
+        destination.hash = window.location.hash;
+        window.location.replace(destination.href);
+    })();
+    </script>
+</body>
+</html>

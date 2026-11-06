@@ -13,7 +13,7 @@ async function storyCard(story) {
     const reviews = story.review_count ?? 0;
 
     return `
-        <a class="story-card" href="./historia.html?slug=${encodeURIComponent(story.slug)}">
+        <a class="story-card" href="./historia/?slug=${encodeURIComponent(story.slug)}">
             <img class="story-cover" src="${escapeHtml(cover)}" alt="Capa de ${escapeHtml(story.title)}">
             <div class="story-card-body">
                 <span class="eyebrow">OBRA</span>

@@ -97,6 +97,7 @@ export async function getWriterChapter(
             content,
             status,
             scheduled_publish_at,
+            scheduled_public_preview,
             content_format,
             created_at,
             updated_at
@@ -198,6 +199,7 @@ export async function updateChapter(
     // Publicação manual imediata substitui qualquer agendamento anterior.
     if (status === "published") {
         payload.scheduled_publish_at = null;
+        payload.scheduled_public_preview = false;
     }
 
     const { data, error } = await supabase
@@ -225,7 +227,7 @@ export async function updateChapter(
  */
 export async function scheduleChapterPublication(
     chapterId,
-    { title, content, scheduledPublishAt },
+    { title, content, scheduledPublishAt, scheduledPublicPreview = false },
 ) {
     const cleanTitle = String(title ?? "").trim();
     const cleanContent = String(content ?? "");
@@ -248,6 +250,7 @@ export async function scheduleChapterPublication(
             content: cleanContent,
             content_format: "plain_text",
             scheduled_publish_at: scheduledDate.toISOString(),
+            scheduled_public_preview: scheduledPublicPreview === true,
         })
         .eq("id", chapterId)
         .eq("status", "draft")
@@ -282,6 +285,7 @@ export async function cancelChapterPublicationSchedule(
             content: cleanContent,
             content_format: "plain_text",
             scheduled_publish_at: null,
+            scheduled_public_preview: false,
         })
         .eq("id", chapterId)
         .eq("status", "draft")

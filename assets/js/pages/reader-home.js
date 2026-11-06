@@ -10,7 +10,7 @@ import { getPublishedStories } from "../services/story.service.js?v=20261027-coa
 import { getStoryAuthors } from "../core/story-authors.js?v=20261027-coauthor-2";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 setupTheme();
 setupProfanityFilter();
@@ -102,7 +102,7 @@ async function storyCard(story) {
     return `
         <a
             class="story-card"
-            href="./historia.html?slug=${encodeURIComponent(story.slug)}"
+            href="./historia/?slug=${encodeURIComponent(story.slug)}"
         >
             <img
                 class="story-cover"
@@ -159,7 +159,7 @@ function storyCardFallback(story) {
     const summary = storyRatingSummaries[String(story.id)] || { average: 0, count: 0 };
     const defaultCover = "./assets/img/default-story-cover.svg";
     return `
-        <a class="story-card" href="./historia.html?slug=${encodeURIComponent(story.slug)}">
+        <a class="story-card" href="./historia/?slug=${encodeURIComponent(story.slug)}">
             <img class="story-cover" src="${defaultCover}" alt="Capa de ${escapeHtml(story.title)}">
             <div class="story-card-body">
                 <span class="eyebrow">OBRA</span>

@@ -4,7 +4,12 @@ import { CRIAS_PRESENCE_LOGO_URL } from "./crias-presence-images.service.js?v=20
 const WS_URL = "ws://127.0.0.1:32145/presence";
 const GITHUB_PAGES_ORIGIN = "https://evertonteto09.github.io";
 const SESSION_KEY = "criasPresenceSession";
+const SESSION_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 const SETTINGS_KEY = "criasPresenceSettings";
+
+function isValidSessionToken(token) {
+    return typeof token === "string" && SESSION_TOKEN_PATTERN.test(token);
+}
 
 const PUBLIC_SITE_BASE_URL = "https://evertonteto09.github.io/universo-crias-newstart/";
 const PUBLIC_SITE_ORIGIN = "https://evertonteto09.github.io";
@@ -677,10 +682,10 @@ export function initCriasPresence(initialActivity = {}) {
     // tanto em /universo-crias-newstart/ no GitHub Pages quanto no Live Server local.
     const downloadPageLink = host.querySelector("#cp-download-link");
     if (downloadPageLink) {
-        downloadPageLink.href = new URL("../../../crias-presence.html", import.meta.url).href;
+        downloadPageLink.href = new URL("../../../crias-presence/", import.meta.url).href;
 
         // Na própria página de instalação, o callout seria redundante.
-        if (window.location.pathname.endsWith("/crias-presence.html")) {
+        if (window.location.pathname.replace(/\/+$/, "").endsWith("/crias-presence")) {
             downloadPageLink.closest(".cp-download-callout")?.setAttribute("hidden", "");
         }
     }
@@ -1212,10 +1217,17 @@ export function initCriasPresence(initialActivity = {}) {
 
                     const existingToken =
                         sessionStorage.getItem(SESSION_KEY);
+                    const hasValidExistingToken =
+                        isValidSessionToken(existingToken);
+
+                    // Remove tokens corrompidos ou gravados em formato inesperado.
+                    if (existingToken !== null && !hasValidExistingToken) {
+                        sessionStorage.removeItem(SESSION_KEY);
+                    }
 
                     updateControls();
 
-                    if (existingToken) {
+                    if (hasValidExistingToken) {
                         setStatus(
                             "Validando a sessão existente...",
                             "connected"
@@ -1252,19 +1264,56 @@ export function initCriasPresence(initialActivity = {}) {
                 }
 
                 case "AUTH_OK": {
+                    const includesSessionToken =
+                        Object.prototype.hasOwnProperty.call(data, "sessionToken");
+                    const existingToken = sessionStorage.getItem(SESSION_KEY);
+
+                    // Na primeira autorização o programa devolve o token.
+                    // Na restauração, AUTH_OK pode vir sem token porque o site
+                    // já enviou o token válido em AUTH_SESSION.
+                    if (includesSessionToken) {
+                        if (!isValidSessionToken(data.sessionToken)) {
+                            sessionStorage.removeItem(SESSION_KEY);
+                            authorized = false;
+                            pendingAction = null;
+
+                            setStatus(
+                                "O programa enviou um token de sessão inválido. Conecte novamente usando um novo código.",
+                                "error"
+                            );
+
+                            updateControls();
+                            connection.close(4002, "Token de sessão inválido");
+                            break;
+                        }
+
+                        sessionStorage.setItem(
+                            SESSION_KEY,
+                            data.sessionToken
+                        );
+                    } else if (!isValidSessionToken(existingToken)) {
+                        // Não aceitar uma confirmação de sessão sem que exista
+                        // um token válido previamente enviado para restauração.
+                        sessionStorage.removeItem(SESSION_KEY);
+                        authorized = false;
+                        pendingAction = null;
+
+                        setStatus(
+                            "O programa confirmou uma sessão sem um token válido. Conecte novamente usando um novo código.",
+                            "error"
+                        );
+
+                        updateControls();
+                        connection.close(4002, "Token de sessão ausente");
+                        break;
+                    }
+
                     authorized = true;
                     reconnectAttempts = 0;
 
                     if (reconnectTimer) {
                         clearTimeout(reconnectTimer);
                         reconnectTimer = null;
-                    }
-
-                    if (typeof data.sessionToken === "string") {
-                        sessionStorage.setItem(
-                            SESSION_KEY,
-                            data.sessionToken
-                        );
                     }
 
                     updateControls();

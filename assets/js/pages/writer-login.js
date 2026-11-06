@@ -90,7 +90,7 @@ async function continueExistingWriterSession() {
         const { writer } = await syncCurrentWriterState(user);
         if (writer) {
             showMessage(message, "Sessão encontrada. Abrindo o portal...");
-            location.href = "./index.html";
+            location.href = "../";
             return;
         }
 
@@ -135,7 +135,7 @@ discordButton.addEventListener("click", async () => {
     showMessage(message, "Abrindo o Discord para a conta de escritor confirmada neste navegador…");
     try {
         rememberDiscordLoginAttempt(email, remembered);
-        const redirectTo = new URL("./index.html?discord-login=1", window.location.href).href;
+        const redirectTo = new URL("../index.html?discord-login=1", window.location.href).href;
         await signInWithDiscord(redirectTo);
     } catch (error) {
         console.error("[Writer Login] Login Discord falhou:", error);
@@ -164,7 +164,7 @@ form.addEventListener("submit", async (event) => {
             return;
         }
 
-        location.href = "./index.html";
+        location.href = "../";
     } catch (error) {
         console.error("[Writer Login] Falha no login por e-mail:", error);
         setFormDisabled(false);

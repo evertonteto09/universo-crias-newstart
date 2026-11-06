@@ -20,6 +20,17 @@ import {
 } from "../services/chapter.service.js?v=20261028-crias-presence-images-3";
 
 import {
+    getPublishedStoryBySlug,
+} from "../services/story.service.js?v=20261105-premiere-server-clock-2";
+
+import {
+    getPublicChapterPremiereStatus,
+    estimateServerNowMs,
+    formatPremiereCountdown,
+    formatBrasiliaDate,
+} from "../services/premiere.service.js?v=20261105-premiere-server-clock-2";
+
+import {
     getPublishedChapterReviews,
     submitReview,
 } from "../services/review.service.js";
@@ -34,7 +45,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-3";
+} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -97,7 +108,7 @@ function notFound() {
 
             <a
                 class="primary-button"
-                href="./index.html"
+                href="../"
             >
                 Voltar
             </a>
@@ -107,7 +118,7 @@ function notFound() {
 
 function chapterHref(item) {
     return `
-        ./episodio.html?slug=${encodeURIComponent(
+        ../episodio/?slug=${encodeURIComponent(
             currentStory.slug
         )}&season=${item.season_number}&episode=${item.number}
     `;
@@ -174,7 +185,7 @@ function renderNavigation() {
 
             <a
                 class="chapter-nav-center"
-                href="./historia.html?slug=${encodeURIComponent(
+                href="../historia/?slug=${encodeURIComponent(
                     currentStory.slug
                 )}"
             >
@@ -529,7 +540,7 @@ async function renderPage() {
             <div class="reader-header">
                 <a
                     class="text-link"
-                    href="./historia.html?slug=${encodeURIComponent(
+                    href="../historia/?slug=${encodeURIComponent(
                         currentStory.slug
                     )}"
                 >
@@ -602,143 +613,358 @@ async function renderPage() {
     `;
 }
 
+let premiereCountdownInterval = null;
+let premiereStatusInterval = null;
+let premiereStatusInFlight = false;
+
+function clearPremiereTimers() {
+    if (premiereCountdownInterval) {
+        clearInterval(premiereCountdownInterval);
+        premiereCountdownInterval = null;
+    }
+    if (premiereStatusInterval) {
+        clearInterval(premiereStatusInterval);
+        premiereStatusInterval = null;
+    }
+}
+
+function renderPublicPremierePage(story, premiere, initialServerClock) {
+    clearPremiereTimers();
+    currentStory = story;
+
+    const episodeLabel = premiere.chapter_number === 0
+        ? "Piloto"
+        : `Episódio ${premiere.chapter_number}`;
+    const seasonTitle = premiere.season_title || `Temporada ${premiere.season_number}`;
+    const targetTime = Date.parse(premiere.scheduled_publish_at || "");
+    let serverClock = initialServerClock;
+    let premierePollingStarted = false;
+
+    page.innerHTML = `
+        <article class="reader-page public-premiere-page">
+            <section class="public-premiere-card">
+                <a
+                    class="text-link public-premiere-back"
+                    href="../historia/?slug=${encodeURIComponent(story.slug)}"
+                >
+                    ← ${escapeHtml(story.title || "Voltar para a história")}
+                </a>
+
+                <span class="eyebrow">PRÉ-ESTREIA</span>
+                <span class="chapter-premiere-badge">ESTREIA PROGRAMADA</span>
+
+                <p class="public-premiere-season">${escapeHtml(seasonTitle)} · ${escapeHtml(episodeLabel)}</p>
+                <h1>${escapeHtml(premiere.chapter_title || "Episódio")}</h1>
+
+                <div class="public-premiere-clock" aria-live="off">
+                    <span class="eyebrow">CONTAGEM REGRESSIVA</span>
+                    <strong id="public-premiere-countdown">Sincronizando horário do servidor...</strong>
+                </div>
+
+                <p class="public-premiere-date">
+                    Estreia prevista para ${escapeHtml(formatBrasiliaDate(premiere.scheduled_publish_at))}
+                    · Horário de Brasília (UTC−3)
+                </p>
+
+                <p
+                    id="public-premiere-status"
+                    class="public-premiere-status"
+                    role="status"
+                    aria-live="polite"
+                >
+                    O conteúdo permanece protegido até a publicação pelo servidor.
+                </p>
+
+                <button
+                    id="public-premiere-refresh"
+                    class="primary-button public-premiere-refresh"
+                    type="button"
+                    hidden
+                >
+                    Atualizar página
+                </button>
+            </section>
+        </article>
+    `;
+
+    criasPresence.update({
+        details: "Aguardando estreia",
+        state: `${episodeLabel}: ${premiere.chapter_title || "Episódio"}`,
+    });
+
+    const countdownNode = document.querySelector("#public-premiere-countdown");
+    const statusNode = document.querySelector("#public-premiere-status");
+    const refreshButton = document.querySelector("#public-premiere-refresh");
+    if (!countdownNode || !statusNode || !refreshButton) return;
+
+    const showRefreshButton = () => {
+        countdownNode.textContent = "CONTEÚDO DISPONÍVEL";
+        statusNode.textContent = "A estreia foi publicada pelo servidor. Atualize a página para começar a leitura.";
+        refreshButton.hidden = false;
+        if (premiereStatusInterval) {
+            clearInterval(premiereStatusInterval);
+            premiereStatusInterval = null;
+        }
+        if (premiereCountdownInterval) {
+            clearInterval(premiereCountdownInterval);
+            premiereCountdownInterval = null;
+        }
+        premierePollingStarted = false;
+    };
+
+    refreshButton.addEventListener("click", () => {
+        refreshButton.disabled = true;
+        refreshButton.textContent = "Atualizando episódio...";
+        window.location.reload();
+    });
+
+    const syncAndCheckPublication = async () => {
+        if (premiereStatusInFlight || refreshButton.hidden === false) return;
+        premiereStatusInFlight = true;
+
+        try {
+            const latest = await getPublicChapterPremiereStatus(
+                story.id,
+                premiere.season_number,
+                premiere.chapter_number,
+            );
+
+            if (!latest) {
+                statusNode.textContent = "Esta pré-estreia não está mais disponível. Volte à página da história para conferir os episódios.";
+                if (premiereStatusInterval) {
+                    clearInterval(premiereStatusInterval);
+                    premiereStatusInterval = null;
+                }
+                if (premiereCountdownInterval) {
+                    clearInterval(premiereCountdownInterval);
+                    premiereCountdownInterval = null;
+                }
+                premierePollingStarted = false;
+                return;
+            }
+
+            premiere = latest.premiere;
+            if (latest.serverClock) serverClock = latest.serverClock;
+
+            if (premiere.is_published === true) {
+                showRefreshButton();
+                return;
+            }
+
+            const serverNow = estimateServerNowMs(serverClock);
+            const latestTargetTime = Date.parse(premiere.scheduled_publish_at || "");
+            if (!Number.isFinite(serverNow)) {
+                countdownNode.textContent = "Sincronizando relógio do banco...";
+                statusNode.textContent = "A confirmação será feita pelo servidor. O relógio do computador não libera o conteúdo.";
+                premierePollingStarted = true;
+                if (!premiereStatusInterval) {
+                    premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
+                }
+            } else if (Number.isFinite(latestTargetTime) && latestTargetTime > serverNow) {
+                statusNode.textContent = "A contagem foi sincronizada com o relógio do banco. O conteúdo continua protegido.";
+                premierePollingStarted = false;
+                if (premiereStatusInterval) {
+                    clearInterval(premiereStatusInterval);
+                    premiereStatusInterval = null;
+                }
+                updateCountdown();
+            } else {
+                statusNode.textContent = "O horário chegou. Aguardando o servidor concluir a publicação automática...";
+                countdownNode.textContent = "00m 00s";
+                premierePollingStarted = true;
+                if (!premiereStatusInterval) {
+                    premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
+                }
+            }
+        } catch (error) {
+            console.warn("Não foi possível confirmar a publicação da pré-estreia:", error);
+            statusNode.textContent = "Não foi possível consultar o servidor agora. Vamos tentar novamente.";
+            premierePollingStarted = true;
+            if (!premiereStatusInterval) {
+                premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
+            }
+        } finally {
+            premiereStatusInFlight = false;
+        }
+    };
+
+    const updateCountdown = () => {
+        if (refreshButton.hidden === false) return;
+
+        const serverNow = estimateServerNowMs(serverClock);
+        const currentTargetTime = Date.parse(premiere.scheduled_publish_at || "") || targetTime;
+        if (!Number.isFinite(serverNow) || !Number.isFinite(currentTargetTime)) {
+            countdownNode.textContent = "Não foi possível sincronizar o relógio do servidor";
+            statusNode.textContent = "Atualize a página ou tente novamente mais tarde. O relógio do computador não é usado para liberar o episódio.";
+            return;
+        }
+
+        const remaining = currentTargetTime - serverNow;
+        if (remaining > 0) {
+            countdownNode.textContent = formatPremiereCountdown(remaining);
+            statusNode.textContent = "O conteúdo permanece protegido até a publicação pelo servidor.";
+        } else {
+            countdownNode.textContent = "00m 00s";
+            statusNode.textContent = "O horário chegou. Aguardando o servidor concluir a publicação automática...";
+            if (!premierePollingStarted) {
+                premierePollingStarted = true;
+                syncAndCheckPublication();
+                if (!premiereStatusInterval) {
+                    premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
+                }
+            }
+        }
+    };
+
+    updateCountdown();
+    if (!premiere.is_published && Number.isFinite(targetTime)) {
+        premiereCountdownInterval = setInterval(updateCountdown, 1000);
+    }
+    if (!premiere.is_published && !serverClock) {
+        // Sem amostra do relógio do banco, consultamos apenas o estado público;
+        // nunca usamos o relógio local como condição para liberar o conteúdo.
+        premierePollingStarted = true;
+        premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
+    }
+    if (premiere.is_published === true) {
+        showRefreshButton();
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            // Reconsulta o banco ao voltar para a aba, corrigindo qualquer
+            // tempo que o navegador tenha deixado de contar enquanto suspenso.
+            syncAndCheckPublication();
+        }
+    });
+}
+
+async function renderPublishedChapter(result) {
+    currentStory = result.story;
+    currentSeason = result.season;
+    currentChapter = result.chapter;
+
+    const episodeLabel = currentChapter.number === 0
+        ? "Piloto"
+        : `Episódio ${currentChapter.number}`;
+
+    const [storyCoverUrl, episodeImageUrl] = await Promise.all([
+        getPresenceStoryCoverUrl(currentStory),
+        getPresenceChapterImageUrl(currentChapter.content, currentChapter),
+    ]);
+    const primaryImageUrl = episodeImageUrl || storyCoverUrl || CRIAS_PRESENCE_LOGO_URL;
+    const primaryImageText = episodeImageUrl
+        ? (currentChapter.title || episodeLabel)
+        : (currentStory.title || "Universo dos Crias");
+
+    criasPresence.update({
+        details: `Lendo: ${currentStory.title || "uma história"}`,
+        state: `${episodeLabel}: ${currentChapter.title || "Sem título"}`,
+        largeImageUrl: primaryImageUrl,
+        largeImageText: primaryImageText,
+        smallImageUrl: episodeImageUrl ? (storyCoverUrl || CRIAS_PRESENCE_LOGO_URL) : CRIAS_PRESENCE_LOGO_URL,
+        smallImageText: episodeImageUrl ? (currentStory.title || "Universo dos Crias") : "Universo dos Crias",
+    });
+
+    publishedChapters =
+        (currentStory.seasons ?? [])
+            .flatMap((season) =>
+                (season.chapters ?? [])
+                    .filter((chapter) => chapter.status === "published")
+                    .map((chapter) => ({
+                        ...chapter,
+                        season_number: season.number,
+                        season_title: season.title,
+                    }))
+            )
+            .sort((a, b) => {
+                if (a.season_number !== b.season_number) {
+                    return a.season_number - b.season_number;
+                }
+                return a.number - b.number;
+            });
+
+    await renderPage();
+    syncEpisodeHeaderCover();
+
+    bindReviewForm();
+    await loadReviews();
+
+    const contentRoot = document.querySelector("#chapter-content-rendered");
+    refreshReadingBookmarkUI = setupReadingBookmarkUI({
+        root: contentRoot,
+        toolbar: document.querySelector("#reading-bookmark-toolbar"),
+        story: currentStory,
+        season: currentSeason,
+        chapter: currentChapter,
+    });
+
+    const initialBookmarkState = refreshReadingBookmarkUI();
+    if (location.hash === "#ponto-de-leitura" && initialBookmarkState?.match?.element) {
+        window.requestAnimationFrame(() => {
+            initialBookmarkState.match.element.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+            });
+        });
+    }
+
+    bindDynamicText(contentRoot);
+
+    window.addEventListener("hdc-profanity-filter-changed", async () => {
+        const refreshedContentRoot = document.querySelector("#chapter-content-rendered");
+        if (refreshedContentRoot) {
+            refreshedContentRoot.innerHTML = await renderContent(currentChapter.content);
+            syncEpisodeHeaderCover();
+            refreshReadingBookmarkUI();
+            bindDynamicText(refreshedContentRoot);
+        }
+    });
+}
+
 async function load() {
-    if (
-        !slug ||
-        Number.isNaN(seasonNumber) ||
-        Number.isNaN(episodeNumber)
-    ) {
+    if (!slug || Number.isNaN(seasonNumber) || Number.isNaN(episodeNumber)) {
         notFound();
         return;
     }
 
-    try {
-        const result =
-            await getPublishedChapter(
-                slug,
-                seasonNumber,
-                episodeNumber,
-            );
+    let publishedResult = null;
+    let publishedQueryError = null;
 
-        if (!result) {
+    try {
+        publishedResult = await getPublishedChapter(slug, seasonNumber, episodeNumber);
+    } catch (error) {
+        publishedQueryError = error;
+    }
+
+    if (publishedResult) {
+        try {
+            await renderPublishedChapter(publishedResult);
+        } catch (error) {
+            console.error(error);
+            notFound();
+        }
+        return;
+    }
+
+    try {
+        const story = await getPublishedStoryBySlug(slug);
+        const premiereStatus = await getPublicChapterPremiereStatus(
+            story.id,
+            seasonNumber,
+            episodeNumber,
+        );
+
+        if (!premiereStatus) {
+            if (publishedQueryError) console.warn("Consulta do episódio publicado:", publishedQueryError);
             notFound();
             return;
         }
 
-        currentStory =
-            result.story;
-
-        currentSeason =
-            result.season;
-
-        currentChapter =
-            result.chapter;
-
-        const episodeLabel =
-            currentChapter.number === 0
-                ? "Piloto"
-                : `Episódio ${currentChapter.number}`;
-        
-        const [storyCoverUrl, episodeImageUrl] = await Promise.all([
-            getPresenceStoryCoverUrl(currentStory),
-            getPresenceChapterImageUrl(currentChapter.content, currentChapter),
-        ]);
-        const primaryImageUrl = episodeImageUrl || storyCoverUrl || CRIAS_PRESENCE_LOGO_URL;
-        const primaryImageText = episodeImageUrl
-            ? (currentChapter.title || episodeLabel)
-            : (currentStory.title || "Universo dos Crias");
-
-        criasPresence.update({
-            details: `Lendo: ${currentStory.title || "uma história"}`,
-            state: `${episodeLabel}: ${currentChapter.title || "Sem título"}`,
-            largeImageUrl: primaryImageUrl,
-            largeImageText: primaryImageText,
-            smallImageUrl: episodeImageUrl ? (storyCoverUrl || CRIAS_PRESENCE_LOGO_URL) : CRIAS_PRESENCE_LOGO_URL,
-            smallImageText: episodeImageUrl ? (currentStory.title || "Universo dos Crias") : "Universo dos Crias",
-        });
-
-        publishedChapters =
-            (currentStory.seasons ?? [])
-                .flatMap(
-                    (season) =>
-                        (season.chapters ?? [])
-                            .filter(
-                                (chapter) =>
-                                    chapter.status ===
-                                    "published"
-                            )
-                            .map(
-                                (chapter) => ({
-                                    ...chapter,
-                                    season_number:
-                                        season.number,
-                                    season_title:
-                                        season.title,
-                                })
-                            )
-                )
-                .sort((a, b) => {
-                    if (
-                        a.season_number !==
-                        b.season_number
-                    ) {
-                        return (
-                            a.season_number -
-                            b.season_number
-                        );
-                    }
-
-                    return a.number - b.number;
-                });
-
-        await renderPage();
-        syncEpisodeHeaderCover();
-
-        bindReviewForm();
-        await loadReviews();
-
-        const contentRoot = document.querySelector(
-            "#chapter-content-rendered"
-        );
-
-        refreshReadingBookmarkUI = setupReadingBookmarkUI({
-            root: contentRoot,
-            toolbar: document.querySelector("#reading-bookmark-toolbar"),
-            story: currentStory,
-            season: currentSeason,
-            chapter: currentChapter,
-        });
-
-        const initialBookmarkState = refreshReadingBookmarkUI();
-        if (location.hash === "#ponto-de-leitura" && initialBookmarkState?.match?.element) {
-            window.requestAnimationFrame(() => {
-                initialBookmarkState.match.element.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                });
-            });
-        }
-
-        bindDynamicText(contentRoot);
-
-        window.addEventListener(
-            "hdc-profanity-filter-changed",
-            async () => {
-                const refreshedContentRoot =
-                    document.querySelector(
-                        "#chapter-content-rendered"
-                    );
-
-                if (refreshedContentRoot) {
-                    refreshedContentRoot.innerHTML =
-                        await renderContent(
-                            currentChapter.content
-                        );
-                    syncEpisodeHeaderCover();
-                    refreshReadingBookmarkUI();
-                    bindDynamicText(refreshedContentRoot);
-                }
-            },
+        renderPublicPremierePage(
+            story,
+            premiereStatus.premiere,
+            premiereStatus.serverClock,
         );
     } catch (error) {
         console.error(error);

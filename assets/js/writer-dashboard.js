@@ -32,7 +32,7 @@ import {
 
 import {
     initCriasPresence,
-} from "./services/crias-presence.service.js?v=20261028-crias-presence-images-2";
+} from "./services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 setupTheme();
 
@@ -182,7 +182,7 @@ document.querySelector(
             await signOut();
         } finally {
             location.href =
-                "./login.html";
+                "./login/";
         }
     }
 );
@@ -250,7 +250,7 @@ async function storyCard(story, summary) {
 
                     <a
                         class="secondary-button"
-                        href="../historia.html?slug=${encodeURIComponent(story.slug)}"
+                        href="../historia/?slug=${encodeURIComponent(story.slug)}"
                         target="_blank"
                         rel="noopener"
                     >
@@ -614,7 +614,7 @@ async function init() {
 
     if (!writer) {
         location.href =
-            "./login.html";
+            "./login/";
         return;
     }
 

@@ -5,7 +5,7 @@ export async function requireWriter() {
         return await getMyWriterAccount();
     } catch (error) {
         console.error("[Writer Guard]", error);
-        location.href = "./login.html";
+        location.href = "./login/";
         return null;
     }
 }

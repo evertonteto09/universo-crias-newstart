@@ -37,7 +37,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-crias-presence-images-2";
+} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 setupTheme();
 
@@ -189,7 +189,7 @@ document.querySelector(
             await signOut();
         } finally {
             location.href =
-                "./login.html";
+                "./login/";
         }
     }
 );
@@ -264,7 +264,7 @@ async function storyCard(story, summary) {
 
                     <a
                         class="secondary-button"
-                        href="../historia.html?slug=${encodeURIComponent(story.slug)}"
+                        href="../historia/?slug=${encodeURIComponent(story.slug)}"
                         target="_blank"
                         rel="noopener"
                     >
@@ -737,7 +737,7 @@ async function validatePendingDiscordLogin() {
         try { await signOut(); } catch (error) {
             console.warn("[Writer Dashboard] Não foi possível encerrar a sessão Discord inesperada:", error);
         }
-        location.replace("./login.html?error=discord-account-mismatch");
+        location.replace("./login/?error=discord-account-mismatch");
         return false;
     }
 
@@ -753,7 +753,7 @@ async function init() {
 
     const writer = await getMyWriterAccount();
     if (!writer) {
-        location.href = "./login.html?error=not-writer";
+        location.href = "./login/?error=not-writer";
         return;
     }
 

@@ -9,7 +9,7 @@ import {
     preferenceDefaults,
 } from "../services/user-preferences.service.js?v=20261028-crias-presence-final-1";
 import { getCachedCustomThemeSettings, normalizeCustomThemeSettings } from "../services/custom-theme.service.js?v=20261028-theme-label-link-colors-1";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261028-crias-presence-final-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 import { deleteReaderAccount } from "../services/account-deletion.service.js?v=20261028-reader-data-deletion-1";
 
 setupTheme();
@@ -513,7 +513,7 @@ loginButton.addEventListener("click", async () => {
     loginButton.disabled = true;
     setMessage(loginMessage, "Abrindo o Discord…");
     try {
-        const redirectTo = new URL("./conta.html", window.location.href).href;
+        const redirectTo = new URL("../conta/", window.location.href).href;
         await signInWithDiscord(redirectTo);
     } catch (error) {
         console.error("[Account] Login Discord falhou:", error);
@@ -539,7 +539,7 @@ logoutButton.addEventListener("click", async () => {
     logoutButton.disabled = true;
     try {
         await signOut();
-        location.href = "./conta.html";
+        location.href = "../conta/";
     } catch (error) {
         console.error("[Account] Falha ao sair:", error);
         setMessage(prefsMessage, "Não foi possível encerrar a sessão. Tente novamente.", "error");
@@ -568,7 +568,7 @@ deleteAccountButton?.addEventListener("click", async () => {
 
     try {
         await deleteReaderAccount();
-        window.location.replace("./conta.html?account_deleted=1");
+        window.location.replace("../conta/?account_deleted=1");
     } catch (error) {
         console.error("[Account] Falha ao apagar a conta de leitor:", error?.message || error);
         setMessage(deleteAccountMessage, error?.message || "Não foi possível apagar os dados. Tente novamente.", "error");

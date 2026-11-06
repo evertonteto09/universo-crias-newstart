@@ -15,15 +15,15 @@ import {
     scheduleChapterPublication,
     cancelChapterPublicationSchedule,
     deleteChapter,
-} from "../services/chapter.service.js?v=20261028-spoiler-news-images-1";
+} from "../services/chapter.service.js?v=20261105-public-premiere-countdown-1";
 
 import {
     getWriterStoryById,
-} from "../services/story.service.js?v=20261027-scheduled-release-1";
+} from "../services/story.service.js?v=20261105-public-premiere-countdown-1";
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261028-spoiler-news-images-1";
+} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -347,13 +347,24 @@ function getScheduleInitialValue() {
     return dateToLocalInputValue(new Date(Date.now() + 60 * 60 * 1000));
 }
 
-function updateScheduledNote(scheduledPublishAt = chapter?.scheduled_publish_at) {
+function updateScheduledNote(
+    scheduledPublishAt = chapter?.scheduled_publish_at,
+    scheduledPublicPreview = chapter?.scheduled_public_preview,
+) {
     const note = document.querySelector("#scheduled-publication-note");
     const dateNode = document.querySelector("#scheduled-publication-date");
+    const visibilityNode = document.querySelector("#scheduled-publication-visibility");
     if (!note || !dateNode) return;
     const scheduled = chapter?.status !== "published" && Boolean(scheduledPublishAt);
     note.hidden = !scheduled;
-    if (scheduled) dateNode.textContent = formatScheduleDate(scheduledPublishAt);
+    if (scheduled) {
+        dateNode.textContent = formatScheduleDate(scheduledPublishAt);
+        if (visibilityNode) {
+            visibilityNode.textContent = scheduledPublicPreview
+                ? "O título e a contagem aparecem na página da história; ao abrir a pré-estreia, o leitor verá o cronômetro ampliado. O conteúdo permanece protegido até a publicação pelo servidor."
+                : "Estreia privada: leitores só verão o episódio depois que ele for publicado.";
+        }
+    }
 }
 
 function startScheduledPublicationRefresh() {
@@ -394,6 +405,7 @@ function openSchedulePublicationModal() {
 
     const initialValue = getScheduleInitialValue();
     const minValue = dateToLocalInputValue(new Date(Date.now() + 60 * 1000));
+    const currentPreviewMode = chapter?.scheduled_public_preview === true;
 
     const modal = openFormModal({
         eyebrow: chapter.number === 0 ? "PILOTO" : `EPISÓDIO ${chapter.number}`,
@@ -410,9 +422,20 @@ function openSchedulePublicationModal() {
             <label>
                 Data e horário de estreia
                 <input id="scheduled-publication-input" type="datetime-local" min="${minValue}" value="${initialValue}" required>
-                <small class="field-help">O horário usa o fuso local deste dispositivo: ${escapeHtml(Intl.DateTimeFormat().resolvedOptions().timeZone || "fuso local")}.</small>
+                <small class="field-help">A data é escolhida no fuso deste dispositivo (${escapeHtml(Intl.DateTimeFormat().resolvedOptions().timeZone || "fuso local")}). Para os leitores, a contagem é sincronizada com o relógio do banco e exibida no horário de Brasília (UTC−3).</small>
             </label>
-            <p class="muted">A estreia pode ocorrer até aproximadamente um minuto depois do horário escolhido, conforme o ciclo do agendador.</p>
+            <fieldset class="scheduled-publication-visibility">
+                <legend>Como o episódio deve aparecer antes da estreia?</legend>
+                <label class="scheduled-publication-choice">
+                    <input type="radio" name="scheduled-public-preview" value="false" ${currentPreviewMode ? "" : "checked"}>
+                    <span><strong>Manter privado</strong><small>O episódio não aparece para os leitores até ser publicado, como funciona atualmente.</small></span>
+                </label>
+                <label class="scheduled-publication-choice">
+                    <input type="radio" name="scheduled-public-preview" value="true" ${currentPreviewMode ? "checked" : ""}>
+                    <span><strong>Mostrar contagem regressiva</strong><small>O título e a contagem aparecem na página da história. Ao abrir a pré-estreia, o leitor verá o cronômetro ampliado; depois da publicação, poderá atualizar a página para ler.</small></span>
+                </label>
+            </fieldset>
+            <p class="muted">A contagem regressiva pública só aparece quando a história também está publicada. A estreia pode ocorrer até aproximadamente um minuto depois do horário escolhido, conforme o ciclo do agendador.</p>
         `,
         onSubmit: async (form) => {
             const localValue = form.querySelector("#scheduled-publication-input")?.value;
@@ -422,10 +445,12 @@ function openSchedulePublicationModal() {
                 throw new Error("Escolha uma data e um horário futuros.");
             }
 
+            const scheduledPublicPreview = form.querySelector('input[name="scheduled-public-preview"]:checked')?.value === "true";
             const updated = await scheduleChapterPublication(chapter.id, {
                 title: document.querySelector("#chapter-title").value,
                 content: document.querySelector("#chapter-content").value,
                 scheduledPublishAt: scheduledDate.toISOString(),
+                scheduledPublicPreview,
             });
 
             chapter = { ...chapter, ...updated };
@@ -547,7 +572,7 @@ function render() {
                 <div class="chapter-scheduled-note" id="scheduled-publication-note" ${isChapterScheduled(chapter) ? "" : "hidden"}>
                     <span class="eyebrow">ESTREIA AGENDADA</span>
                     <strong id="scheduled-publication-date">${escapeHtml(formatScheduleDate(chapter.scheduled_publish_at))}</strong>
-                    <p>O servidor publicará este episódio automaticamente no horário programado. Até lá, ele continua indisponível para leitores.</p>
+                    <p id="scheduled-publication-visibility">${chapter.scheduled_public_preview === true ? "O título e a contagem aparecem na página da história; ao abrir a pré-estreia, o leitor verá o cronômetro ampliado. O conteúdo permanece protegido até a publicação pelo servidor." : "Estreia privada: leitores só verão o episódio depois que ele for publicado."}</p>
                 </div>
 
                 <div class="chapter-media-tools">
@@ -1152,7 +1177,7 @@ function setStatusUi(
         scheduleButton.textContent = scheduled ? "Alterar estreia" : "Agendar estreia";
     }
     if (cancelScheduleButton) cancelScheduleButton.hidden = !scheduled;
-    updateScheduledNote(scheduledPublishAt);
+    updateScheduledNote(scheduledPublishAt, chapter?.scheduled_public_preview);
 }
 
 async function save(status) {
@@ -2191,7 +2216,7 @@ document.querySelector(
             await signOut();
         } finally {
             location.href =
-                "./login.html";
+                "./login/";
         }
     }
 );
@@ -2203,7 +2228,7 @@ async function init() {
 
         if (!writer) {
             location.href =
-                "./login.html";
+                "./login/";
             return;
         }
 
@@ -2281,7 +2306,7 @@ async function init() {
 
                 <a
                     class="primary-button"
-                    href="./index.html"
+                    href="./"
                 >
                     Voltar ao dashboard
                 </a>
