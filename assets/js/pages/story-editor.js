@@ -63,6 +63,7 @@ import {
     openFormModal,
     openConfirmModal,
 } from "../core/modal.js";
+import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
 
 import {
     initCriasPresence,
@@ -271,7 +272,7 @@ function newsHtml(item) {
                     ${escapeHtml(title)}
                 </h3>
 
-                <p class="story-news-content">${escapeHtml(content.trim())}</p>
+                <p class="story-news-content">${renderEmojiText(content.trim())}</p>
             </div>
 
             <div class="story-news-actions">
@@ -1264,6 +1265,7 @@ function openNewsForm(existingNews = null) {
                 Conteúdo
                 <textarea id="modal-news-content" rows="10" maxlength="10000" placeholder="Escreva a novidade que deseja compartilhar..." required>${isEditing ? escapeHtml(existingNews.content) : ""}</textarea>
             </label>
+            <div id="modal-news-emoji-picker" class="emoji-picker-host"></div>
             <small class="field-help">A notícia aceita quebras de linha. Os códigos das imagens são protegidos: para remover uma imagem, use o botão “Remover imagem” no gerenciador abaixo.</small>
 
             <section class="story-news-image-composer" aria-label="Adicionar imagens à notícia">
@@ -1352,6 +1354,10 @@ function openNewsForm(existingNews = null) {
     if (!modal) return;
     const form = modal.querySelector("[data-modal-form]");
     const textarea = form?.querySelector("#modal-news-content");
+    mountEmojiPicker({
+        textarea,
+        host: form?.querySelector("#modal-news-emoji-picker"),
+    });
     const sourceType = form?.querySelector("#modal-news-image-source-type");
     const uploadPanel = form?.querySelector("#modal-news-image-upload-panel");
     const urlPanel = form?.querySelector("#modal-news-image-url-panel");

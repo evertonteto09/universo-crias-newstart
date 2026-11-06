@@ -1,5 +1,6 @@
 import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import { openConfirmModal } from "../core/modal.js";
+import { renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
 import {
     escapeHtml,
     storyCoverSource,
@@ -337,7 +338,7 @@ async function loadReviews(storyId) {
                                     <strong>${Number(review.rating)}/10</strong>
                                 </span>
                             </div>
-                            <p>${escapeHtml(review.content)}</p>
+                            <p class="review-text" data-review-original="${escapeHtml(review.content)}">${renderEmojiText(review.content)}</p>
                             <small class="muted">
                                 ${review.chapter_id ? "Episódio específico" : "Obra completa"}
                                 · ${isPublished ? "Visível" : "Oculta"}
@@ -409,7 +410,9 @@ async function loadReviews(storyId) {
                 const card = event.currentTarget.closest("[data-review-id]");
                 const reviewId = Number(card?.dataset.reviewId);
                 const readerName = card?.querySelector(".review-meta strong")?.textContent?.trim() || "este leitor";
-                const reviewText = card?.querySelector(".review-card-content p")?.textContent?.trim() || "";
+                const reviewText = card?.querySelector(".review-card-content p")?.dataset.reviewOriginal
+                    || card?.querySelector(".review-card-content p")?.textContent?.trim()
+                    || "";
                 if (!Number.isSafeInteger(reviewId) || reviewId <= 0) return;
 
                 openConfirmModal({
@@ -418,7 +421,7 @@ async function loadReviews(storyId) {
                     message: `Excluir permanentemente a avaliação de <strong>${escapeHtml(readerName)}</strong>?`,
                     details: `
                         <div class="review-delete-preview">
-                            “${escapeHtml(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
+                            “${renderEmojiText(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
                         </div>
                         <span>Use esta opção para remover avaliações ofensivas, ataques ou spam da obra.</span>
                     `,

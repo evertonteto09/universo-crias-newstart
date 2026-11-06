@@ -1,4 +1,5 @@
 import { escapeHtml } from "./utils.js";
+import { renderEmojiTokens } from "./emoji-picker.js?v=20261106-emojis-1";
 import {
     getChapterImageUrl,
     getStoryNewsImageUrl,
@@ -98,6 +99,11 @@ export function renderDynamicInlineText(value) {
         /\*([^*\n]+?)\*/g,
         "<em>$1</em>",
     );
+
+    // Os placeholders de código e spoiler continuam protegidos. Assim,
+    // emojis são renderizados no texto normal e também dentro de spoilers
+    // (processados recursivamente), mas permanecem literais dentro de código.
+    text = renderEmojiTokens(text);
 
     // Restauramos código e spoilers somente depois das demais marcações.
     return restoreTokens(text, protectedParts);

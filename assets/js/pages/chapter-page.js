@@ -13,7 +13,8 @@ import {
 import {
     renderDynamicContent,
     bindDynamicText,
-} from "../core/dynamic-text.js?v=20261028-spoiler-news-images-1";
+} from "../core/dynamic-text.js?v=20261106-emojis-1";
+import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
 
 import {
     getPublishedChapter,
@@ -274,7 +275,7 @@ async function loadReviews() {
                                 </span>
                             </div>
 
-                            <p class="review-text">${escapeHtml(
+                            <p class="review-text">${renderEmojiText(
                                 review.content
                             )}</p>
                         </article>
@@ -295,6 +296,11 @@ function bindReviewForm() {
         );
 
     if (!reviewForm) return;
+
+    mountEmojiPicker({
+        textarea: reviewForm.querySelector("#reader-content"),
+        host: reviewForm.querySelector("#chapter-review-emoji-picker"),
+    });
 
     const message =
         document.querySelector(
@@ -517,6 +523,7 @@ async function renderPage() {
                         required
                     ></textarea>
                 </label>
+                <div id="chapter-review-emoji-picker" class="emoji-picker-host"></div>
 
                 <button
                     class="primary-button"

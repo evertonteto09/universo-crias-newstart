@@ -1,6 +1,7 @@
 import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
-import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261028-spoiler-news-images-1";
+import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261106-emojis-1";
+import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
 import {
     escapeHtml,
     ratingStars,
@@ -198,7 +199,7 @@ function renderReview(review) {
                 </span>
             </div>
 
-            <p class="review-text">${escapeHtml(review.content)}</p>
+            <p class="review-text">${renderEmojiText(review.content)}</p>
         </article>
     `;
 }
@@ -348,6 +349,7 @@ async function renderStoryReviewForm(
                             placeholder="Conte o que achou da obra..."
                         ></textarea>
                     </label>
+                    <div id="story-review-emoji-picker" class="emoji-picker-host"></div>
 
                     <button
                         class="primary-button"
@@ -965,6 +967,10 @@ async function load() {
                 story,
                 reviews,
             );
+        mountEmojiPicker({
+            textarea: reviewsRoot.querySelector("#story-review-content"),
+            host: reviewsRoot.querySelector("#story-review-emoji-picker"),
+        });
 
         const average =
             calculateAverage(reviews);
@@ -1018,6 +1024,10 @@ async function load() {
 
                     reviewsRoot.innerHTML =
                         await renderStoryReviewForm(story, updatedReviews);
+                    mountEmojiPicker({
+                        textarea: reviewsRoot.querySelector("#story-review-content"),
+                        host: reviewsRoot.querySelector("#story-review-emoji-picker"),
+                    });
 
                     const updatedAverage = calculateAverage(updatedReviews);
                     document.querySelector("#story-rating-summary").innerHTML = `
