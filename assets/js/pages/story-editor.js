@@ -189,7 +189,7 @@ function seasonHtml(season) {
                                 <div class="chapter-editor-row-wrapper">
                                     <a
                                         class="chapter-editor-row"
-                                        href="./chapter-editor.html?chapter=${chapter.id}&story=${story.id}"
+                                        href="../chapter-editor/?chapter=${chapter.id}&story=${story.id}"
                                     >
                                         <div>
                                             <span class="chapter-number">
@@ -557,7 +557,7 @@ async function render() {
             <div>
                 <a
                     class="text-link"
-                    href="./"
+                    href="../"
                 >
                     ← Dashboard
                 </a>
@@ -577,7 +577,7 @@ async function render() {
             <div class="main-nav">
                 <a
                     class="secondary-button"
-                    href="../historia/?slug=${encodeURIComponent(story.slug)}"
+                    href="../../historia/?slug=${encodeURIComponent(story.slug)}"
                     target="_blank"
                     rel="noopener"
                 >
@@ -2366,7 +2366,7 @@ function bindSeasons() {
 
                         // Redireciona para o editor imediatamente.
                         location.href =
-                            `./chapter-editor.html?chapter=${chapter.id}&story=${story.id}`;
+                            `../chapter-editor/?chapter=${chapter.id}&story=${story.id}`;
                     },
                 });
 
@@ -2492,7 +2492,7 @@ document.querySelector(
             await signOut();
         } finally {
             location.href =
-                "./login/";
+                "../login/";
         }
     }
 );
@@ -2564,7 +2564,7 @@ function bindDeleteStory() {
                         throw deleteError;
                     }
 
-                    location.href = "./";
+                    location.href = "../";
                 },
             });
         },
@@ -2639,7 +2639,7 @@ async function init() {
 
         if (!writer) {
             location.href =
-                "./login/";
+                "../login/";
             return;
         }
 
@@ -2710,7 +2710,7 @@ async function init() {
                 </p>
                 <a
                     class="primary-button"
-                    href="./"
+                    href="../"
                 >
                     Voltar ao dashboard
                 </a>

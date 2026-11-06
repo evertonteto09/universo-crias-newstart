@@ -257,7 +257,7 @@ async function storyCard(story, summary) {
                 <div class="main-nav writer-card-actions">
                     <a
                         class="primary-button"
-                        href="./story-editor.html?id=${story.id}"
+                        href="./story-editor/?id=${story.id}"
                     >
                         Editar história
                     </a>
@@ -704,7 +704,7 @@ form.addEventListener(
             dialog.close();
 
             location.href =
-                `./story-editor.html?id=${story.id}`;
+                `./story-editor/?id=${story.id}`;
         } catch (error) {
             console.error(error);
 

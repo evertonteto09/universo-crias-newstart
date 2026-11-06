@@ -1,0 +1,24 @@
+---
+permalink: /portal-escritor/story-editor.html
+---
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,follow">
+    <title>Editor de história — endereço atualizado</title>
+    <link rel="canonical" href="story-editor/">
+</head>
+<body>
+    <p>Este endereço foi atualizado. <a href="story-editor/">Acessar o editor de história</a>.</p>
+    <script>
+    (() => {
+        const destination = new URL("story-editor/", window.location.href);
+        destination.search = window.location.search;
+        destination.hash = window.location.hash;
+        window.location.replace(destination.href);
+    })();
+    </script>
+</body>
+</html>

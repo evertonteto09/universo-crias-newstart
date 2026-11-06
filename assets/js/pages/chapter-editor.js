@@ -505,7 +505,7 @@ function render() {
             <div>
                 <a
                     class="text-link"
-                    href="./story-editor.html?id=${storyId}"
+                    href="../story-editor/?id=${storyId}"
                 >
                     ← Voltar para a história
                 </a>
@@ -2194,7 +2194,7 @@ function bind() {
                     );
 
                     location.href =
-                        `./story-editor.html?id=${storyId}`;
+                        `../story-editor/?id=${storyId}`;
                 },
             });
         },
@@ -2216,7 +2216,7 @@ document.querySelector(
             await signOut();
         } finally {
             location.href =
-                "./login/";
+                "../login/";
         }
     }
 );
@@ -2228,7 +2228,7 @@ async function init() {
 
         if (!writer) {
             location.href =
-                "./login/";
+                "../login/";
             return;
         }
 
@@ -2306,7 +2306,7 @@ async function init() {
 
                 <a
                     class="primary-button"
-                    href="./"
+                    href="../"
                 >
                     Voltar ao dashboard
                 </a>
