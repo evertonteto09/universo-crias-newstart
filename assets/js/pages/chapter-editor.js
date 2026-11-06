@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261028-spoiler-news-images-1";
+import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import {
     escapeHtml,
     showMessage,
@@ -23,7 +23,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
+} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,

@@ -9,12 +9,12 @@ import {
     resolveCustomThemeBackground,
     setCustomThemeBackgroundPreview,
     validateThemeBackgroundFile,
-} from "../services/custom-theme.service.js?v=20261028-theme-label-link-colors-1";
+} from "../services/custom-theme.service.js?v=20261106-custom-theme-bookmark-color-1";
 import {
     saveCustomThemePreferences,
     saveUserPreferencePatch,
     syncUserPreferences,
-} from "../services/user-preferences.service.js?v=20261028-crias-presence-images-1";
+} from "../services/user-preferences.service.js?v=20261106-custom-theme-bookmark-color-1";
 
 const THEMES = ["neblina", "preto", "branco", "vermelho", "amarelo", "roxo", "ciano", "personalizado"];
 const PRESET_THEMES = THEMES.filter((theme) => theme !== "personalizado");
@@ -74,6 +74,7 @@ function fieldsToSettings() {
         ["custom_theme_button_bg_color", "#custom-theme-button-bg-color-hex"],
         ["custom_theme_input_bg_color", "#custom-theme-input-bg-color-hex"],
         ["custom_theme_hover_color", "#custom-theme-hover-color-hex"],
+        ["custom_theme_bookmark_color", "#custom-theme-bookmark-color-hex"],
     ];
     const values = {};
     const validHex = /^#?[\da-fA-F]{6}$/;
@@ -92,7 +93,7 @@ function fieldsToSettings() {
     }
 
     if (!allValid) {
-        if (editorState) editorState.validationMessage = "Confira os onze códigos de cor. Use seis dígitos hexadecimais, como #00E5FF.";
+        if (editorState) editorState.validationMessage = "Confira os doze códigos de cor. Use seis dígitos hexadecimais, como #00E5FF.";
         return null;
     }
 
@@ -180,6 +181,8 @@ function loadFields(settings) {
     editorDialog.querySelector("#custom-theme-input-bg-color-hex").value = normalized.custom_theme_input_bg_color;
     editorDialog.querySelector("#custom-theme-hover-color-picker").value = normalized.custom_theme_hover_color;
     editorDialog.querySelector("#custom-theme-hover-color-hex").value = normalized.custom_theme_hover_color;
+    editorDialog.querySelector("#custom-theme-bookmark-color-picker").value = normalized.custom_theme_bookmark_color;
+    editorDialog.querySelector("#custom-theme-bookmark-color-hex").value = normalized.custom_theme_bookmark_color;
     editorDialog.querySelector("#custom-theme-background-type").value = normalized.custom_theme_background_type;
     editorDialog.querySelector("#custom-theme-background-source").value = normalized.custom_theme_background_source;
     editorDialog.querySelector("#custom-theme-background-url").value = normalized.custom_theme_background_url;
@@ -220,6 +223,7 @@ function loadFields(settings) {
         "#custom-theme-button-bg-color-hex",
         "#custom-theme-input-bg-color-hex",
         "#custom-theme-hover-color-hex",
+        "#custom-theme-bookmark-color-hex",
     ]) editorDialog.querySelector(selector).setAttribute("aria-invalid", "false");
     syncBackgroundControls();
     updatePreview({ markDirty: false });
@@ -358,7 +362,7 @@ function ensureEditorDialog() {
                 <div>
                     <span class="eyebrow">APARÊNCIA</span>
                     <h2 id="custom-theme-title">Personalize seu tema</h2>
-                    <p>Personalize o gradiente, os textos, os componentes e a cor dos realces ao passar o mouse. A prévia muda enquanto você edita.</p>
+                    <p>Personalize o gradiente, os textos, os componentes, os realces ao passar o mouse e a cor do marcador de leitura. A prévia muda enquanto você edita.</p>
                 </div>
                 <button type="button" class="custom-theme-close" id="custom-theme-close" aria-label="Fechar editor">×</button>
             </div>
@@ -608,9 +612,29 @@ function ensureEditorDialog() {
                 </div>
             </section>
 
+            <section class="custom-theme-typography" aria-labelledby="custom-theme-reading-marker-title">
+                <div class="custom-theme-section-heading">
+                    <h3 id="custom-theme-reading-marker-title">Personalização da leitura</h3>
+                    <p>Defina a cor que identifica o parágrafo salvo como seu ponto de leitura. Ela é independente da cor dos efeitos ao passar o mouse.</p>
+                </div>
+                <div class="custom-theme-colors">
+                    <div class="custom-theme-color-field" role="group" aria-labelledby="custom-theme-bookmark-color-label">
+                        <div class="custom-theme-color-title" id="custom-theme-bookmark-color-label">Cor do marcador de leitura</div>
+                        <p class="custom-theme-color-help">Usada no fundo suave e na borda do parágrafo que ficou marcado.</p>
+                        <div class="custom-theme-color-inputs">
+                            <input type="color" id="custom-theme-bookmark-color-picker" value="#00E5FF" aria-label="Selecionar cor do marcador de leitura">
+                            <label class="custom-theme-hex-label" for="custom-theme-bookmark-color-hex">
+                                <span>Código hexadecimal</span>
+                                <input type="text" id="custom-theme-bookmark-color-hex" value="#00E5FF" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Código hexadecimal da cor do marcador de leitura">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <div class="custom-theme-preview-block">
-                <span class="custom-theme-preview-caption">Prévia do fundo, textos, componentes e hover</span>
-                <div id="custom-theme-preview" class="custom-theme-preview" role="group" aria-label="Prévia do gradiente, textos, componentes e efeitos de hover">
+                <span class="custom-theme-preview-caption">Prévia do fundo, textos, componentes e marcador de leitura</span>
+                <div id="custom-theme-preview" class="custom-theme-preview" role="group" aria-label="Prévia do gradiente, textos, componentes e marcador de leitura">
                     <div class="custom-theme-preview-background" aria-hidden="true">
                         <img id="custom-theme-preview-background-image" alt="" draggable="false">
                     </div>
@@ -618,6 +642,7 @@ function ensureEditorDialog() {
                         <span class="custom-theme-preview-label">BIBLIOTECA</span>
                         <strong class="custom-theme-preview-title">Universo dos Crias</strong>
                         <small class="custom-theme-preview-text">Prévia de um card de história.</small>
+                        <p class="custom-theme-preview-reading-marker">Este parágrafo está salvo como seu ponto de leitura.</p>
                         <div class="custom-theme-preview-menu">Menu interativo</div>
                         <input class="custom-theme-preview-input" type="text" value="Campo de escrita" readonly aria-label="Prévia de um campo de escrita">
                         <span class="custom-theme-preview-button">Botão de exemplo</span>
@@ -652,6 +677,7 @@ function ensureEditorDialog() {
         ["#custom-theme-button-bg-color-picker", "#custom-theme-button-bg-color-hex"],
         ["#custom-theme-input-bg-color-picker", "#custom-theme-input-bg-color-hex"],
         ["#custom-theme-hover-color-picker", "#custom-theme-hover-color-hex"],
+        ["#custom-theme-bookmark-color-picker", "#custom-theme-bookmark-color-hex"],
     ];
     for (const [pickerSelector, hexSelector] of pickerPairs) {
         const picker = editorDialog.querySelector(pickerSelector);

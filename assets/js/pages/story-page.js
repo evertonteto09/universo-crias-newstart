@@ -1,5 +1,5 @@
-import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
-import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261028-spoiler-news-images-1";
+import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
 import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261028-spoiler-news-images-1";
 import {
     escapeHtml,
@@ -47,7 +47,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
+} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -57,7 +57,7 @@ import {
 import {
     getReadingBookmark,
     removeReadingBookmark,
-} from "../services/reading-bookmark.service.js";
+} from "../services/reading-bookmark.service.js?v=20261106-reading-bookmark-cloud-1";
 
 setupTheme();
 setupProfanityFilter();
@@ -542,12 +542,25 @@ function setupStoryTabs() {
     activate(initialTab);
 }
 
-function renderReadingBookmarkResume(story) {
+async function renderReadingBookmarkResume(story) {
     const container = document.querySelector("#reading-bookmark-resume");
     if (!container) return;
 
     container.replaceChildren();
-    const bookmark = getReadingBookmark(story.id);
+    container.classList.remove("is-warning");
+    let bookmark;
+    try {
+        bookmark = await getReadingBookmark(story.id);
+    } catch (error) {
+        console.warn("Não foi possível carregar o marcador de leitura da conta.", error);
+        container.hidden = false;
+        container.classList.add("is-warning");
+        const message = document.createElement("p");
+        message.className = "reading-bookmark-resume-description";
+        message.textContent = "Não foi possível carregar seu ponto de leitura. Verifique sua conexão e atualize a página.";
+        container.append(message);
+        return;
+    }
 
     if (!bookmark) {
         container.hidden = true;
@@ -597,12 +610,15 @@ function renderReadingBookmarkResume(story) {
     removeButton.type = "button";
     removeButton.className = "secondary-button reading-bookmark-resume-remove";
     removeButton.textContent = "Limpar marcador";
-    removeButton.addEventListener("click", () => {
-        if (removeReadingBookmark(story.id)) {
+    removeButton.addEventListener("click", async () => {
+        removeButton.disabled = true;
+        const removed = await removeReadingBookmark(story.id);
+        if (removed) {
             container.classList.remove("is-warning");
-            renderReadingBookmarkResume(story);
+            await renderReadingBookmarkResume(story);
         } else {
-            description.textContent = "Não foi possível limpar o marcador neste navegador.";
+            removeButton.disabled = false;
+            description.textContent = "Não foi possível limpar o marcador. Verifique sua conexão e tente novamente.";
         }
     });
 
@@ -937,7 +953,7 @@ async function load() {
             });
         }
         bindDynamicText(page);
-        renderReadingBookmarkResume(story);
+        await renderReadingBookmarkResume(story);
 
         const reviewsRoot =
             document.querySelector(

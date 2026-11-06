@@ -30,6 +30,7 @@ export const DEFAULT_CUSTOM_THEME = Object.freeze({
     custom_theme_button_bg_color: "#16002B",
     custom_theme_input_bg_color: "#0C1218",
     custom_theme_hover_color: "#00E5FF",
+    custom_theme_bookmark_color: "#00E5FF",
     custom_theme_background_type: "gradient",
     custom_theme_background_source: "url",
     custom_theme_background_url: "",
@@ -127,6 +128,7 @@ export function normalizeCustomThemeSettings(value = {}) {
         custom_theme_button_bg_color: normalizeHexColor(value.custom_theme_button_bg_color, DEFAULT_CUSTOM_THEME.custom_theme_button_bg_color),
         custom_theme_input_bg_color: normalizeHexColor(value.custom_theme_input_bg_color, DEFAULT_CUSTOM_THEME.custom_theme_input_bg_color),
         custom_theme_hover_color: normalizeHexColor(value.custom_theme_hover_color, DEFAULT_CUSTOM_THEME.custom_theme_hover_color),
+        custom_theme_bookmark_color: normalizeHexColor(value.custom_theme_bookmark_color, DEFAULT_CUSTOM_THEME.custom_theme_bookmark_color),
         custom_theme_background_type: value.custom_theme_background_type === "image" ? "image" : "gradient",
         custom_theme_background_source: source,
         custom_theme_background_url: normalizeBackgroundImageUrl(value.custom_theme_background_url),
@@ -435,6 +437,7 @@ export function applyCustomThemeSettings(value = {}) {
         custom_theme_button_bg_color: buttonBgColor,
         custom_theme_input_bg_color: inputBgColor,
         custom_theme_hover_color: hoverColor,
+        custom_theme_bookmark_color: bookmarkColor,
     } = cachedSettings;
     const cssDirection = direction === "vertical" ? "to bottom" : "to right";
     const accentRgb = rgbFromHex(color2).join(", ");
@@ -454,6 +457,7 @@ export function applyCustomThemeSettings(value = {}) {
     root.style.setProperty("--custom-theme-button-bg-color", buttonBgColor);
     root.style.setProperty("--custom-theme-input-bg-color", inputBgColor);
     root.style.setProperty("--custom-theme-hover-color", hoverColor);
+    root.style.setProperty("--custom-theme-bookmark-color", bookmarkColor);
     root.style.setProperty("--custom-theme-background-dim", String(cachedSettings.custom_theme_background_dim));
     root.style.setProperty("--custom-theme-background-brightness", String(1 - (cachedSettings.custom_theme_background_dim / 100)));
     root.style.setProperty("--custom-theme-background-blur", `${cachedSettings.custom_theme_background_blur}px`);

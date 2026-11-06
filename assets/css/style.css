@@ -523,6 +523,18 @@
 .custom-theme-preview-label { display: block; margin-bottom: 7px; font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--custom-theme-label-color, var(--custom-theme-color-2, #16002B)); }
 .custom-theme-preview-title { font-size: clamp(1.2rem, 4vw, 1.7rem); font-weight: 800; }
 .custom-theme-preview-text { font-size: .9rem; line-height: 1.45; }
+.custom-theme-preview-reading-marker {
+    width: 100%;
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 3px solid var(--custom-theme-bookmark-color, #00E5FF);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--custom-theme-bookmark-color, #00E5FF) 18%, var(--custom-theme-card-bg-color, #0C1218));
+    color: var(--custom-theme-text-color, #F4FBFF);
+    font-size: .82rem;
+    line-height: 1.45;
+    text-align: left;
+}
 .custom-theme-preview-button {
     display: inline-flex;
     align-items: center;
@@ -4195,3 +4207,12 @@ textarea { resize: vertical; }
     }
 }
 
+
+
+/* Tema personalizado: o parágrafo salvo mantém a cor própria do marcador,
+   inclusive quando o mouse está sobre ele. */
+:root[data-theme="personalizado"] .reader-content [data-reading-text].reading-bookmarkable.reading-bookmark-active,
+:root[data-theme="personalizado"] .reader-content [data-reading-text].reading-bookmarkable.reading-bookmark-active:hover {
+    background: color-mix(in srgb, var(--custom-theme-bookmark-color, #00E5FF) 18%, var(--custom-theme-card-bg-color, #0C1218)) !important;
+    box-shadow: inset 3px 0 0 var(--custom-theme-bookmark-color, #00E5FF) !important;
+}

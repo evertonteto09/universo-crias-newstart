@@ -1,5 +1,5 @@
 import { setupTheme } from "../ui.js?v=20261027-custom-background-crop-1";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
 
 // Reutiliza o tema salvo pelo restante do site.
 setupTheme();

@@ -1,17 +1,53 @@
+import { supabase } from "../core/supabase.js";
+
 const STORAGE_KEY = "universo-crias:reading-bookmarks:v1";
+const TABLE_NAME = "reading_bookmarks";
 const MAX_ANCHOR_LENGTH = 12000;
 const CONTEXT_LENGTH = 120;
 
-function readAllBookmarks() {
+let cachedUserId = null;
+let cachedUserBookmarks = new Map();
+let userBookmarksLoaded = false;
+let userBookmarksLoading = null;
+
+function normalizeBookmark(bookmark, storyIdOverride = null) {
+    if (!bookmark || typeof bookmark !== "object" || Array.isArray(bookmark)) return null;
+
+    const storyId = String(storyIdOverride ?? bookmark.storyId ?? "");
+    const chapterId = String(bookmark.chapterId ?? "");
+    const anchorText = String(bookmark.anchorText ?? "").slice(0, MAX_ANCHOR_LENGTH);
+    if (!storyId || !chapterId || !anchorText.trim()) return null;
+
+    const savedAt = typeof bookmark.savedAt === "string" && Number.isFinite(Date.parse(bookmark.savedAt))
+        ? new Date(bookmark.savedAt).toISOString()
+        : new Date(0).toISOString();
+    const rawSeasonNumber = Number(bookmark.seasonNumber ?? 1);
+    const rawEpisodeNumber = Number(bookmark.episodeNumber ?? 1);
+
+    return {
+        version: 1,
+        storyId,
+        chapterId,
+        chapterTitle: String(bookmark.chapterTitle ?? "").slice(0, 300),
+        storySlug: String(bookmark.storySlug ?? "").slice(0, 200),
+        seasonNumber: Number.isFinite(rawSeasonNumber) && rawSeasonNumber >= 0 ? rawSeasonNumber : 1,
+        // Episódio 0 é válido e representa o Piloto; não o converta para 1.
+        episodeNumber: Number.isFinite(rawEpisodeNumber) && rawEpisodeNumber >= 0 ? rawEpisodeNumber : 1,
+        anchorText,
+        previousText: String(bookmark.previousText ?? "").slice(-CONTEXT_LENGTH),
+        nextText: String(bookmark.nextText ?? "").slice(0, CONTEXT_LENGTH),
+        paragraphIndex: Math.max(0, Number(bookmark.paragraphIndex) || 0),
+        savedAt,
+    };
+}
+
+function readAllLocalBookmarks() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return {};
 
         const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            return {};
-        }
-
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
         return parsed;
     } catch (error) {
         console.warn("Não foi possível ler os marcadores locais de leitura.", error);
@@ -19,66 +55,176 @@ function readAllBookmarks() {
     }
 }
 
-export function getReadingBookmark(storyId) {
-    if (storyId === null || storyId === undefined || storyId === "") {
-        return null;
-    }
-
-    const bookmark = readAllBookmarks()[String(storyId)];
-    if (!bookmark || typeof bookmark !== "object" || Array.isArray(bookmark)) {
-        return null;
-    }
-
-    if (!bookmark.chapterId || !bookmark.anchorText) {
-        return null;
-    }
-
-    return bookmark;
-}
-
-export function saveReadingBookmark(bookmark) {
-    if (!bookmark?.storyId || !bookmark?.chapterId || !bookmark?.anchorText) {
-        return false;
-    }
-
-    const all = readAllBookmarks();
-    all[String(bookmark.storyId)] = {
-        version: 1,
-        storyId: String(bookmark.storyId),
-        chapterId: String(bookmark.chapterId),
-        chapterTitle: String(bookmark.chapterTitle ?? ""),
-        storySlug: String(bookmark.storySlug ?? ""),
-        seasonNumber: Number(bookmark.seasonNumber ?? 1),
-        episodeNumber: Number(bookmark.episodeNumber ?? 1),
-        anchorText: String(bookmark.anchorText).slice(0, MAX_ANCHOR_LENGTH),
-        previousText: String(bookmark.previousText ?? "").slice(-CONTEXT_LENGTH),
-        nextText: String(bookmark.nextText ?? "").slice(0, CONTEXT_LENGTH),
-        paragraphIndex: Math.max(0, Number(bookmark.paragraphIndex) || 0),
-        savedAt: bookmark.savedAt || new Date().toISOString(),
-    };
-
+function writeAllLocalBookmarks(bookmarks) {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
         return true;
     } catch (error) {
-        console.warn("Não foi possível salvar o marcador local de leitura.", error);
+        console.warn("Não foi possível salvar os marcadores locais de leitura.", error);
         return false;
     }
 }
 
-export function removeReadingBookmark(storyId) {
-    if (storyId === null || storyId === undefined || storyId === "") {
-        return false;
-    }
+function getLocalBookmark(storyId) {
+    const raw = readAllLocalBookmarks()[String(storyId)];
+    return normalizeBookmark(raw, storyId);
+}
 
-    const all = readAllBookmarks();
+function saveLocalBookmark(bookmark) {
+    const all = readAllLocalBookmarks();
+    all[String(bookmark.storyId)] = bookmark;
+    return writeAllLocalBookmarks(all);
+}
+
+function removeLocalBookmark(storyId) {
+    const all = readAllLocalBookmarks();
     delete all[String(storyId)];
+    return writeAllLocalBookmarks(all);
+}
+
+function bookmarkTime(bookmark) {
+    const value = Date.parse(bookmark?.savedAt ?? "");
+    return Number.isFinite(value) ? value : 0;
+}
+
+async function getSignedInUser() {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data?.session?.user ?? null;
+}
+
+function resetUserBookmarkCache(userId) {
+    cachedUserId = userId;
+    cachedUserBookmarks = new Map();
+    userBookmarksLoaded = false;
+    userBookmarksLoading = null;
+}
+
+/**
+ * Carrega os marcadores da conta e migra os marcadores anônimos deste navegador.
+ * Quando há conflito para a mesma história, vence o marcador com savedAt mais recente.
+ * O localStorage só é limpo depois que todas as migrações foram confirmadas pelo Supabase.
+ */
+async function ensureUserBookmarksLoaded(user) {
+    if (cachedUserId !== user.id) resetUserBookmarkCache(user.id);
+    if (userBookmarksLoaded) return;
+    if (userBookmarksLoading) return userBookmarksLoading;
+
+    userBookmarksLoading = (async () => {
+        const { data, error } = await supabase
+            .from(TABLE_NAME)
+            .select("story_id, bookmark, updated_at")
+            .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        const merged = new Map();
+        for (const row of data ?? []) {
+            const bookmark = normalizeBookmark(row.bookmark, row.story_id);
+            if (bookmark) merged.set(String(row.story_id), bookmark);
+        }
+
+        const localBookmarks = readAllLocalBookmarks();
+        const pendingUpserts = [];
+
+        for (const [storyId, rawBookmark] of Object.entries(localBookmarks)) {
+            const localBookmark = normalizeBookmark(rawBookmark, storyId);
+            if (!localBookmark) continue;
+
+            const cloudBookmark = merged.get(String(storyId));
+            if (!cloudBookmark || bookmarkTime(localBookmark) > bookmarkTime(cloudBookmark)) {
+                merged.set(String(storyId), localBookmark);
+                pendingUpserts.push({
+                    user_id: user.id,
+                    story_id: String(storyId),
+                    bookmark: localBookmark,
+                    updated_at: localBookmark.savedAt,
+                });
+            }
+        }
+
+        if (pendingUpserts.length) {
+            const { error: upsertError } = await supabase
+                .from(TABLE_NAME)
+                .upsert(pendingUpserts, { onConflict: "user_id,story_id" });
+            if (upsertError) throw upsertError;
+        }
+
+        // O marcador anônimo foi incorporado à conta. Remove o cache compartilhado
+        // para não expor dados de uma conta quando o usuário sair ou trocar de conta.
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (storageError) {
+            console.warn("Os marcadores foram sincronizados, mas o cache local não pôde ser limpo.", storageError);
+        }
+
+        cachedUserBookmarks = merged;
+        userBookmarksLoaded = true;
+    })();
 
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+        await userBookmarksLoading;
+    } finally {
+        userBookmarksLoading = null;
+    }
+}
+
+export async function getReadingBookmark(storyId) {
+    if (storyId === null || storyId === undefined || storyId === "") return null;
+
+    const user = await getSignedInUser();
+    if (!user) return getLocalBookmark(storyId);
+
+    await ensureUserBookmarksLoaded(user);
+    return cachedUserBookmarks.get(String(storyId)) ?? null;
+}
+
+export async function saveReadingBookmark(bookmark) {
+    const normalized = normalizeBookmark(bookmark);
+    if (!normalized) return false;
+
+    try {
+        const user = await getSignedInUser();
+        if (!user) return saveLocalBookmark(normalized);
+
+        await ensureUserBookmarksLoaded(user);
+        const { error } = await supabase
+            .from(TABLE_NAME)
+            .upsert({
+                user_id: user.id,
+                story_id: normalized.storyId,
+                bookmark: normalized,
+                updated_at: normalized.savedAt,
+            }, { onConflict: "user_id,story_id" });
+
+        if (error) throw error;
+        cachedUserBookmarks.set(normalized.storyId, normalized);
         return true;
     } catch (error) {
-        console.warn("Não foi possível remover o marcador local de leitura.", error);
+        console.warn("Não foi possível salvar o marcador de leitura na conta.", error);
+        return false;
+    }
+}
+
+export async function removeReadingBookmark(storyId) {
+    if (storyId === null || storyId === undefined || storyId === "") return false;
+
+    try {
+        const user = await getSignedInUser();
+        if (!user) return removeLocalBookmark(storyId);
+
+        await ensureUserBookmarksLoaded(user);
+        const { error } = await supabase
+            .from(TABLE_NAME)
+            .delete()
+            .eq("user_id", user.id)
+            .eq("story_id", String(storyId));
+
+        if (error) throw error;
+        cachedUserBookmarks.delete(String(storyId));
+        return true;
+    } catch (error) {
+        console.warn("Não foi possível remover o marcador de leitura da conta.", error);
         return false;
     }
 }
@@ -108,14 +254,10 @@ function textMatchesNext(currentText, savedText) {
 }
 
 function findBookmarkMatch(blocks, bookmark) {
-    if (!bookmark || !blocks.length) {
-        return { status: "stale", element: null, index: -1 };
-    }
+    if (!bookmark || !blocks.length) return { status: "stale", element: null, index: -1 };
 
     const savedText = normalizeText(bookmark.anchorText);
-    if (!savedText) {
-        return { status: "stale", element: null, index: -1 };
-    }
+    if (!savedText) return { status: "stale", element: null, index: -1 };
 
     const currentTexts = blocks.map(blockText);
     const exactIndices = [];
@@ -134,30 +276,15 @@ function findBookmarkMatch(blocks, bookmark) {
     if (exactIndices.length > 1) {
         const scored = exactIndices.map((index) => {
             let score = 0;
-            let contextSignals = 0;
-
-            if (bookmark.previousText) {
-                contextSignals += 1;
-                if (index > 0 && textMatchesPrevious(currentTexts[index - 1], bookmark.previousText)) {
-                    score += 1;
-                }
-            }
-
-            if (bookmark.nextText) {
-                contextSignals += 1;
-                if (index < currentTexts.length - 1 && textMatchesNext(currentTexts[index + 1], bookmark.nextText)) {
-                    score += 1;
-                }
-            }
-
-            return { index, score, contextSignals };
+            if (bookmark.previousText && index > 0 && textMatchesPrevious(currentTexts[index - 1], bookmark.previousText)) score += 1;
+            if (bookmark.nextText && index < currentTexts.length - 1 && textMatchesNext(currentTexts[index + 1], bookmark.nextText)) score += 1;
+            return { index, score };
         }).sort((a, b) => b.score - a.score);
 
         if (scored[0].score > 0 && scored[0].score > scored[1].score) {
             const index = scored[0].index;
             return { status: "exact", element: blocks[index], index };
         }
-
         return { status: "stale", element: null, index: -1 };
     }
 
@@ -175,8 +302,7 @@ function findBookmarkMatch(blocks, bookmark) {
         for (const previousIndex of previousIndices) {
             for (const nextIndex of nextIndices) {
                 if (nextIndex <= previousIndex) continue;
-                const between = nextIndex - previousIndex - 1;
-                if (between === 1) possible.add(previousIndex + 1);
+                if (nextIndex - previousIndex - 1 === 1) possible.add(previousIndex + 1);
             }
         }
 
@@ -199,7 +325,7 @@ function makeButton(className, label, text) {
     return button;
 }
 
-function renderToolbar(toolbar, { bookmark, chapter, match, otherChapter }) {
+function renderToolbar(toolbar, { bookmark, chapter, match }) {
     if (!toolbar) return;
     toolbar.replaceChildren();
 
@@ -274,12 +400,13 @@ function renderToolbar(toolbar, { bookmark, chapter, match, otherChapter }) {
 
 /**
  * Torna cada bloco de texto clicável para salvar o ponto de leitura.
- * O texto de âncora vem da fonte original, não do texto filtrado exibido.
+ * Contas autenticadas sincronizam com Supabase; visitantes usam localStorage.
  */
-export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }) {
-    if (!root || !toolbar || !story?.id || !chapter?.id) {
-        return () => {};
-    }
+export async function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }) {
+    if (!root || !toolbar || !story?.id || !chapter?.id) return async () => null;
+
+    let operationInFlight = false;
+    let refreshGeneration = 0;
 
     const isInteractiveTarget = (target, block) => {
         if (!(target instanceof Element)) return false;
@@ -289,58 +416,28 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
         return Boolean(interactive && interactive !== block);
     };
 
-    const activateBlock = (block) => {
-        const freshBlocks = getReadingBlocks(root);
-        const freshIndex = freshBlocks.indexOf(block);
-        if (freshIndex < 0) return;
-
-        const currentBookmark = getReadingBookmark(story.id);
-        const currentMatch = currentBookmark &&
-            String(currentBookmark.chapterId) === String(chapter.id)
-            ? findBookmarkMatch(freshBlocks, currentBookmark)
-            : { status: "none", element: null, index: -1 };
-
-        // Clicar novamente no trecho já salvo remove o marcador desta história.
-        if (currentMatch.status === "exact" && currentMatch.element === block) {
-            const removed = removeReadingBookmark(story.id);
-            if (!removed) {
-                setStorageError();
-                return;
-            }
-            refresh();
-            return;
-        }
-
-        // Um trecho sugerido ou qualquer outro bloco passa a ser o novo ponto salvo.
-        saveFromBlock(block, freshBlocks, freshIndex);
+    const setStorageError = (messageText = "Não foi possível sincronizar o marcador de leitura. Verifique sua conexão e tente novamente.") => {
+        toolbar.replaceChildren();
+        const message = document.createElement("p");
+        message.className = "reading-bookmark-message is-warning";
+        message.textContent = messageText;
+        toolbar.append(message);
     };
 
-    // Delegação mantém apenas um conjunto de eventos mesmo quando o conteúdo é
-    // renderizado novamente (por exemplo, ao alternar o filtro de palavrões).
-    if (root.dataset.readingBookmarkEventsBound !== "true") {
-        root.addEventListener("click", (event) => {
-            const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-            const block = target?.closest("[data-reading-text].reading-bookmarkable");
-            if (!block || !root.contains(block) || isInteractiveTarget(target, block)) return;
-            activateBlock(block);
-        });
+    const refresh = async () => {
+        const generation = ++refreshGeneration;
+        let bookmark;
+        try {
+            bookmark = await getReadingBookmark(story.id);
+        } catch (error) {
+            console.warn("Não foi possível carregar o marcador de leitura.", error);
+            if (generation === refreshGeneration) {
+                setStorageError("Não foi possível carregar seu marcador de leitura da conta. Verifique sua conexão e tente novamente.");
+            }
+            return null;
+        }
+        if (generation !== refreshGeneration) return null;
 
-        root.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            const target = event.target;
-            if (!(target instanceof Element)) return;
-            const block = target.closest("[data-reading-text].reading-bookmarkable");
-            if (!block || target !== block || !root.contains(block)) return;
-            event.preventDefault();
-            // Usa o mesmo fluxo de clique delegado para evitar dupla ativação.
-            block.click();
-        });
-
-        root.dataset.readingBookmarkEventsBound = "true";
-    }
-
-    const refresh = () => {
-        const bookmark = getReadingBookmark(story.id);
         const blocks = getReadingBlocks(root);
         const isSameChapter = bookmark && String(bookmark.chapterId) === String(chapter.id);
         const match = isSameChapter
@@ -363,8 +460,6 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
                     ? "Sugestão aproximada para seu ponto de leitura. Ative para confirmar este parágrafo."
                     : "Marcar este parágrafo como ponto de leitura";
 
-            // Blocos sem controles internos também ficam acessíveis pelo teclado.
-            // Não atribuímos role=button a blocos com spoilers/botões aninhados.
             const hasInteractiveDescendant = Boolean(block.querySelector(
                 'button, a, input, select, textarea, summary, [contenteditable="true"]',
             ));
@@ -381,20 +476,21 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
             }
         });
 
-        renderToolbar(toolbar, {
-            bookmark,
-            chapter,
-            match,
-            otherChapter: bookmark && !isSameChapter,
-        });
+        renderToolbar(toolbar, { bookmark, chapter, match });
 
-        toolbar.querySelector('[data-reading-bookmark-action="remove"]')?.addEventListener("click", () => {
-            const removed = removeReadingBookmark(story.id);
-            if (!removed) {
-                setStorageError();
-                return;
+        toolbar.querySelector('[data-reading-bookmark-action="remove"]')?.addEventListener("click", async () => {
+            if (operationInFlight) return;
+            operationInFlight = true;
+            try {
+                const removed = await removeReadingBookmark(story.id);
+                if (!removed) {
+                    setStorageError("Não foi possível remover o marcador da conta. Tente novamente.");
+                    return;
+                }
+                await refresh();
+            } finally {
+                operationInFlight = false;
             }
-            refresh();
         });
 
         toolbar.querySelector('[data-reading-bookmark-action="jump"]')?.addEventListener("click", () => {
@@ -407,32 +503,28 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
             window.setTimeout(() => target.classList.remove("reading-bookmark-jump-highlight"), 1700);
         });
 
-        toolbar.querySelector('[data-reading-bookmark-action="confirm-approximate"]')?.addEventListener("click", () => {
-            if (match.element) {
+        toolbar.querySelector('[data-reading-bookmark-action="confirm-approximate"]')?.addEventListener("click", async () => {
+            if (!match.element || operationInFlight) return;
+            operationInFlight = true;
+            try {
                 const freshBlocks = getReadingBlocks(root);
                 const freshIndex = freshBlocks.indexOf(match.element);
-                if (freshIndex >= 0) saveFromBlock(match.element, freshBlocks, freshIndex);
+                if (freshIndex >= 0) await saveFromBlock(match.element, freshBlocks, freshIndex);
+            } finally {
+                operationInFlight = false;
             }
         });
 
         return { bookmark, match };
     };
 
-    const setStorageError = () => {
-        toolbar.replaceChildren();
-        const message = document.createElement("p");
-        message.className = "reading-bookmark-message is-warning";
-        message.textContent = "Não foi possível acessar o armazenamento local deste navegador. O ponto de leitura não foi alterado.";
-        toolbar.append(message);
-    };
-
-    const saveFromBlock = (block, blocks, index) => {
+    const saveFromBlock = async (block, blocks, index) => {
         const anchorText = blockText(block);
         if (!anchorText) return;
 
         const previousText = index > 0 ? blockText(blocks[index - 1]).slice(-CONTEXT_LENGTH) : "";
         const nextText = index < blocks.length - 1 ? blockText(blocks[index + 1]).slice(0, CONTEXT_LENGTH) : "";
-        const saved = saveReadingBookmark({
+        const saved = await saveReadingBookmark({
             storyId: story.id,
             chapterId: chapter.id,
             chapterTitle: chapter.title || (Number(chapter.number) === 0 ? "Piloto" : `Episódio ${chapter.number}`),
@@ -447,13 +539,66 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
         });
 
         if (!saved) {
-            setStorageError();
+            setStorageError("Não foi possível salvar o marcador. Confira sua conexão e tente novamente.");
             return;
         }
-
-        refresh();
+        await refresh();
     };
 
-    refresh();
+    const activateBlock = async (block) => {
+        if (operationInFlight) return;
+        operationInFlight = true;
+        try {
+            const freshBlocks = getReadingBlocks(root);
+            const freshIndex = freshBlocks.indexOf(block);
+            if (freshIndex < 0) return;
+
+            const currentBookmark = await getReadingBookmark(story.id);
+            const currentMatch = currentBookmark && String(currentBookmark.chapterId) === String(chapter.id)
+                ? findBookmarkMatch(freshBlocks, currentBookmark)
+                : { status: "none", element: null, index: -1 };
+
+            // Clicar novamente no trecho já salvo remove o marcador desta história.
+            if (currentMatch.status === "exact" && currentMatch.element === block) {
+                const removed = await removeReadingBookmark(story.id);
+                if (!removed) {
+                    setStorageError("Não foi possível remover o marcador. Confira sua conexão e tente novamente.");
+                    return;
+                }
+                await refresh();
+                return;
+            }
+
+            await saveFromBlock(block, freshBlocks, freshIndex);
+        } catch (error) {
+            console.warn("Não foi possível atualizar o marcador de leitura.", error);
+            setStorageError();
+        } finally {
+            operationInFlight = false;
+        }
+    };
+
+    if (root.dataset.readingBookmarkEventsBound !== "true") {
+        root.addEventListener("click", (event) => {
+            const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+            const block = target?.closest("[data-reading-text].reading-bookmarkable");
+            if (!block || !root.contains(block) || isInteractiveTarget(target, block)) return;
+            void activateBlock(block);
+        });
+
+        root.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const block = target.closest("[data-reading-text].reading-bookmarkable");
+            if (!block || target !== block || !root.contains(block)) return;
+            event.preventDefault();
+            block.click();
+        });
+
+        root.dataset.readingBookmarkEventsBound = "true";
+    }
+
+    await refresh();
     return refresh;
 }

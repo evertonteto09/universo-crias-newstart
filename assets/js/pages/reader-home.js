@@ -1,5 +1,5 @@
-import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-2";
-import { setupProfanityFilter } from "../core/profanity-filter.js?v=20261028-crias-presence-images-2";
+import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupProfanityFilter } from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
 import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-genres-home-1";
 import {
     escapeHtml,
@@ -10,7 +10,7 @@ import { getPublishedStories } from "../services/story.service.js?v=20261027-coa
 import { getStoryAuthors } from "../core/story-authors.js?v=20261027-coauthor-2";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
 
 setupTheme();
 setupProfanityFilter();

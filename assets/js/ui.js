@@ -1,5 +1,5 @@
 import { getStoryCoverUrl } from "./services/storage.service.js";
-import { setupTheme as setupSharedTheme } from "./core/theme.js?v=20261028-crias-presence-images-1";
+import { setupTheme as setupSharedTheme } from "./core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 
 const DEFAULT_COVER = "./assets/img/default-story-cover.svg";
 

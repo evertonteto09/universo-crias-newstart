@@ -1,5 +1,5 @@
 import { checkSupabaseConnection } from "../core/supabase.js";
-import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-1";
+import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 
 setupTheme();
 

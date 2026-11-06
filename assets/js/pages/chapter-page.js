@@ -1,8 +1,8 @@
-import { setupTheme } from "../core/theme.js?v=20261028-crias-presence-images-3";
+import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import {
     setupProfanityFilter,
     filterProfanity,
-} from "../core/profanity-filter.js?v=20261028-crias-presence-images-3";
+} from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
 
 import {
     escapeHtml,
@@ -45,7 +45,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-session-token-validation-1";
+} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -55,7 +55,7 @@ import {
 
 import {
     setupReadingBookmarkUI,
-} from "../services/reading-bookmark.service.js?v=20261106-reading-bookmark-paragraph-1";
+} from "../services/reading-bookmark.service.js?v=20261106-reading-bookmark-cloud-1";
 
 setupTheme();
 setupProfanityFilter();
@@ -891,7 +891,7 @@ async function renderPublishedChapter(result) {
     await loadReviews();
 
     const contentRoot = document.querySelector("#chapter-content-rendered");
-    refreshReadingBookmarkUI = setupReadingBookmarkUI({
+    refreshReadingBookmarkUI = await setupReadingBookmarkUI({
         root: contentRoot,
         toolbar: document.querySelector("#reading-bookmark-toolbar"),
         story: currentStory,
@@ -899,7 +899,7 @@ async function renderPublishedChapter(result) {
         chapter: currentChapter,
     });
 
-    const initialBookmarkState = refreshReadingBookmarkUI();
+    const initialBookmarkState = await refreshReadingBookmarkUI();
     if (location.hash === "#ponto-de-leitura" && initialBookmarkState?.match?.element) {
         window.requestAnimationFrame(() => {
             initialBookmarkState.match.element.scrollIntoView({
@@ -916,7 +916,7 @@ async function renderPublishedChapter(result) {
         if (refreshedContentRoot) {
             refreshedContentRoot.innerHTML = await renderContent(currentChapter.content);
             syncEpisodeHeaderCover();
-            refreshReadingBookmarkUI();
+            await refreshReadingBookmarkUI();
             bindDynamicText(refreshedContentRoot);
         }
     });
