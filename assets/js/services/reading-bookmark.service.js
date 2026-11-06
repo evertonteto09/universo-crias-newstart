@@ -231,7 +231,7 @@ function renderToolbar(toolbar, { bookmark, chapter, match, otherChapter }) {
     };
 
     if (!bookmark) {
-        message.textContent = "Marque o ponto onde você parou usando o quadradinho ao lado de qualquer parágrafo.";
+        message.textContent = "Marque o ponto onde você parou clicando diretamente no parágrafo desejado.";
         toolbar.append(message);
         return;
     }
@@ -273,12 +273,70 @@ function renderToolbar(toolbar, { bookmark, chapter, match, otherChapter }) {
 }
 
 /**
- * Adiciona controles de marcador aos blocos de texto de um episódio.
+ * Torna cada bloco de texto clicável para salvar o ponto de leitura.
  * O texto de âncora vem da fonte original, não do texto filtrado exibido.
  */
 export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }) {
     if (!root || !toolbar || !story?.id || !chapter?.id) {
         return () => {};
+    }
+
+    const isInteractiveTarget = (target, block) => {
+        if (!(target instanceof Element)) return false;
+        const interactive = target.closest(
+            'button, a, input, select, textarea, summary, [contenteditable="true"], [data-reading-bookmark-ignore]',
+        );
+        return Boolean(interactive && interactive !== block);
+    };
+
+    const activateBlock = (block) => {
+        const freshBlocks = getReadingBlocks(root);
+        const freshIndex = freshBlocks.indexOf(block);
+        if (freshIndex < 0) return;
+
+        const currentBookmark = getReadingBookmark(story.id);
+        const currentMatch = currentBookmark &&
+            String(currentBookmark.chapterId) === String(chapter.id)
+            ? findBookmarkMatch(freshBlocks, currentBookmark)
+            : { status: "none", element: null, index: -1 };
+
+        // Clicar novamente no trecho já salvo remove o marcador desta história.
+        if (currentMatch.status === "exact" && currentMatch.element === block) {
+            const removed = removeReadingBookmark(story.id);
+            if (!removed) {
+                setStorageError();
+                return;
+            }
+            refresh();
+            return;
+        }
+
+        // Um trecho sugerido ou qualquer outro bloco passa a ser o novo ponto salvo.
+        saveFromBlock(block, freshBlocks, freshIndex);
+    };
+
+    // Delegação mantém apenas um conjunto de eventos mesmo quando o conteúdo é
+    // renderizado novamente (por exemplo, ao alternar o filtro de palavrões).
+    if (root.dataset.readingBookmarkEventsBound !== "true") {
+        root.addEventListener("click", (event) => {
+            const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+            const block = target?.closest("[data-reading-text].reading-bookmarkable");
+            if (!block || !root.contains(block) || isInteractiveTarget(target, block)) return;
+            activateBlock(block);
+        });
+
+        root.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const block = target.closest("[data-reading-text].reading-bookmarkable");
+            if (!block || target !== block || !root.contains(block)) return;
+            event.preventDefault();
+            // Usa o mesmo fluxo de clique delegado para evitar dupla ativação.
+            block.click();
+        });
+
+        root.dataset.readingBookmarkEventsBound = "true";
     }
 
     const refresh = () => {
@@ -293,7 +351,6 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
             block.classList.add("reading-bookmarkable");
             block.classList.remove("reading-bookmark-active", "reading-bookmark-suggestion");
             block.dataset.readingIndex = String(index);
-            block.querySelectorAll(":scope > .reading-bookmark-action").forEach((button) => button.remove());
 
             const isActive = match.status === "exact" && match.element === block;
             const isSuggestion = match.status === "approximate" && match.element === block;
@@ -301,36 +358,27 @@ export function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }
             if (isSuggestion) block.classList.add("reading-bookmark-suggestion");
 
             const label = isActive
-                ? "Este é seu ponto de leitura salvo. Clique novamente para remover o marcador."
+                ? "Este é seu ponto de leitura salvo. Ative novamente para remover o marcador."
                 : isSuggestion
-                    ? "Este trecho é uma sugestão aproximada para o ponto de leitura. Clique para confirmar."
-                    : "Marcar este trecho como ponto de leitura";
-            const action = makeButton(
-                `reading-bookmark-action${isActive ? " is-active" : ""}${isSuggestion ? " is-suggestion" : ""}`,
-                label,
-                "",
-            );
-            action.setAttribute("aria-pressed", String(isActive));
-            action.addEventListener("click", () => {
-                const freshBlocks = getReadingBlocks(root);
-                const freshIndex = freshBlocks.indexOf(block);
-                if (freshIndex < 0) return;
+                    ? "Sugestão aproximada para seu ponto de leitura. Ative para confirmar este parágrafo."
+                    : "Marcar este parágrafo como ponto de leitura";
 
-                // O quadradinho selecionado funciona como alternância:
-                // clicar nele novamente remove o marcador desta história.
-                if (isActive) {
-                    const removed = removeReadingBookmark(story.id);
-                    if (!removed) {
-                        setStorageError();
-                        return;
-                    }
-                    refresh();
-                    return;
-                }
-
-                saveFromBlock(block, freshBlocks, freshIndex);
-            });
-            block.prepend(action);
+            // Blocos sem controles internos também ficam acessíveis pelo teclado.
+            // Não atribuímos role=button a blocos com spoilers/botões aninhados.
+            const hasInteractiveDescendant = Boolean(block.querySelector(
+                'button, a, input, select, textarea, summary, [contenteditable="true"]',
+            ));
+            if (hasInteractiveDescendant) {
+                block.removeAttribute("role");
+                block.removeAttribute("tabindex");
+                block.removeAttribute("aria-pressed");
+                block.removeAttribute("aria-label");
+            } else {
+                block.setAttribute("role", "button");
+                block.setAttribute("tabindex", "0");
+                block.setAttribute("aria-pressed", String(isActive));
+                block.setAttribute("aria-label", label);
+            }
         });
 
         renderToolbar(toolbar, {

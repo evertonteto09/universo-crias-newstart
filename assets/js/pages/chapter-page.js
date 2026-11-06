@@ -28,7 +28,7 @@ import {
     estimateServerNowMs,
     formatPremiereCountdown,
     formatBrasiliaDate,
-} from "../services/premiere.service.js?v=20261105-premiere-server-clock-2";
+} from "../services/premiere.service.js?v=20261106-premiere-visual-refine-1";
 
 import {
     getPublishedChapterReviews,
@@ -55,7 +55,7 @@ import {
 
 import {
     setupReadingBookmarkUI,
-} from "../services/reading-bookmark.service.js";
+} from "../services/reading-bookmark.service.js?v=20261106-reading-bookmark-paragraph-1";
 
 setupTheme();
 setupProfanityFilter();
@@ -770,7 +770,7 @@ function renderPublicPremierePage(story, premiere, initialServerClock) {
                 updateCountdown();
             } else {
                 statusNode.textContent = "O horário chegou. Aguardando o servidor concluir a publicação automática...";
-                countdownNode.textContent = "00m 00s";
+                countdownNode.textContent = "00s";
                 premierePollingStarted = true;
                 if (!premiereStatusInterval) {
                     premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
@@ -804,7 +804,7 @@ function renderPublicPremierePage(story, premiere, initialServerClock) {
             countdownNode.textContent = formatPremiereCountdown(remaining);
             statusNode.textContent = "O conteúdo permanece protegido até a publicação pelo servidor.";
         } else {
-            countdownNode.textContent = "00m 00s";
+            countdownNode.textContent = "00s";
             statusNode.textContent = "O horário chegou. Aguardando o servidor concluir a publicação automática...";
             if (!premierePollingStarted) {
                 premierePollingStarted = true;

@@ -45,7 +45,8 @@ export function formatPremiereCountdown(milliseconds) {
 
     if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
     if (hours > 0) return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
-    return `${pad(minutes)}m ${pad(seconds)}s`;
+    if (minutes > 0) return `${pad(minutes)}m ${pad(seconds)}s`;
+    return `${pad(seconds)}s`;
 }
 
 /** Formata datas públicas sempre no fuso de Brasília, independente do PC do leitor. */

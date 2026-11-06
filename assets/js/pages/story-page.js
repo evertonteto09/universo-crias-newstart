@@ -17,7 +17,7 @@ import {
     estimateServerNowMs,
     formatPremiereCountdown,
     formatBrasiliaDate,
-} from "../services/premiere.service.js?v=20261105-premiere-server-clock-2";
+} from "../services/premiere.service.js?v=20261106-premiere-visual-refine-1";
 import {
     getStoryAuthors,
     renderStoryAuthorNames,
