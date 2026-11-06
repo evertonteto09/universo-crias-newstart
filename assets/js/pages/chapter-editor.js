@@ -1905,7 +1905,7 @@ function openImageInsertModal() {
                     >
                 </label>
 
-                <p class="muted modal-help-text">
+                <p class="muted modal-help-text modal-image-source-help">
                     Formatos de imagem aceitos. Limite de 5 MB.
                 </p>
             </div>
@@ -1921,7 +1921,7 @@ function openImageInsertModal() {
                     >
                 </label>
 
-                <p class="muted modal-help-text">
+                <p class="muted modal-help-text modal-image-source-help">
                     Prefira links HTTPS diretos para imagens.
                 </p>
             </div>

@@ -1129,6 +1129,15 @@ label {
     font-weight: 600;
 }
 
+/* Os grupos alternados de imagem precisam respeitar o atributo hidden,
+   mesmo quando seus elementos são labels com display:grid. */
+.cover-editor > label[hidden],
+.story-news-image-tools-grid > label[hidden],
+#image-upload-panel[hidden],
+#image-url-panel[hidden] {
+    display: none !important;
+}
+
 input,
 textarea,
 select {
@@ -2696,6 +2705,11 @@ textarea { resize: vertical; }
 .modal-help-text {
     margin: -2px 0 4px;
     line-height: 1.55;
+}
+
+/* Mais respiro entre o seletor/arquivo e as instruções do upload/link. */
+.modal-image-source-help {
+    margin: 7px 0 8px;
 }
 
 @media (max-width: 680px) {
