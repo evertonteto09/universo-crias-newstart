@@ -1,6 +1,6 @@
 import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import { openConfirmModal } from "../core/modal.js";
-import { renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { renderDynamicInlineBlock, bindDynamicText } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
 import {
     escapeHtml,
     storyCoverSource,
@@ -338,7 +338,7 @@ async function loadReviews(storyId) {
                                     <strong>${Number(review.rating)}/10</strong>
                                 </span>
                             </div>
-                            <p class="review-text" data-review-original="${escapeHtml(review.content)}">${renderEmojiText(review.content)}</p>
+                            <p class="review-text" data-review-original="${escapeHtml(review.content)}">${renderDynamicInlineBlock(review.content)}</p>
                             <small class="muted">
                                 ${review.chapter_id ? "Episódio específico" : "Obra completa"}
                                 · ${isPublished ? "Visível" : "Oculta"}
@@ -370,6 +370,8 @@ async function loadReviews(storyId) {
                     Essa história ainda não recebeu avaliações.
                 </article>
             `;
+
+        bindDynamicText(reviewList);
 
         reviewList.querySelectorAll(".toggle-review-status-button").forEach((button) => {
             button.addEventListener("click", (event) => {
@@ -415,13 +417,13 @@ async function loadReviews(storyId) {
                     || "";
                 if (!Number.isSafeInteger(reviewId) || reviewId <= 0) return;
 
-                openConfirmModal({
+                const confirmationModal = openConfirmModal({
                     eyebrow: "MODERAÇÃO",
                     title: "Excluir avaliação?",
                     message: `Excluir permanentemente a avaliação de <strong>${escapeHtml(readerName)}</strong>?`,
                     details: `
                         <div class="review-delete-preview">
-                            “${renderEmojiText(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
+                            “${renderDynamicInlineBlock(reviewText.slice(0, 240))}${reviewText.length > 240 ? "…" : ""}”
                         </div>
                         <span>Use esta opção para remover avaliações ofensivas, ataques ou spam da obra.</span>
                     `,
@@ -431,6 +433,7 @@ async function loadReviews(storyId) {
                         await loadReviews(normalizedStoryId);
                     },
                 });
+                bindDynamicText(confirmationModal.body);
             });
         });
     } catch (error) {

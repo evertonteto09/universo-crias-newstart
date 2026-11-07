@@ -12,9 +12,10 @@ import {
 
 import {
     renderDynamicContent,
+    renderDynamicInlineBlock,
     bindDynamicText,
-} from "../core/dynamic-text.js?v=20261106-emojis-inline-2";
-import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+} from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
+import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
 
 import {
     getPublishedChapter,
@@ -275,7 +276,7 @@ async function loadReviews() {
                                 </span>
                             </div>
 
-                            <p class="review-text">${renderEmojiText(
+                            <p class="review-text">${renderDynamicInlineBlock(
                                 review.content
                             )}</p>
                         </article>
@@ -287,6 +288,8 @@ async function loadReviews() {
                     Ainda não há avaliações neste episódio.
                 </article>
               `;
+
+    bindDynamicText(reviewList);
 }
 
 function bindReviewForm() {
@@ -523,6 +526,10 @@ async function renderPage() {
                         required
                     ></textarea>
                 </label>
+                <small class="field-help dynamic-format-help">
+                    Formatação: <code>**negrito**</code>, <code>*itálico*</code>,
+                    <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>`código`</code>.
+                </small>
                 <div id="chapter-review-emoji-picker" class="emoji-picker-host"></div>
 
                 <button

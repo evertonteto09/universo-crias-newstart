@@ -63,7 +63,8 @@ import {
     openFormModal,
     openConfirmModal,
 } from "../core/modal.js";
-import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
 
 import {
     initCriasPresence,
@@ -237,7 +238,7 @@ function seasonHtml(season) {
 }
 
 
-function newsHtml(item) {
+async function newsHtml(item) {
     const title =
         String(item.title ?? "").trim() ||
         "Sem título";
@@ -251,6 +252,8 @@ function newsHtml(item) {
             return `[🖼️ ${alt}${spoiler ? " · spoiler" : ""}]`;
         },
     );
+
+    const renderedContent = await renderDynamicContent(content, content);
 
     return `
         <article
@@ -272,7 +275,7 @@ function newsHtml(item) {
                     ${escapeHtml(title)}
                 </h3>
 
-                <p class="story-news-content">${renderEmojiText(content.trim())}</p>
+                <div class="story-news-content dynamic-content-root">${renderedContent}</div>
             </div>
 
             <div class="story-news-actions">
@@ -297,10 +300,10 @@ function newsHtml(item) {
 }
 
 
-function renderNewsSection() {
+async function renderNewsSection() {
     const list =
         news.length
-            ? news.map(newsHtml).join("")
+            ? (await Promise.all(news.map(newsHtml))).join("")
             : `
                 <article class="empty-card">
                     Essa história ainda não possui notícias.
@@ -869,11 +872,12 @@ async function render() {
             </aside>
         </section>
 
-        ${renderNewsSection()}
+        ${await renderNewsSection()}
 
         ${renderStoryDangerZone()}
     `;
 
+    bindDynamicText(root);
     bindStoryPublication();
     bindStorySettings();
     bindSeasons();
@@ -1265,6 +1269,13 @@ function openNewsForm(existingNews = null) {
                 Conteúdo
                 <textarea id="modal-news-content" rows="10" maxlength="10000" placeholder="Escreva a novidade que deseja compartilhar..." required>${isEditing ? escapeHtml(existingNews.content) : ""}</textarea>
             </label>
+            <small class="field-help dynamic-format-help">
+                Formatação: <code>**negrito**</code>, <code>*itálico*</code>,
+                <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>`código`</code>.
+                Títulos: <code>#</code>, <code>##</code> ou <code>###</code> no início da linha.
+                Citações: comece o bloco com <code>&lt;</code> e termine com <code>&gt;</code>.
+                As imagens continuam sendo inseridas pelo gerenciador abaixo.
+            </small>
             <div id="modal-news-emoji-picker" class="emoji-picker-host"></div>
             <small class="field-help">A notícia aceita quebras de linha. Os códigos das imagens são protegidos: para remover uma imagem, use o botão “Remover imagem” no gerenciador abaixo.</small>
 

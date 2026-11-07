@@ -1,7 +1,7 @@
 import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
-import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261106-emojis-inline-2";
-import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { renderDynamicContent, renderDynamicInlineBlock, bindDynamicText } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
+import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
 import {
     escapeHtml,
     ratingStars,
@@ -199,7 +199,7 @@ function renderReview(review) {
                 </span>
             </div>
 
-            <p class="review-text">${renderEmojiText(review.content)}</p>
+            <p class="review-text">${renderDynamicInlineBlock(review.content)}</p>
         </article>
     `;
 }
@@ -349,6 +349,10 @@ async function renderStoryReviewForm(
                             placeholder="Conte o que achou da obra..."
                         ></textarea>
                     </label>
+                    <small class="field-help dynamic-format-help">
+                        Formatação: <code>**negrito**</code>, <code>*itálico*</code>,
+                        <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>`código`</code>.
+                    </small>
                     <div id="story-review-emoji-picker" class="emoji-picker-host"></div>
 
                     <button

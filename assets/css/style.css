@@ -2799,6 +2799,27 @@ textarea { resize: vertical; }
     word-break: break-word;
 }
 
+.story-news-content > :first-child {
+    margin-top: 0;
+}
+
+.story-news-content > :last-child {
+    margin-bottom: 0;
+}
+
+.story-news-content p {
+    margin: 0 0 1em;
+}
+
+.story-news-content p:last-child {
+    margin-bottom: 0;
+}
+
+ .story-news-content .dynamic-heading,
+.news-card-content .dynamic-heading {
+    color: var(--text);
+}
+
 .story-news-actions {
     display: flex;
     align-items: center;
@@ -4414,4 +4435,22 @@ textarea { resize: vertical; }
     border-color: var(--custom-theme-hover-color, #00E5FF) !important;
     outline: 2px solid color-mix(in srgb, var(--custom-theme-hover-color, #00E5FF) 32%, transparent);
     outline-offset: 1px;
+}
+
+
+/* Ajuda compacta para os recursos de texto dinâmico em avaliações e notícias. */
+.dynamic-format-help {
+    display: block;
+    margin: 8px 0 12px;
+    line-height: 1.55;
+}
+
+.dynamic-format-help code {
+    display: inline-block;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: .92em;
 }

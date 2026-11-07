@@ -109,6 +109,19 @@ export function renderDynamicInlineText(value) {
     return restoreTokens(text, protectedParts);
 }
 
+/**
+ * Renderiza texto curto com as mesmas marcações inline das histórias,
+ * preservando quebras de linha. Não interpreta blocos de imagem, títulos
+ * ou citações; é adequado para avaliações e pequenos trechos.
+ */
+export function renderDynamicInlineBlock(value) {
+    return String(value ?? "")
+        .replace(/\r\n?/g, "\n")
+        .split("\n")
+        .map((line) => renderDynamicInlineText(line))
+        .join("<br>");
+}
+
 function readingAnchorText(value) {
     return String(value ?? "")
         .replace(/^\s*#{1,3}\s+/gm, "")
