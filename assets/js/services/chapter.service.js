@@ -29,6 +29,7 @@ export async function getPublishedChapter(
                 writer_id,
                 title,
                 slug,
+                favicon_emoji,
                 status,
                 cover_type,
                 cover_url,

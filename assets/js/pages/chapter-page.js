@@ -20,7 +20,7 @@ import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inli
 
 import {
     getPublishedChapter,
-} from "../services/chapter.service.js?v=20261028-crias-presence-images-3";
+} from "../services/chapter.service.js?v=20261107-episode-story-favicon-1";
 
 import {
     getPublishedStoryBySlug,
