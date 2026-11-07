@@ -9,12 +9,13 @@ import {
     resolveCustomThemeBackground,
     setCustomThemeBackgroundPreview,
     validateThemeBackgroundFile,
-} from "../services/custom-theme.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/custom-theme.service.js?v=20261107-tab-icons-1";
+import { applySiteFavicon, getSiteFaviconUrl } from "./favicon.js?v=20261107-tab-icons-1";
 import {
     saveCustomThemePreferences,
     saveUserPreferencePatch,
     syncUserPreferences,
-} from "../services/user-preferences.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/user-preferences.service.js?v=20261107-tab-icons-1";
 
 const THEMES = ["neblina", "preto", "branco", "vermelho", "amarelo", "roxo", "ciano", "personalizado"];
 const PRESET_THEMES = THEMES.filter((theme) => theme !== "personalizado");
@@ -49,6 +50,7 @@ function setThemeLocally(theme) {
     try { localStorage.setItem(STORAGE_KEY, theme); } catch (error) {
         console.warn("Não foi possível guardar o tema no navegador:", error);
     }
+    applySiteFavicon(theme, getCachedCustomThemeSettings().custom_theme_favicon_variant);
     refreshThemeLabel();
 }
 
@@ -97,6 +99,7 @@ function fieldsToSettings() {
         return null;
     }
 
+    values.custom_theme_favicon_variant = editorDialog.querySelector("#custom-theme-favicon-variant").value;
     values.custom_theme_direction = editorDialog.querySelector("#custom-theme-direction").value;
     values.custom_theme_background_type = editorDialog.querySelector("#custom-theme-background-type").value;
     values.custom_theme_background_source = editorDialog.querySelector("#custom-theme-background-source").value;
@@ -163,6 +166,8 @@ function loadFields(settings) {
     editorDialog.querySelector("#custom-theme-color-2-picker").value = normalized.custom_theme_color_2;
     editorDialog.querySelector("#custom-theme-color-2-hex").value = normalized.custom_theme_color_2;
     editorDialog.querySelector("#custom-theme-direction").value = normalized.custom_theme_direction;
+    editorDialog.querySelector("#custom-theme-favicon-variant").value = normalized.custom_theme_favicon_variant;
+    updateCustomFaviconPreview(normalized.custom_theme_favicon_variant);
     editorDialog.querySelector("#custom-theme-title-color-picker").value = normalized.custom_theme_title_color;
     editorDialog.querySelector("#custom-theme-title-color-hex").value = normalized.custom_theme_title_color;
     editorDialog.querySelector("#custom-theme-text-color-picker").value = normalized.custom_theme_text_color;
@@ -247,6 +252,12 @@ function getPreviewBackgroundUrl(settings) {
     return getResolvedCustomThemeBackgroundUrl();
 }
 
+function updateCustomFaviconPreview(variant) {
+    if (!editorDialog) return;
+    const preview = editorDialog.querySelector("#custom-theme-favicon-preview");
+    if (preview) preview.src = getSiteFaviconUrl("personalizado", variant);
+}
+
 function updatePreview({ markDirty = true } = {}) {
     const settings = fieldsToSettings();
     const saveButton = editorDialog.querySelector("#custom-theme-save");
@@ -262,6 +273,8 @@ function updatePreview({ markDirty = true } = {}) {
     if (editorState) editorState.draftSettings = { ...settings };
     applyCustomThemeSettings(settings);
     document.documentElement.dataset.theme = "personalizado";
+    applySiteFavicon("personalizado", settings.custom_theme_favicon_variant);
+    updateCustomFaviconPreview(settings.custom_theme_favicon_variant);
     if (settings.custom_theme_background_type === "image" && editorState?.pendingBackgroundObjectUrl) {
         setCustomThemeBackgroundPreview(editorState.pendingBackgroundObjectUrl);
     }
@@ -632,6 +645,27 @@ function ensureEditorDialog() {
                 </div>
             </section>
 
+            <section class="custom-theme-typography" aria-labelledby="custom-theme-favicon-title">
+                <div class="custom-theme-section-heading">
+                    <h3 id="custom-theme-favicon-title">Ícone da aba do navegador</h3>
+                    <p>Escolha a versão do símbolo que aparecerá na aba enquanto seu tema personalizado estiver ativo.</p>
+                </div>
+                <div class="custom-theme-favicon-control">
+                    <label class="custom-theme-direction-label" for="custom-theme-favicon-variant">
+                        <span><strong>Versão do ícone</strong><small>Colorido, preto ou branco.</small></span>
+                        <select id="custom-theme-favicon-variant">
+                            <option value="normal">Colorido — ícone original</option>
+                            <option value="preto">Preto — para fundos claros</option>
+                            <option value="branco">Branco — para fundos escuros</option>
+                        </select>
+                    </label>
+                    <div class="custom-theme-favicon-preview-row">
+                        <span>Prévia</span>
+                        <img id="custom-theme-favicon-preview" src="${getSiteFaviconUrl("personalizado", "normal")}" alt="Prévia do ícone da aba" width="56" height="56">
+                    </div>
+                </div>
+            </section>
+
             <div class="custom-theme-preview-block">
                 <span class="custom-theme-preview-caption">Prévia do fundo, textos, componentes e marcador de leitura</span>
                 <div id="custom-theme-preview" class="custom-theme-preview" role="group" aria-label="Prévia do gradiente, textos, componentes e marcador de leitura">
@@ -706,6 +740,7 @@ function ensureEditorDialog() {
         });
     }
 
+    editorDialog.querySelector("#custom-theme-favicon-variant").addEventListener("change", () => updatePreview());
     editorDialog.querySelector("#custom-theme-direction").addEventListener("change", () => updatePreview());
     editorDialog.querySelector("#custom-theme-background-type").addEventListener("change", () => {
         if (editorDialog.querySelector("#custom-theme-background-type").value === "image" && editorState) {
@@ -892,6 +927,7 @@ function ensureEditorDialog() {
             const savedSettings = normalizeCustomThemeSettings(result.preferences || settings);
             setThemeLocally("personalizado");
             applyCustomThemeSettings(savedSettings);
+            applySiteFavicon("personalizado", savedSettings.custom_theme_favicon_variant);
             await resolveCustomThemeBackground(savedSettings);
             if (editorState) {
                 if (editorState.pendingBackgroundObjectUrl) URL.revokeObjectURL(editorState.pendingBackgroundObjectUrl);
@@ -952,6 +988,7 @@ function ensureEditorDialog() {
         if (state.hasUnsavedChanges || currentTheme() !== state.baselineTheme) {
             setThemeLocally(state.baselineTheme);
             applyCustomThemeSettings(state.baselineSettings);
+            applySiteFavicon(state.baselineTheme, state.baselineSettings.custom_theme_favicon_variant);
             void resolveCustomThemeBackground(state.baselineSettings);
             const themeSelect = document.querySelector("#account-theme");
             if (themeSelect) themeSelect.value = state.baselineTheme;
@@ -999,6 +1036,7 @@ export async function openCustomThemeEditor() {
     loadFields(settings);
     applyCustomThemeSettings(settings);
     root.dataset.theme = "personalizado";
+    applySiteFavicon("personalizado", settings.custom_theme_favicon_variant);
     refreshThemeLabel();
     dialog.showModal();
 }
@@ -1013,6 +1051,7 @@ export function setupTheme() {
     const saved = THEMES.includes(stored) ? stored : "neblina";
     document.documentElement.dataset.theme = saved;
     applyCustomThemeSettings(getCachedCustomThemeSettings());
+    applySiteFavicon(saved, getCachedCustomThemeSettings().custom_theme_favicon_variant);
 
     const button = document.querySelector("#theme-toggle");
     refreshThemeLabel = () => {
@@ -1057,7 +1096,10 @@ export function setupTheme() {
         const remoteTheme = event.detail?.preferences?.theme;
         if (!THEMES.includes(remoteTheme)) return;
         document.documentElement.dataset.theme = remoteTheme;
-        if (event.detail?.preferences) applyCustomThemeSettings(event.detail.preferences);
+        if (event.detail?.preferences) {
+            applyCustomThemeSettings(event.detail.preferences);
+            applySiteFavicon(remoteTheme, event.detail.preferences.custom_theme_favicon_variant);
+        }
         refreshThemeLabel();
     });
 
@@ -1066,6 +1108,7 @@ export function setupTheme() {
         if (synced?.preferences) return;
         const anonymous = await readAnonymousCustomThemeSettings();
         applyCustomThemeSettings(anonymous);
+        applySiteFavicon(currentTheme(), anonymous.custom_theme_favicon_variant);
         await resolveCustomThemeBackground(anonymous);
         if (currentTheme() === "personalizado") refreshThemeLabel();
     }).catch((error) => {

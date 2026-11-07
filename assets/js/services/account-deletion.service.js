@@ -3,7 +3,7 @@ import {
     DEFAULT_CUSTOM_THEME,
     saveAnonymousCustomThemeSettings,
     removeAnonymousCustomThemeBackgroundFile,
-} from "./custom-theme.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "./custom-theme.service.js?v=20261107-tab-icons-1";
 
 const LOCAL_PREFERENCE_KEYS = [
     "hdc-theme",

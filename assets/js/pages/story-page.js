@@ -1,5 +1,6 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
-import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
+import { setStoryFavicon } from "../core/favicon.js?v=20261107-tab-icons-1";
+import { setupProfanityFilter, filterProfanity } from "../core/profanity-filter.js?v=20261107-tab-icons-1";
 import { renderDynamicContent, renderDynamicInlineBlock, bindDynamicText } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
 import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
 import {
@@ -12,7 +13,7 @@ import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-g
 
 import {
     getPublishedStoryBySlug,
-} from "../services/story.service.js?v=20261028-story-genres-2";
+} from "../services/story.service.js?v=20261107-tab-icons-1";
 import {
     getPublicScheduledChapterPreviews,
     estimateServerNowMs,
@@ -48,7 +49,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -647,6 +648,8 @@ async function load() {
             await getPublishedStoryBySlug(
                 slug,
             );
+
+        setStoryFavicon(story.favicon_emoji);
 
         const cover =
             await storyCoverSource(

@@ -1,4 +1,4 @@
-import { saveUserPreferencePatch, syncUserPreferences } from "./user-preferences.service.js?v=20261106-custom-theme-bookmark-color-1";
+import { saveUserPreferencePatch, syncUserPreferences } from "./user-preferences.service.js?v=20261107-tab-icons-1";
 import { CRIAS_PRESENCE_LOGO_URL } from "./crias-presence-images.service.js?v=20261028-crias-presence-final-1";
 
 const WS_URL = "ws://127.0.0.1:32145/presence";

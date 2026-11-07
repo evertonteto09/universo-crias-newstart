@@ -1,4 +1,4 @@
-import { saveUserPreferencePatch, syncUserPreferences } from "../services/user-preferences.service.js?v=20261106-custom-theme-bookmark-color-1";
+import { saveUserPreferencePatch, syncUserPreferences } from "../services/user-preferences.service.js?v=20261107-tab-icons-1";
 
 const STORAGE_KEY = "hdc-profanity-filter";
 

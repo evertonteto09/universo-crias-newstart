@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
 import { getCurrentUser, signInWithDiscord, signOut, getCurrentUserIdentities, unlinkDiscordIdentity } from "../services/auth.service.js?v=20261024-identity-management";
 import { getMyWriterAccount } from "../services/writer.service.js";
 import { getLastWriterLoginEmail, getRememberedAccountState, rememberWriterLoginState } from "../services/local-account-state.service.js?v=20261024-local-login-state-2";
@@ -7,10 +7,10 @@ import {
     saveUserPreferencePatch,
     syncUserPreferences,
     preferenceDefaults,
-} from "../services/user-preferences.service.js?v=20261106-custom-theme-bookmark-color-1";
-import { getCachedCustomThemeSettings, normalizeCustomThemeSettings } from "../services/custom-theme.service.js?v=20261106-custom-theme-bookmark-color-1";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
-import { deleteReaderAccount } from "../services/account-deletion.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/user-preferences.service.js?v=20261107-tab-icons-1";
+import { getCachedCustomThemeSettings, normalizeCustomThemeSettings } from "../services/custom-theme.service.js?v=20261107-tab-icons-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
+import { deleteReaderAccount } from "../services/account-deletion.service.js?v=20261107-tab-icons-1";
 
 setupTheme();
 

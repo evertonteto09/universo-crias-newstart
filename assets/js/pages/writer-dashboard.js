@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
 import { openConfirmModal } from "../core/modal.js";
 import { renderDynamicInlineBlock, bindDynamicText } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
 import {
@@ -23,7 +23,7 @@ import {
 import {
     getStoryReviewSummary,
     getWriterStoryById,
-} from "../services/story.service.js?v=20261028-story-genres-1";
+} from "../services/story.service.js?v=20261107-tab-icons-1";
 
 import {
     getWriterReviews,
@@ -38,7 +38,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
 
 setupTheme();
 

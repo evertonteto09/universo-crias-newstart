@@ -1,8 +1,9 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
+import { setStoryFavicon } from "../core/favicon.js?v=20261107-tab-icons-1";
 import {
     setupProfanityFilter,
     filterProfanity,
-} from "../core/profanity-filter.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../core/profanity-filter.js?v=20261107-tab-icons-1";
 
 import {
     escapeHtml,
@@ -23,7 +24,7 @@ import {
 
 import {
     getPublishedStoryBySlug,
-} from "../services/story.service.js?v=20261105-premiere-server-clock-2";
+} from "../services/story.service.js?v=20261107-tab-icons-1";
 
 import {
     getPublicChapterPremiereStatus,
@@ -47,7 +48,7 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -645,6 +646,7 @@ function clearPremiereTimers() {
 function renderPublicPremierePage(story, premiere, initialServerClock) {
     clearPremiereTimers();
     currentStory = story;
+    setStoryFavicon(story.favicon_emoji);
 
     const episodeLabel = premiere.chapter_number === 0
         ? "Piloto"
@@ -855,6 +857,7 @@ function renderPublicPremierePage(story, premiere, initialServerClock) {
 
 async function renderPublishedChapter(result) {
     currentStory = result.story;
+    setStoryFavicon(currentStory.favicon_emoji);
     currentSeason = result.season;
     currentChapter = result.chapter;
 

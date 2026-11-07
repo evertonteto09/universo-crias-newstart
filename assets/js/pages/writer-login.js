@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
 import { showMessage } from "../core/utils.js";
 import {
     getCurrentUser,

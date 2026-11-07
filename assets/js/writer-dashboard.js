@@ -1,4 +1,4 @@
-import { setupTheme } from "./core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "./core/theme.js?v=20261107-tab-icons-1";
 import { openConfirmModal } from "./core/modal.js";
 import {
     escapeHtml,
@@ -17,7 +17,7 @@ import {
 import {
     getStoryReviewSummary,
     getWriterStoryById,
-} from "./services/story.service.js?v=20261027-coauthor-2";
+} from "./services/story.service.js?v=20261107-tab-icons-1";
 
 import {
     getWriterReviews,
@@ -32,7 +32,7 @@ import {
 
 import {
     initCriasPresence,
-} from "./services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "./services/crias-presence.service.js?v=20261107-tab-icons-1";
 
 setupTheme();
 

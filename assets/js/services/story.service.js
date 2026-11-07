@@ -1,4 +1,5 @@
 import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-genres-1";
+import { normalizeStoryFavicon } from "../core/favicon.js?v=20261107-tab-icons-1";
 
 import { supabase } from "../core/supabase.js";
 
@@ -12,6 +13,7 @@ export async function getPublishedStories() {
             slug,
             description,
             genres,
+            favicon_emoji,
             status,
             published_at,
             cover_type,
@@ -83,6 +85,7 @@ export async function getPublishedStoryBySlug(slug) {
             slug,
             description,
             genres,
+            favicon_emoji,
             status,
             published_at,
             cover_type,
@@ -155,6 +158,7 @@ export async function getWriterStoryById(storyId) {
             slug,
             description,
             genres,
+            favicon_emoji,
             cover_type,
             cover_url,
             cover_path,
@@ -226,6 +230,7 @@ export async function updateStory(
         coverUrl,
         coverPath,
         genres,
+        faviconEmoji,
     },
 ) {
     const cleanTitle =
@@ -256,6 +261,13 @@ export async function updateStory(
     // Permite que chamadas futuras que não conheçam gêneros não apaguem o campo.
     if (genres !== undefined) {
         payload.genres = normalizeStoryGenres(genres);
+    }
+    if (faviconEmoji !== undefined) {
+        const normalizedFavicon = faviconEmoji === null ? null : normalizeStoryFavicon(faviconEmoji);
+        if (faviconEmoji !== null && !normalizedFavicon) {
+            throw new Error("O ícone escolhido para a história é inválido.");
+        }
+        payload.favicon_emoji = normalizedFavicon;
     }
 
     const { data, error } = await supabase

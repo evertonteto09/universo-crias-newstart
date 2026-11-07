@@ -13,13 +13,13 @@ import {
     resolveCustomThemeBackground,
     saveAnonymousCustomThemeSettings,
     validateThemeBackgroundFile,
-} from "./custom-theme.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "./custom-theme.service.js?v=20261107-tab-icons-1";
 
 const THEME_KEY = "hdc-theme";
 const PROFANITY_KEY = "hdc-profanity-filter";
 const PRESENCE_KEY = "criasPresenceSettings";
 const VALID_THEMES = new Set(["neblina", "preto", "branco", "vermelho", "amarelo", "roxo", "ciano", "personalizado"]);
-const PREFERENCE_COLUMNS = "user_id, theme, profanity_filter_enabled, presence_enabled, presence_show_story_title, presence_show_episode_details, presence_show_writer_activity, presence_show_images, presence_show_story_section, presence_show_current_page_button, custom_theme_color_1, custom_theme_color_2, custom_theme_direction, custom_theme_title_color, custom_theme_text_color, custom_theme_interactive_text_color, custom_theme_label_color, custom_theme_card_bg_color, custom_theme_menu_bg_color, custom_theme_button_bg_color, custom_theme_input_bg_color, custom_theme_hover_color, custom_theme_bookmark_color, custom_theme_background_type, custom_theme_background_source, custom_theme_background_url, custom_theme_background_path, custom_theme_background_dim, custom_theme_background_blur, custom_theme_background_position, custom_theme_background_zoom, custom_theme_background_rotation, custom_theme_background_flip_x, custom_theme_background_flip_y, custom_theme_background_offset_x, custom_theme_background_offset_y";
+const PREFERENCE_COLUMNS = "user_id, theme, profanity_filter_enabled, presence_enabled, presence_show_story_title, presence_show_episode_details, presence_show_writer_activity, presence_show_images, presence_show_story_section, presence_show_current_page_button, custom_theme_color_1, custom_theme_color_2, custom_theme_direction, custom_theme_title_color, custom_theme_text_color, custom_theme_interactive_text_color, custom_theme_label_color, custom_theme_card_bg_color, custom_theme_menu_bg_color, custom_theme_button_bg_color, custom_theme_input_bg_color, custom_theme_hover_color, custom_theme_bookmark_color, custom_theme_favicon_variant, custom_theme_background_type, custom_theme_background_source, custom_theme_background_url, custom_theme_background_path, custom_theme_background_dim, custom_theme_background_blur, custom_theme_background_position, custom_theme_background_zoom, custom_theme_background_rotation, custom_theme_background_flip_x, custom_theme_background_flip_y, custom_theme_background_offset_x, custom_theme_background_offset_y";
 const DEFAULT_PREFERENCES = Object.freeze({
     theme: "neblina",
     profanity_filter_enabled: true,
@@ -235,7 +235,7 @@ export async function saveUserPreferencePatch(patch) {
             "custom_theme_color_1", "custom_theme_color_2", "custom_theme_direction",
             "custom_theme_title_color", "custom_theme_text_color", "custom_theme_interactive_text_color", "custom_theme_label_color",
             "custom_theme_card_bg_color", "custom_theme_menu_bg_color", "custom_theme_button_bg_color",
-            "custom_theme_input_bg_color", "custom_theme_hover_color", "custom_theme_bookmark_color",
+            "custom_theme_input_bg_color", "custom_theme_hover_color", "custom_theme_bookmark_color", "custom_theme_favicon_variant",
         ].some((key) => Object.hasOwn(patch, key));
         if (hasCustomThemePatch) {
             const current = await readAnonymousCustomThemeSettings();
@@ -261,6 +261,9 @@ export async function saveUserPreferencePatch(patch) {
     }
     if (Object.hasOwn(patch, "custom_theme_direction") && ["horizontal", "vertical"].includes(patch.custom_theme_direction)) {
         allowed.custom_theme_direction = patch.custom_theme_direction;
+    }
+    if (Object.hasOwn(patch, "custom_theme_favicon_variant") && ["normal", "preto", "branco"].includes(patch.custom_theme_favicon_variant)) {
+        allowed.custom_theme_favicon_variant = patch.custom_theme_favicon_variant;
     }
     for (const key of [
         "profanity_filter_enabled",

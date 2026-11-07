@@ -4454,3 +4454,62 @@ textarea { resize: vertical; }
     color: var(--text);
     font-size: .92em;
 }
+
+
+/* Ícone de aba personalizado por história. */
+.story-favicon-editor {
+    display: grid;
+    gap: 14px;
+    margin: 22px 0;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface-2);
+}
+.story-favicon-editor-heading h3 { margin: 5px 0 7px; }
+.story-favicon-editor-heading p { margin: 0; line-height: 1.55; }
+.story-favicon-editor > div:not(.story-favicon-editor-heading) { min-width: 0; }
+.story-favicon-editor label { display: grid; gap: 8px; }
+.story-favicon-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    flex-wrap: wrap;
+}
+.story-favicon-preview-row img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    image-rendering: auto;
+}
+.story-favicon-editor [aria-invalid="true"] { border-color: #e35d6a !important; }
+.story-favicon-editor .form-message:empty { display: none; }
+
+.custom-theme-favicon-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+.custom-theme-favicon-preview-row {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: .82rem;
+}
+.custom-theme-favicon-preview-row img {
+    display: block;
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+}
+@media (max-width: 560px) {
+    .custom-theme-favicon-control { grid-template-columns: 1fr; }
+    .custom-theme-favicon-preview-row { justify-self: start; }
+}

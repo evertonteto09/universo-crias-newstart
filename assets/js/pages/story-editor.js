@@ -1,4 +1,6 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
+import { EMOJI_CATALOG } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { getStoryFaviconUrl, normalizeStoryFavicon } from "../core/favicon.js?v=20261107-tab-icons-1";
 import {
     escapeHtml,
     formatDate,
@@ -26,7 +28,7 @@ import {
     updateStory,
     updateStoryStatus,
     deleteStory,
-} from "../services/story.service.js?v=20261028-story-genres-1";
+} from "../services/story.service.js?v=20261107-tab-icons-1";
 
 import {
     getWriterSeasons,
@@ -68,7 +70,7 @@ import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,
@@ -447,6 +449,57 @@ function renderCollaborationSection() {
     `;
 }
 
+function renderStoryFaviconEditor(story) {
+    const current = normalizeStoryFavicon(story.favicon_emoji);
+    const mode = current?.startsWith("site:") ? "site" : current?.startsWith("unicode:") ? "unicode" : "none";
+    const selectedId = mode === "site" ? current.slice("site:".length) : "";
+    const nativeEmoji = mode === "unicode" ? current.slice("unicode:".length) : "";
+    const options = `
+        <option value="" disabled ${selectedId ? "" : "selected"}>Escolha um emoji…</option>
+        ${EMOJI_CATALOG.map((emoji) => `
+            <option value="${escapeHtml(emoji.id)}" ${emoji.id === selectedId ? "selected" : ""}>${escapeHtml(emoji.name)}</option>
+        `).join("")}
+    `;
+    const previewUrl = current ? getStoryFaviconUrl(current) : "";
+
+    return `
+        <section class="story-favicon-editor" aria-labelledby="story-favicon-title">
+            <div class="story-favicon-editor-heading">
+                <span class="eyebrow">IDENTIDADE DA OBRA</span>
+                <h3 id="story-favicon-title">Ícone da aba do navegador</h3>
+                <p class="muted">Escolha um emoji para representar esta história nas abas quando alguém abrir a obra ou um de seus episódios. Se não escolher, será usado o ícone do site conforme o tema de cada leitor.</p>
+            </div>
+            <label for="story-favicon-type">
+                Origem do ícone
+                <select id="story-favicon-type">
+                    <option value="none" ${mode === "none" ? "selected" : ""}>Usar ícone do site</option>
+                    <option value="site" ${mode === "site" ? "selected" : ""}>Emoji do Universo dos Crias</option>
+                    <option value="unicode" ${mode === "unicode" ? "selected" : ""}>Emoji do sistema</option>
+                </select>
+            </label>
+            <div id="story-favicon-site-group" ${mode === "site" ? "" : "hidden"}>
+                <label for="story-favicon-site-emoji">
+                    Escolha um emoji do catálogo
+                    <select id="story-favicon-site-emoji">${options}</select>
+                </label>
+            </div>
+            <div id="story-favicon-unicode-group" ${mode === "unicode" ? "" : "hidden"}>
+                <label for="story-favicon-native-emoji">
+                    Emoji do sistema
+                    <input id="story-favicon-native-emoji" type="text" value="${escapeHtml(nativeEmoji)}" placeholder="Ex.: 🌟" autocomplete="off" spellcheck="false">
+                </label>
+                <small class="muted">Insira um único emoji usando o teclado do sistema (no Windows, pressione Win + .).</small>
+            </div>
+            <div class="story-favicon-preview-row">
+                <span class="muted">Prévia do ícone</span>
+                <img id="story-favicon-preview" alt="Prévia do ícone da história" src="${previewUrl}" ${previewUrl ? "" : "hidden"}>
+                <span id="story-favicon-default-preview" class="muted" ${previewUrl ? "hidden" : ""}>Ícone padrão do site</span>
+            </div>
+            <p id="story-favicon-message" class="form-message" role="status" aria-live="polite"></p>
+        </section>
+    `;
+}
+
 function renderStoryDangerZone() {
     if (!isPrimaryAuthor) {
         return "";
@@ -673,6 +726,8 @@ async function render() {
                     </div>
                     ${renderStoryGenreChoices(story.genres)}
                 </section>
+
+                ${renderStoryFaviconEditor(story)}
 
                 <div class="cover-editor">
                     <div>
@@ -1667,6 +1722,14 @@ function bindStorySettings() {
     const cropZoom = document.querySelector("#story-cover-crop-zoom");
     const cropZoomOutput = document.querySelector("#story-cover-crop-zoom-output");
     const cropMessage = document.querySelector("#story-cover-crop-message");
+    const faviconType = document.querySelector("#story-favicon-type");
+    const faviconSiteGroup = document.querySelector("#story-favicon-site-group");
+    const faviconUnicodeGroup = document.querySelector("#story-favicon-unicode-group");
+    const faviconSiteEmoji = document.querySelector("#story-favicon-site-emoji");
+    const faviconNativeEmoji = document.querySelector("#story-favicon-native-emoji");
+    const faviconPreview = document.querySelector("#story-favicon-preview");
+    const faviconDefaultPreview = document.querySelector("#story-favicon-default-preview");
+    const faviconMessage = document.querySelector("#story-favicon-message");
     const flipXButton = document.querySelector("#story-cover-crop-flip-x");
     const flipYButton = document.querySelector("#story-cover-crop-flip-y");
     const cropState = {
@@ -1851,6 +1914,49 @@ function bindStorySettings() {
         cropToggle.title = hasSource ? "Abrir os ajustes de enquadramento" : "Selecione uma imagem para ajustar o enquadramento";
     }
 
+    function readSelectedStoryFavicon() {
+        if (faviconType.value === "none") return null;
+        if (faviconType.value === "site") {
+            const value = normalizeStoryFavicon(`site:${faviconSiteEmoji.value}`);
+            if (!value) throw new Error("Selecione um emoji válido do catálogo.");
+            return value;
+        }
+        if (faviconType.value === "unicode") {
+            const value = normalizeStoryFavicon(`unicode:${faviconNativeEmoji.value}`);
+            if (!value) throw new Error("Informe apenas um emoji válido do sistema.");
+            return value;
+        }
+        return null;
+    }
+
+    function updateStoryFaviconControls() {
+        const mode = faviconType.value;
+        faviconSiteGroup.hidden = mode !== "site";
+        faviconUnicodeGroup.hidden = mode !== "unicode";
+        faviconNativeEmoji?.setAttribute("aria-invalid", "false");
+        faviconSiteEmoji?.setAttribute("aria-invalid", "false");
+        if (faviconMessage) faviconMessage.textContent = "";
+
+        let value = null;
+        try {
+            value = readSelectedStoryFavicon();
+        } catch (error) {
+            if (faviconMessage && mode !== "none") faviconMessage.textContent = error.message;
+            if (faviconNativeEmoji && mode === "unicode") faviconNativeEmoji.setAttribute("aria-invalid", String(Boolean(faviconNativeEmoji.value.trim())));
+            if (faviconSiteEmoji && mode === "site") faviconSiteEmoji.setAttribute("aria-invalid", "true");
+        }
+        const previewUrl = value ? getStoryFaviconUrl(value) : "";
+        faviconPreview.hidden = !previewUrl;
+        faviconDefaultPreview.hidden = Boolean(previewUrl);
+        if (previewUrl) faviconPreview.src = previewUrl;
+        else faviconPreview.removeAttribute("src");
+    }
+
+    faviconType.addEventListener("change", updateStoryFaviconControls);
+    faviconSiteEmoji.addEventListener("change", updateStoryFaviconControls);
+    faviconNativeEmoji.addEventListener("input", updateStoryFaviconControls);
+    updateStoryFaviconControls();
+
     coverType.addEventListener("change", () => {
         updateCoverControls();
         if (!cropControls.hidden) loadCropSource(true);
@@ -2024,6 +2130,7 @@ function bindStorySettings() {
             const title = document.querySelector("#story-title").value.trim();
             const description = document.querySelector("#story-description").value.trim();
             const genres = readSelectedStoryGenres(form);
+            const faviconEmoji = readSelectedStoryFavicon();
             const url = coverUrlInput.value.trim();
             const file = coverFileInput.files?.[0] || null;
             let coverPath = story.cover_path;
@@ -2067,6 +2174,7 @@ function bindStorySettings() {
                 title,
                 description,
                 genres,
+                faviconEmoji,
                 coverType: effectiveCoverType,
                 coverUrl,
                 coverPath,

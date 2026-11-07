@@ -1,4 +1,4 @@
-import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
 import {
     escapeHtml,
     showMessage,
@@ -19,11 +19,11 @@ import {
 
 import {
     getWriterStoryById,
-} from "../services/story.service.js?v=20261105-public-premiere-countdown-1";
+} from "../services/story.service.js?v=20261107-tab-icons-1";
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261106-custom-theme-bookmark-color-1";
+} from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,

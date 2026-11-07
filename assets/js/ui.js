@@ -1,5 +1,5 @@
 import { getStoryCoverUrl } from "./services/storage.service.js";
-import { setupTheme as setupSharedTheme } from "./core/theme.js?v=20261106-custom-theme-bookmark-color-1";
+import { setupTheme as setupSharedTheme } from "./core/theme.js?v=20261107-tab-icons-1";
 
 const DEFAULT_COVER = "./assets/img/default-story-cover.svg";
 
