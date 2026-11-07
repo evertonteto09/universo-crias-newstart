@@ -15,6 +15,9 @@ import {
     getPublishedStoryBySlug,
 } from "../services/story.service.js?v=20261107-tab-icons-1";
 import {
+    getPublicStoryUniverses,
+} from "../services/story-universe.service.js?v=20261107-reader-universes-2";
+import {
     getPublicScheduledChapterPreviews,
     estimateServerNowMs,
     formatPremiereCountdown,
@@ -637,6 +640,54 @@ async function renderReadingBookmarkResume(story) {
     }
 }
 
+async function renderStoryUniverseSection(story) {
+    try {
+        const universes = await getPublicStoryUniverses();
+        const related = universes.filter((universe) =>
+            (universe.stories ?? []).some((entry) => String(entry.story_id) === String(story.id))
+        );
+        if (!related.length) return "";
+
+        const cards = await Promise.all(related.map(async (universe) => {
+            let cover = universe.cover_display_url;
+            if (!cover && universe.main_story) {
+                cover = await storyCoverSource(universe.main_story, getStoryCoverUrl);
+            }
+            cover ||= "../assets/img/default-story-cover.svg";
+            const membership = universe.stories.find((entry) => String(entry.story_id) === String(story.id));
+            const label = membership?.relationship_type === "main"
+                ? "OBRA PRINCIPAL"
+                : membership?.relationship_type === "spin_off"
+                    ? "SPIN-OFF"
+                    : "HISTÓRIA COMPLEMENTAR";
+
+            return `
+                <a class="story-universe-link-card" href="../universo/?slug=${encodeURIComponent(universe.slug)}">
+                    <img src="${escapeHtml(cover)}" alt="Capa do universo ${escapeHtml(universe.name)}" loading="lazy">
+                    <span class="story-universe-link-copy">
+                        <span class="eyebrow">${label}</span>
+                        <strong>${escapeHtml(universe.name)}</strong>
+                        <small>${universe.stories.length} ${universe.stories.length === 1 ? "história publicada" : "histórias publicadas"}</small>
+                        <span class="story-universe-link-action">Explorar universo →</span>
+                    </span>
+                </a>
+            `;
+        }));
+
+        return `
+            <section class="story-universes-related" aria-labelledby="story-universes-title">
+                <div class="section-heading">
+                    <div><span class="eyebrow">MUNDOS COMPARTILHADOS</span><h2 id="story-universes-title">Explore este universo</h2></div>
+                </div>
+                <div class="story-universes-related-grid">${cards.join("")}</div>
+            </section>
+        `;
+    } catch (error) {
+        console.warn("Não foi possível carregar os universos relacionados a esta história.", error);
+        return "";
+    }
+}
+
 async function load() {
     if (!slug) {
         notFound();
@@ -817,6 +868,8 @@ async function load() {
             );
         }
 
+        const storyUniverseSection = await renderStoryUniverseSection(story);
+
         page.innerHTML = `
             <section class="story-hero">
                 <img
@@ -852,6 +905,8 @@ async function load() {
                     ></div>
                 </div>
             </section>
+
+            ${storyUniverseSection}
 
             <nav
                 class="story-tabs"

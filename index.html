@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Histórias dos Crias — leia histórias, episódios e avaliações.">
     <title>Histórias dos Crias</title>
-    <link rel="stylesheet" href="./assets/css/style.css?v=20261107-tab-icons-1">
+    <link rel="stylesheet" href="./assets/css/style.css?v=20261107-reader-universes-2">
     <link rel="icon" type="image/png" href="./assets/img/favicons/icon.png" data-universo-favicon="true">
 </head>
 <body>
@@ -24,26 +24,6 @@
             >
                 Filtro: ON
             </button>
-
-            <div class="writer-filter" data-writer-filter>
-                <button
-                    class="theme-button writer-filter-toggle"
-                    id="writer-filter-toggle"
-                    type="button"
-                    aria-expanded="false"
-                    aria-haspopup="true"
-                    aria-controls="writer-filter-menu"
-                >
-                    Escritor: todos
-                </button>
-
-                <div
-                    class="writer-filter-menu"
-                    id="writer-filter-menu"
-                    role="menu"
-                    hidden
-                ></div>
-            </div>
 
             <button class="theme-button" id="theme-toggle" type="button">Tema</button>
         </nav>
@@ -88,17 +68,36 @@
             ></div>
         </section>
 
-        <section>
-            <div class="section-heading">
-                <div>
-                    <span class="eyebrow">PUBLICADAS</span>
-                    <h2>Histórias</h2>
+        <section class="library-controls" aria-label="Tipo de biblioteca">
+            <div class="library-mode-switch" role="group" aria-label="Alternar biblioteca">
+                <button class="library-mode-button active" id="library-mode-stories" type="button" aria-controls="stories-library-section" aria-pressed="true">📚 Histórias</button>
+                <button class="library-mode-button" id="library-mode-universes" type="button" aria-controls="universes-library-section" aria-pressed="false">🌌 Universos</button>
+            </div>
+            <div class="library-filter-row" id="story-library-filters">
+                <div class="writer-filter" data-writer-filter>
+                    <button class="theme-button writer-filter-toggle" id="writer-filter-toggle" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="writer-filter-menu">Escritor: todos</button>
+                    <div class="writer-filter-menu" id="writer-filter-menu" role="menu" hidden></div>
                 </div>
+            </div>
+        </section>
+
+        <section id="stories-library-section">
+            <div class="section-heading">
+                <div><span class="eyebrow">PUBLICADAS</span><h2>Histórias</h2></div>
                 <span id="story-count" class="muted">—</span>
             </div>
-
             <div id="story-grid" class="story-grid" aria-live="polite">
                 <article class="loading-card">Carregando histórias...</article>
+            </div>
+        </section>
+
+        <section id="universes-library-section" hidden>
+            <div class="section-heading">
+                <div><span class="eyebrow">MUNDOS COMPARTILHADOS</span><h2>Universos</h2></div>
+                <span id="universe-count" class="muted">—</span>
+            </div>
+            <div id="universe-grid" class="universe-grid" aria-live="polite">
+                <article class="loading-card">Carregando universos...</article>
             </div>
         </section>
     </main>
@@ -108,6 +107,6 @@
         <a href="./portal-escritor/login/">Área do escritor</a>
     </footer>
 
-    <script type="module" src="./assets/js/pages/reader-home.js?v=20261107-tab-icons-1"></script>
+    <script type="module" src="./assets/js/pages/reader-home.js?v=20261107-reader-universes-2"></script>
 </body>
 </html>

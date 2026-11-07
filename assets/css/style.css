@@ -4616,3 +4616,166 @@ textarea { resize: vertical; }
     .universe-search-row { grid-template-columns: 1fr; }
     .universe-search-result { grid-template-columns: 1fr; }
 }
+
+/* Biblioteca pública: alternância entre histórias e universos. */
+.library-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: -12px 0 38px;
+}
+.library-mode-switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+.library-mode-button {
+    min-height: 44px;
+    padding: 10px 18px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+}
+.library-mode-button:hover { color: var(--text); background: var(--surface-2); }
+.library-mode-button.active {
+    color: var(--accent-contrast);
+    background: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+}
+.library-filter-row { display: flex; align-items: center; gap: 12px; }
+#stories-library-section[hidden],
+#universes-library-section[hidden],
+#story-library-filters[hidden] { display: none !important; }
+.universe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+}
+.universe-card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    text-decoration: none;
+    transition: transform .22s ease, border-color .22s ease;
+}
+.universe-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); }
+.universe-card-cover { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--surface-2); }
+.universe-card-body { display: grid; align-content: start; gap: 10px; padding: 20px; min-width: 0; }
+.universe-card-body h3, .universe-card-body p { margin: 0; }
+.universe-card-body h3 { font-size: 1.3rem; }
+.universe-card-body > p { color: var(--muted); line-height: 1.6; }
+.universe-card-meta { display: grid; gap: 5px; color: var(--muted); font-size: .86rem; }
+.universe-card-link { margin-top: 5px; color: var(--accent); }
+
+/* Página pública de um universo. */
+.universe-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 0 0 26px; color: var(--muted); }
+.universe-breadcrumb a { color: var(--accent); text-decoration: none; }
+.universe-public-hero {
+    display: grid;
+    grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(24px, 4vw, 52px);
+    margin-bottom: 58px;
+    padding: clamp(20px, 3vw, 32px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+.universe-public-cover-wrap { overflow: hidden; border-radius: 18px; background: var(--surface-2); }
+.universe-public-cover { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.universe-public-copy { min-width: 0; }
+.universe-public-copy h1 { margin: 10px 0 14px; font-size: clamp(2.3rem, 5vw, 4.3rem); line-height: 1; letter-spacing: -.045em; }
+.universe-public-copy > p { color: var(--muted); line-height: 1.8; font-size: 1.05rem; }
+.universe-public-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 20px; color: var(--muted); font-size: .9rem; }
+.universe-public-meta strong { color: var(--text); }
+.universe-public-stories { margin-top: 10px; }
+.universe-reading-hint { margin: -7px 0 20px; color: var(--muted); }
+.universe-public-story-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.universe-story-card {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+    box-shadow: var(--shadow);
+    transition: transform .22s ease, border-color .22s ease;
+}
+.universe-story-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); }
+.universe-story-card-cover-wrap { position: relative; }
+.universe-story-card-cover { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: var(--surface-2); }
+.universe-story-order { position: absolute; top: 12px; left: 12px; display: grid; place-items: center; min-width: 38px; height: 38px; padding: 0 8px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; background: rgba(0,0,0,.72); color: #fff; font-weight: 800; backdrop-filter: blur(8px); }
+.universe-story-card-body { display: grid; align-content: start; gap: 9px; padding: 18px; }
+.universe-story-card-body h3, .universe-story-card-body p { margin: 0; }
+.universe-relationship-badge { justify-self: start; padding: 5px 9px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .08em; }
+.universe-relationship-badge.is-main { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.universe-story-author { color: var(--accent); font-size: .88rem; }
+.universe-story-description, .universe-story-genres { color: var(--muted); line-height: 1.55; }
+.universe-story-rating { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: .86rem; }
+.universe-story-open { margin-top: 4px; color: var(--accent); }
+.universe-not-found { max-width: 700px; margin: 40px auto; }
+
+/* Descoberta do universo dentro da própria página de uma história. */
+.story-universes-related { margin: 38px 0 44px; }
+.story-universes-related-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.story-universe-link-card { display: grid; grid-template-columns: 104px minmax(0, 1fr); overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); text-decoration: none; box-shadow: var(--shadow); transition: border-color .2s ease, transform .2s ease; }
+.story-universe-link-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 48%, var(--border)); }
+.story-universe-link-card > img { display: block; width: 100%; height: 100%; min-height: 138px; object-fit: cover; background: var(--surface-2); }
+.story-universe-link-copy { display: grid; align-content: center; gap: 5px; min-width: 0; padding: 14px; }
+.story-universe-link-copy strong { font-size: 1.02rem; }
+.story-universe-link-copy small { color: var(--muted); }
+.story-universe-link-action { margin-top: 3px; color: var(--accent); font-weight: 800; font-size: .86rem; }
+
+:root[data-theme="personalizado"] .library-mode-switch,
+:root[data-theme="personalizado"] .universe-card,
+:root[data-theme="personalizado"] .universe-public-hero,
+:root[data-theme="personalizado"] .universe-story-card,
+:root[data-theme="personalizado"] .story-universe-link-card { background: var(--custom-theme-card-bg-color, var(--surface)) !important; }
+:root[data-theme="personalizado"] .library-mode-button { color: var(--custom-theme-interactive-text-color, var(--text)) !important; }
+:root[data-theme="personalizado"] .library-mode-button.active { background: var(--custom-theme-button-bg-color, var(--accent)) !important; color: var(--custom-theme-interactive-text-color, #fff) !important; }
+:root[data-theme="personalizado"] .universe-card-body h3,
+:root[data-theme="personalizado"] .universe-public-copy h1,
+:root[data-theme="personalizado"] .universe-story-card-body h3,
+:root[data-theme="personalizado"] .story-universe-link-copy strong { color: var(--custom-theme-title-color, var(--text)) !important; }
+:root[data-theme="personalizado"] .universe-card-body > p,
+:root[data-theme="personalizado"] .universe-public-copy > p,
+:root[data-theme="personalizado"] .universe-story-description,
+:root[data-theme="personalizado"] .universe-story-genres { color: var(--custom-theme-text-color, var(--muted)) !important; }
+
+@media (max-width: 900px) {
+    .universe-grid, .universe-public-story-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .universe-public-hero { grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+    .library-controls { align-items: stretch; flex-direction: column; margin-bottom: 30px; }
+    .library-mode-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+    .library-mode-button { padding-inline: 10px; }
+    .library-filter-row { justify-content: flex-start; }
+    .universe-grid, .universe-public-story-grid { grid-template-columns: 1fr; }
+    .universe-public-hero { grid-template-columns: 1fr; }
+    .universe-public-cover-wrap { width: min(100%, 300px); margin: 0 auto; }
+    .universe-public-copy h1 { font-size: clamp(2.2rem, 11vw, 3.5rem); }
+    .story-universes-related-grid { grid-template-columns: 1fr; }
+}
+.story-card-universe-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.story-card-universe-tag { display: inline-flex; align-items: center; max-width: 100%; padding: 5px 8px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); color: var(--accent); font-size: .72rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.story-card-universe-more { color: var(--muted); background: var(--surface-2); }

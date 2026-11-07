@@ -345,3 +345,73 @@ export async function moveStoryInUniverse(universeId, storyId, direction) {
     });
     if (error) throw error;
 }
+
+
+/** Universos visíveis ao público, contendo somente vínculos aprovados e obras publicadas. */
+export async function getPublicStoryUniverses() {
+    const { data, error } = await supabase
+        .from("story_universes")
+        .select(`
+            id, name, slug, description, cover_url, cover_path, created_at, updated_at,
+            story_universe_stories (
+                universe_id, story_id, relationship_type, reading_order, status,
+                stories!story_universe_stories_story_id_fkey (
+                    id, title, slug, description, genres, writer_id, status, cover_type, cover_url, cover_path,
+                    writers!stories_writer_id_fkey (id, name, username),
+                    story_collaborators (writer_id, writers!story_collaborators_writer_id_fkey (id, name, username))
+                )
+            )
+        `)
+        .order("name", { ascending: true });
+    if (error) throw error;
+
+    const visible = [];
+    for (const universe of data ?? []) {
+        const entries = (universe.story_universe_stories ?? [])
+            .filter((entry) => entry.status === "approved" && entry.stories?.status === "published")
+            .sort((a, b) => Number(a.reading_order) - Number(b.reading_order) || Number(a.story_id) - Number(b.story_id));
+        if (!entries.length) continue;
+        visible.push({
+            ...universe,
+            stories: entries,
+            main_story: entries.find((entry) => entry.relationship_type === "main")?.stories ?? entries[0].stories,
+            cover_display_url: await getStoryUniverseCoverDisplayUrl(universe.cover_path)
+                || (isHttpsCoverUrl(universe.cover_url) ? universe.cover_url : null),
+        });
+    }
+    return visible;
+}
+
+/** Busca um universo público pelo slug e remove qualquer obra não publicada. */
+export async function getPublicStoryUniverseBySlug(slug) {
+    const normalizedSlug = String(slug ?? "").trim().toLowerCase();
+    if (!normalizedSlug) return null;
+    const { data, error } = await supabase
+        .from("story_universes")
+        .select(`
+            id, name, slug, description, cover_url, cover_path, created_at, updated_at,
+            story_universe_stories (
+                universe_id, story_id, relationship_type, reading_order, status,
+                stories!story_universe_stories_story_id_fkey (
+                    id, title, slug, description, genres, writer_id, status, cover_type, cover_url, cover_path,
+                    writers!stories_writer_id_fkey (id, name, username),
+                    story_collaborators (writer_id, writers!story_collaborators_writer_id_fkey (id, name, username))
+                )
+            )
+        `)
+        .eq("slug", normalizedSlug)
+        .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const entries = (data.story_universe_stories ?? [])
+        .filter((entry) => entry.status === "approved" && entry.stories?.status === "published")
+        .sort((a, b) => Number(a.reading_order) - Number(b.reading_order) || Number(a.story_id) - Number(b.story_id));
+    if (!entries.length) return null;
+    return {
+        ...data,
+        stories: entries,
+        main_story: entries.find((entry) => entry.relationship_type === "main")?.stories ?? entries[0].stories,
+        cover_display_url: await getStoryUniverseCoverDisplayUrl(data.cover_path)
+            || (isHttpsCoverUrl(data.cover_url) ? data.cover_url : null),
+    };
+}
