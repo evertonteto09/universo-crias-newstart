@@ -70,7 +70,7 @@ import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
+} from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
 
 import {
     CRIAS_PRESENCE_LOGO_URL,

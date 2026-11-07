@@ -10,15 +10,22 @@ import { getPublishedStories } from "../services/story.service.js?v=20261107-tab
 import { getStoryAuthors } from "../core/story-authors.js?v=20261027-coauthor-2";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
 import { getPublicStoryUniverses } from "../services/story-universe.service.js?v=20261107-reader-universes-2";
 
 setupTheme();
 setupProfanityFilter();
 
+const initialLibraryMode = new URLSearchParams(window.location.search).get("view") === "universes"
+    ? "universes"
+    : "stories";
+
 const criasPresence = initCriasPresence({
-    details: "Navegando pelas histórias",
+    details: initialLibraryMode === "universes" ? "Navegando pelos Universos" : "Navegando pelas Histórias",
     state: "Universo dos Crias",
+    pageContext: "home",
+    currentPageUrl: window.location.href,
+    currentPageButtonLabel: initialLibraryMode === "universes" ? "Ver universos" : "Ver histórias",
 });
 
 const grid =
@@ -51,7 +58,7 @@ const writerFilterMenu =
 
 let allStories = [];
 let allUniverses = [];
-let currentLibraryMode = "stories";
+let currentLibraryMode = initialLibraryMode;
 let storyRatingSummaries = {};
 let selectedWriter = "all";
 let renderSequence = 0;
@@ -317,6 +324,22 @@ function setLibraryMode(mode, { syncUrl = false } = {}) {
         }
         window.history.replaceState(window.history.state, "", url);
     }
+
+    const activityUrl = new URL(window.location.href);
+    if (isStories) {
+        activityUrl.searchParams.delete("view");
+        if (activityUrl.hash === "#universes-library-section") activityUrl.hash = "";
+    } else {
+        activityUrl.searchParams.set("view", "universes");
+    }
+
+    criasPresence.update({
+        details: isStories ? "Navegando pelas Histórias" : "Navegando pelos Universos",
+        state: "Universo dos Crias",
+        pageContext: "home",
+        currentPageUrl: activityUrl.href,
+        currentPageButtonLabel: isStories ? "Ver histórias" : "Ver universos",
+    });
 
     if (isStories) applyFilters(); else applyUniverseSearch();
 }

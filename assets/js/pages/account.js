@@ -9,7 +9,7 @@ import {
     preferenceDefaults,
 } from "../services/user-preferences.service.js?v=20261107-tab-icons-1";
 import { getCachedCustomThemeSettings, normalizeCustomThemeSettings } from "../services/custom-theme.service.js?v=20261107-tab-icons-1";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
 import { deleteReaderAccount } from "../services/account-deletion.service.js?v=20261107-tab-icons-1";
 
 setupTheme();

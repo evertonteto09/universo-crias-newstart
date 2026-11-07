@@ -6,12 +6,19 @@ import { normalizeStoryGenres } from "../core/story-genres.js?v=20261028-story-g
 import { getStoryCoverUrl } from "../services/storage.service.js?v=20261028-spoiler-news-images-1";
 import { getPublicStoryUniverseBySlug } from "../services/story-universe.service.js?v=20261107-reader-universes-2";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
+import { getPresenceUniverseCoverUrl } from "../services/crias-presence-images.service.js?v=20261107-universe-presence-1";
 
 setupTheme();
 setupProfanityFilter();
 
 const page = document.querySelector("#universe-page");
 const slug = new URLSearchParams(window.location.search).get("slug");
+const criasPresence = initCriasPresence({
+    details: "Explorando um universo",
+    state: "Universo dos Crias",
+    pageContext: "universe",
+});
 
 function relationshipLabel(type) {
     if (type === "main") return "OBRA PRINCIPAL";
@@ -81,6 +88,26 @@ async function load() {
         }
 
         document.title = `${universe.name} | Histórias dos Crias`;
+
+        let presenceCoverUrl = null;
+        try {
+            presenceCoverUrl = await getPresenceUniverseCoverUrl(universe);
+        } catch (presenceImageError) {
+            console.warn("Não foi possível preparar a capa do universo para o Crias Presence.", presenceImageError);
+        }
+
+        const publicUniverseUrl = new URL(`./?slug=${encodeURIComponent(universe.slug)}`, window.location.href);
+        criasPresence.update({
+            details: "Explorando um universo",
+            state: universe.name || "Universo dos Crias",
+            universeTitle: universe.name || "",
+            pageContext: "universe",
+            largeImageUrl: presenceCoverUrl || undefined,
+            largeImageText: presenceCoverUrl ? `Capa do universo: ${universe.name}` : "Universo dos Crias",
+            currentPageUrl: publicUniverseUrl.href,
+            currentPageButtonLabel: "Ver universo",
+        });
+
         const mainStory = universe.main_story;
         let cover = universe.cover_display_url;
         if (!cover && mainStory) cover = await storyCoverSource(mainStory, getStoryCoverUrl);

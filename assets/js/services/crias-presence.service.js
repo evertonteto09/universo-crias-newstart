@@ -13,7 +13,7 @@ function isValidSessionToken(token) {
 
 const PUBLIC_SITE_BASE_URL = "https://evertonteto09.github.io/universo-crias-newstart/";
 const PUBLIC_SITE_ORIGIN = "https://evertonteto09.github.io";
-const READER_PAGE_CONTEXTS = new Set(["home", "story", "episode"]);
+const READER_PAGE_CONTEXTS = new Set(["home", "story", "episode", "universe"]);
 const STORY_SECTION_DETAILS = Object.freeze({
     chapters: "Vendo episódios",
     news: "Lendo notícias",
@@ -596,8 +596,8 @@ export function initCriasPresence(initialActivity = {}) {
 
                     <label class="cp-setting-row" for="cp-setting-story-title">
                         <span class="cp-setting-copy">
-                            <strong>Mostrar título da história</strong>
-                            <small>Inclui o nome da obra na atividade quando disponível.</small>
+                            <strong>Mostrar títulos de histórias e universos</strong>
+                            <small>Inclui o nome da obra ou do universo na atividade quando disponível.</small>
                         </span>
                         <input id="cp-setting-story-title" type="checkbox">
                     </label>
@@ -793,7 +793,7 @@ export function initCriasPresence(initialActivity = {}) {
     }
 
     function normalizeActivity(value = {}) {
-        const pageContext = ["home", "story", "episode", "writer"].includes(value.pageContext)
+        const pageContext = ["home", "story", "episode", "universe", "writer"].includes(value.pageContext)
             ? value.pageContext
             : "other";
         const storySection = Object.hasOwn(STORY_SECTION_DETAILS, value.storySection)
@@ -811,6 +811,7 @@ export function initCriasPresence(initialActivity = {}) {
             pageContext,
             storySection,
             storyTitle: normalizeText(value.storyTitle),
+            universeTitle: normalizeText(value.universeTitle),
             currentPageUrl: normalizePublicPageUrl(value.currentPageUrl),
             currentPageButtonLabel,
         };
@@ -845,12 +846,12 @@ export function initCriasPresence(initialActivity = {}) {
         }
     }
 
-    function withPrivacyFilteredImages(textActivity, { hideArtwork = false } = {}) {
+    function withPrivacyFilteredImages(textActivity, { hideArtwork = false, hideImageTitle = false } = {}) {
         const result = { ...textActivity };
 
-        // Só as três páginas de leitura podem acrescentar o botão contextual.
-        // Páginas do portal/editor e páginas auxiliares ficam apenas com o botão
-        // institucional inserido pelo aplicativo desktop.
+        // Páginas públicas de leitura, incluindo a biblioteca de universos e
+        // a página individual de um universo, podem acrescentar o botão contextual.
+        // Portal, editores e páginas auxiliares mantêm apenas o botão institucional.
         if (
             settings.showCurrentPageButton &&
             READER_PAGE_CONTEXTS.has(activity.pageContext) &&
@@ -868,7 +869,7 @@ export function initCriasPresence(initialActivity = {}) {
         result.largeImageUrl = hideArtwork
             ? CRIAS_PRESENCE_LOGO_URL
             : (activity.largeImageUrl || CRIAS_PRESENCE_LOGO_URL);
-        result.largeImageText = hideArtwork
+        result.largeImageText = hideArtwork || hideImageTitle
             ? "Universo dos Crias"
             : (activity.largeImageText || "Universo dos Crias");
 
@@ -902,7 +903,15 @@ export function initCriasPresence(initialActivity = {}) {
             return withPrivacyFilteredImages({
                 details: safeDetails,
                 state: settings.showStoryTitle && storyName ? `História: ${storyName}` : "Universo dos Crias",
-            });
+            }, { hideImageTitle: !settings.showStoryTitle });
+        }
+
+        if (activity.pageContext === "universe") {
+            const universeName = activity.universeTitle || state;
+            return withPrivacyFilteredImages({
+                details: "Explorando um universo",
+                state: settings.showStoryTitle && universeName ? universeName : "Universo dos Crias",
+            }, { hideImageTitle: !settings.showStoryTitle });
         }
 
         if (details === "Lendo uma história") {

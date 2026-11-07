@@ -51,6 +51,23 @@ function normalizeDirectDiscordImageUrl(value, context) {
     return null;
 }
 
+/** Retorna a capa de um universo por URL curta ou URL HTTPS externa compatível. */
+export async function getPresenceUniverseCoverUrl(universe) {
+    if (universe?.cover_path) {
+        // O proxy valida a associação pública e serve apenas a capa atualmente
+        // vinculada ao universo; o bucket permanece privado.
+        const proxyUrl = createStorageProxyUrl("universe", universe.id, universe.cover_path);
+        if (proxyUrl) return proxyUrl;
+        console.warn("[Crias Presence] Não foi possível criar uma URL curta para a capa do universo.");
+    }
+
+    if (universe?.cover_url) {
+        return normalizeDirectDiscordImageUrl(universe.cover_url, "universo");
+    }
+
+    return null;
+}
+
 /** Retorna a capa de uma história publicada via URL curta, ou uma URL externa curta. */
 export async function getPresenceStoryCoverUrl(story) {
     if (story?.cover_type === "url") {
