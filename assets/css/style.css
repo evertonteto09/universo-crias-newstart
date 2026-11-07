@@ -4776,6 +4776,6 @@ textarea { resize: vertical; }
     .universe-public-copy h1 { font-size: clamp(2.2rem, 11vw, 3.5rem); }
     .story-universes-related-grid { grid-template-columns: 1fr; }
 }
-.story-card-universe-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.story-card-universe-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; margin-bottom: 12px; }
 .story-card-universe-tag { display: inline-flex; align-items: center; max-width: 100%; padding: 5px 8px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); color: var(--accent); font-size: .72rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .story-card-universe-more { color: var(--muted); background: var(--surface-2); }
