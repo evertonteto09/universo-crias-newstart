@@ -4515,6 +4515,21 @@ textarea { resize: vertical; }
 }
 
 /* Gerenciamento funcional de universos de histórias. */
+.universe-create-form {
+    display: grid;
+    gap: 14px;
+    padding: clamp(20px, 3vw, 30px);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    margin: 0;
+}
+.universe-create-form > .section-heading { margin: 0; }
+.universe-create-form > p { margin: 0; }
+.universe-create-form [data-universe-cover-file-group] small,
+.universe-create-form [data-universe-cover-link-group] small { display: block; margin-top: 6px; line-height: 1.5; }
+.universe-create-form [data-universe-cover-file-group][hidden],
+.universe-create-form [data-universe-cover-link-group][hidden] { display: none !important; }
 #writer-universes-section { margin-bottom: 60px; }
 .universe-admin-grid {
     display: grid;
@@ -4547,6 +4562,12 @@ textarea { resize: vertical; }
 .universe-manager-section > p { margin: 0; }
 .universe-cover-preview { display: flex; min-height: 88px; align-items: center; justify-content: flex-start; padding: 8px 0; }
 .universe-cover-preview img { display: block; width: min(100%, 320px); max-height: 190px; border: 1px solid var(--border); border-radius: 14px; object-fit: cover; }
+.universe-create-form [data-universe-cover-crop-toggle][hidden],
+.universe-create-form [data-universe-cover-crop-intro][hidden],
+.universe-create-form [data-universe-cover-crop-controls][hidden],
+.universe-manager-content [data-universe-cover-crop-toggle][hidden],
+.universe-manager-content [data-universe-cover-crop-intro][hidden],
+.universe-manager-content [data-universe-cover-crop-controls][hidden] { display: none !important; }
 .universe-manager-content [data-universe-cover-file-group] small,
 #create-universe-form [data-universe-cover-file-group] small { display: block; margin-top: 6px; line-height: 1.5; }
 .universe-manager-content [data-universe-cover-file-group][hidden],
