@@ -12,7 +12,10 @@ import {
     removeStoryFromUniverse,
     moveStoryInUniverse,
     setStoryUniverseMain,
-} from "../services/story-universe.service.js?v=20261107-story-universes-1";
+    uploadStoryUniverseCover,
+    setStoryUniverseCoverPath,
+    removeStoryUniverseCover,
+} from "../services/story-universe.service.js?v=20261107-story-universe-covers-2";
 
 const RELATION_LABELS = {
     main: "Obra principal",
@@ -31,6 +34,42 @@ function feedbackMarkup(message, type = "") {
     return `<p class="form-message ${type === "error" ? "error" : type === "success" ? "success" : ""}" role="status" aria-live="polite">${escapeHtml(message)}</p>`;
 }
 
+function bindUniverseCoverSource(scope) {
+    const source = scope.querySelector("[data-universe-cover-source]");
+    const fileGroup = scope.querySelector("[data-universe-cover-file-group]");
+    const linkGroup = scope.querySelector("[data-universe-cover-link-group]");
+    if (!source || !fileGroup || !linkGroup) return;
+
+    const update = () => {
+        const useFile = source.value === "upload";
+        fileGroup.hidden = !useFile;
+        linkGroup.hidden = useFile;
+    };
+    source.addEventListener("change", update);
+    update();
+}
+
+function bindUniverseCoverPreview(scope) {
+    const input = scope.querySelector("[data-universe-cover-file]");
+    const preview = scope.querySelector("[data-universe-cover-preview]");
+    if (!input || !preview) return;
+    let objectUrl = null;
+    input.addEventListener("change", () => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+        const file = input.files?.[0];
+        if (!file) return;
+        objectUrl = URL.createObjectURL(file);
+        preview.innerHTML = `<img src="${objectUrl}" alt="Prévia da nova capa do universo">`;
+    });
+    scope.addEventListener("close", () => {
+        if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+    });
+}
+
 function relationshipOptions(selected = "spin_off") {
     return `
         <option value="spin_off" ${selected === "spin_off" ? "selected" : ""}>Spin-off</option>
@@ -42,8 +81,9 @@ function renderUniverseCard(universe) {
     const members = universe.story_universe_stories ?? [];
     const approved = members.filter((entry) => entry.status === "approved").length;
     const pending = members.filter((entry) => entry.status === "pending").length;
-    const cover = universe.cover_url
-        ? `<img src="${escapeHtml(universe.cover_url)}" alt="" loading="lazy">`
+    const displayUrl = universe.cover_display_url || (String(universe.cover_url || "").startsWith("https://") ? universe.cover_url : null);
+    const cover = displayUrl
+        ? `<img src="${escapeHtml(displayUrl)}" alt="" loading="lazy">`
         : `<div class="universe-admin-cover-placeholder" aria-hidden="true">🌌</div>`;
 
     return `
@@ -142,7 +182,13 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
             <p class="muted">Escolha uma história sua para ser a obra principal. Depois você poderá adicionar outras histórias e convidar escritores.</p>
             <label>Nome do universo<input id="new-universe-name" minlength="2" maxlength="100" required placeholder="Ex.: O Outro Lado"></label>
             <label>Descrição<textarea id="new-universe-description" maxlength="1200" rows="4" placeholder="Conte o que conecta essas histórias."></textarea></label>
-            <label>Imagem do universo (link HTTPS, opcional)<input id="new-universe-cover" type="url" placeholder="https://exemplo.com/capa.jpg"></label>
+            <label>Origem da capa<select id="new-universe-cover-source" data-universe-cover-source><option value="upload">Enviar arquivo do dispositivo</option><option value="link">Usar link externo HTTPS</option></select></label>
+            <div data-universe-cover-file-group>
+                <label>Capa do universo (até 5 MB)<input id="new-universe-cover-file" data-universe-cover-file type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif"></label>
+                <small class="muted">Formatos aceitos: JPG, PNG, WEBP, GIF e AVIF. Você também pode adicionar a capa depois.</small>
+            </div>
+            <div data-universe-cover-link-group hidden><label>Link HTTPS da capa<input id="new-universe-cover" type="url" placeholder="https://exemplo.com/capa.jpg"></label></div>
+            <div class="universe-cover-preview" data-universe-cover-preview><span class="muted">Nenhuma capa selecionada.</span></div>
             <label>Obra principal<select id="new-universe-main-story" required></select></label>
             <div class="main-nav"><button type="button" class="secondary-button" data-close-create-universe>Cancelar</button><button type="submit" class="primary-button">Criar universo</button></div>
             <p id="create-universe-feedback" class="form-message" role="status" aria-live="polite"></p>
@@ -231,9 +277,14 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
                         <h3>Informações do universo</h3>
                         <label>Nome<input id="manage-universe-name" minlength="2" maxlength="100" required value="${escapeHtml(universe.name)}"></label>
                         <label>Descrição<textarea id="manage-universe-description" maxlength="1200" rows="3">${escapeHtml(universe.description || "")}</textarea></label>
-                        <label>Imagem do universo (link HTTPS)<input id="manage-universe-cover" type="url" value="${escapeHtml(universe.cover_url || "")}" placeholder="https://exemplo.com/capa.jpg"></label>
-                        <div class="universe-cover-preview">${universe.cover_url ? `<img src="${escapeHtml(universe.cover_url)}" alt="Prévia da capa do universo">` : `<span class="muted">Nenhuma imagem definida.</span>`}</div>
-                        <div class="main-nav"><button type="submit" class="primary-button">Salvar informações</button><button type="button" class="secondary-button" data-remove-universe-cover ${universe.cover_url ? "" : "disabled"}>Remover imagem</button></div>
+                        <label>Origem da capa<select id="manage-universe-cover-source" data-universe-cover-source><option value="upload" ${(universe.cover_path || !universe.cover_url) ? "selected" : ""}>Enviar arquivo do dispositivo</option><option value="link" ${universe.cover_url ? "selected" : ""}>Usar link externo HTTPS</option></select></label>
+                        <div data-universe-cover-file-group>
+                            <label>Enviar nova capa (até 5 MB)<input id="manage-universe-cover-file" data-universe-cover-file type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif"></label>
+                            <small class="muted">Formatos aceitos: JPG, PNG, WEBP, GIF e AVIF. Se não selecionar outro arquivo, a capa atual será mantida.</small>
+                        </div>
+                        <div data-universe-cover-link-group hidden><label>Link HTTPS da capa<input id="manage-universe-cover" type="url" value="${escapeHtml(universe.cover_url || "")}" placeholder="https://exemplo.com/capa.jpg"></label></div>
+                        <div class="universe-cover-preview" data-universe-cover-preview>${universe.cover_display_url ? `<img src="${escapeHtml(universe.cover_display_url)}" alt="Prévia da capa do universo">` : `<span class="muted">Nenhuma imagem definida.</span>`}</div>
+                        <div class="main-nav"><button type="submit" class="primary-button">Salvar informações</button><button type="button" class="secondary-button" data-remove-universe-cover ${(universe.cover_url || universe.cover_path) ? "" : "disabled"}>Remover imagem</button></div>
                         <p id="universe-details-feedback" class="form-message" role="status" aria-live="polite"></p>
                     </form>
 
@@ -283,6 +334,8 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
 
     function bindManager(universe) {
         managerDialog.querySelectorAll("[data-close-universe-manager]").forEach((button) => button.addEventListener("click", () => managerDialog.close()));
+        bindUniverseCoverSource(managerDialog);
+        bindUniverseCoverPreview(managerDialog);
 
         managerDialog.querySelector("#universe-details-form")?.addEventListener("submit", async (event) => {
             event.preventDefault();
@@ -290,15 +343,44 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
             const button = event.currentTarget.querySelector('button[type="submit"]');
             button.disabled = true;
             feedback.textContent = "Salvando informações...";
+            let uploadedPath = null;
             try {
+                const source = managerDialog.querySelector("#manage-universe-cover-source").value;
+                const selectedFile = source === "upload" ? managerDialog.querySelector("#manage-universe-cover-file").files?.[0] : null;
+                const previousPath = universe.cover_path || null;
+                let coverUrl = universe.cover_url || null;
+
+                if (source === "link") {
+                    coverUrl = managerDialog.querySelector("#manage-universe-cover").value.trim() || null;
+                } else if (selectedFile) {
+                    uploadedPath = await uploadStoryUniverseCover(universe.id, selectedFile);
+                    // Preserva a URL externa antiga até que o RPC grave o novo caminho.
+                    // setStoryUniverseCoverPath limpa cover_url ao confirmar o upload.
+                }
+
                 await updateStoryUniverseDetails(universe.id, {
                     name: managerDialog.querySelector("#manage-universe-name").value,
                     description: managerDialog.querySelector("#manage-universe-description").value,
-                    coverUrl: managerDialog.querySelector("#manage-universe-cover").value,
+                    coverUrl,
                 });
+
+                if (source === "link") {
+                    await setStoryUniverseCoverPath(universe.id, null);
+                } else if (uploadedPath) {
+                    await setStoryUniverseCoverPath(universe.id, uploadedPath);
+                }
+
+                if (previousPath && (source === "link" || uploadedPath) && previousPath !== uploadedPath) {
+                    try { await removeStoryUniverseCover(previousPath); }
+                    catch (cleanupError) { console.warn("[Universos] A capa anterior não pôde ser removida do Storage:", cleanupError); }
+                }
+
                 await loadUniverses();
                 await openManager(universe.id, { message: "Informações do universo atualizadas.", type: "success" });
             } catch (error) {
+                if (uploadedPath) {
+                    try { await removeStoryUniverseCover(uploadedPath); } catch (cleanupError) { console.warn("[Universos] Não foi possível limpar o upload incompleto:", cleanupError); }
+                }
                 feedback.textContent = error?.message || "Não foi possível salvar as informações.";
                 feedback.className = "form-message error";
                 button.disabled = false;
@@ -313,6 +395,11 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
                     description: managerDialog.querySelector("#manage-universe-description").value,
                     coverUrl: null,
                 });
+                await setStoryUniverseCoverPath(universe.id, null);
+                if (universe.cover_path) {
+                    try { await removeStoryUniverseCover(universe.cover_path); }
+                    catch (cleanupError) { console.warn("[Universos] A capa removida do banco permaneceu no Storage:", cleanupError); }
+                }
                 await openManager(universe.id, { message: "Imagem removida.", type: "success" });
             } catch (error) {
                 const feedback = managerDialog.querySelector("#universe-details-feedback");
@@ -438,6 +525,10 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
                 danger: true,
                 onConfirm: async () => {
                     await deleteStoryUniverse(universe.id);
+                    if (universe.cover_path) {
+                        try { await removeStoryUniverseCover(universe.cover_path); }
+                        catch (cleanupError) { console.warn("[Universos] O universo foi excluído, mas a capa permaneceu no Storage:", cleanupError); }
+                    }
                     managerDialog.close();
                     await loadUniverses();
                     await loadRequests();
@@ -452,10 +543,15 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
         : "Criar um universo começando por uma das suas histórias.";
     renderCreateOptions();
 
+    bindUniverseCoverSource(createDialog);
+    bindUniverseCoverPreview(createDialog);
     newUniverseButton.addEventListener("click", () => {
         createDialog.querySelector("#create-universe-form").reset();
         createDialog.querySelector("#create-universe-feedback").textContent = "";
+        createDialog.querySelector("[data-universe-cover-preview]").innerHTML = `<span class="muted">Nenhuma capa selecionada.</span>`;
         renderCreateOptions();
+        createDialog.querySelector("#new-universe-cover-source").value = "upload";
+        createDialog.querySelector("#new-universe-cover-source").dispatchEvent(new Event("change"));
         createDialog.showModal();
     });
 
@@ -466,16 +562,36 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
         const button = event.currentTarget.querySelector('button[type="submit"]');
         button.disabled = true;
         feedback.textContent = "Criando universo...";
+        let createdId = null;
         try {
-            const id = await createStoryUniverse({
+            const source = createDialog.querySelector("#new-universe-cover-source").value;
+            const file = source === "upload" ? createDialog.querySelector("#new-universe-cover-file").files?.[0] : null;
+            createdId = await createStoryUniverse({
                 storyId: createDialog.querySelector("#new-universe-main-story").value,
                 name: createDialog.querySelector("#new-universe-name").value,
                 description: createDialog.querySelector("#new-universe-description").value,
-                coverUrl: createDialog.querySelector("#new-universe-cover").value,
+                coverUrl: source === "link" ? createDialog.querySelector("#new-universe-cover").value : null,
             });
+
+            let coverWarning = null;
+            if (file) {
+                let uploadedPath = null;
+                try {
+                    uploadedPath = await uploadStoryUniverseCover(createdId, file);
+                    await setStoryUniverseCoverPath(createdId, uploadedPath);
+                } catch (uploadError) {
+                    if (uploadedPath) {
+                        try { await removeStoryUniverseCover(uploadedPath); } catch (cleanupError) { console.warn("[Universos] Não foi possível limpar a capa após falha:", cleanupError); }
+                    }
+                    coverWarning = `O universo foi criado, mas a capa não pôde ser enviada: ${uploadError?.message || "erro no upload"}`;
+                }
+            }
+
             createDialog.close();
             await loadUniverses();
-            await openManager(id, { message: "Universo criado com sua obra principal.", type: "success" });
+            await openManager(createdId, coverWarning
+                ? { message: coverWarning, type: "error" }
+                : { message: "Universo criado com sua obra principal.", type: "success" });
         } catch (error) {
             feedback.textContent = error?.message || "Não foi possível criar o universo.";
             feedback.className = "form-message error";

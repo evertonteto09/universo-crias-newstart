@@ -4514,7 +4514,8 @@ textarea { resize: vertical; }
     .custom-theme-favicon-preview-row { justify-self: start; }
 }
 
-/* Gerenciamento funcional de universos de histórias (primeira versão). */
+/* Gerenciamento funcional de universos de histórias. */
+#writer-universes-section { margin-bottom: 60px; }
 .universe-admin-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4544,8 +4545,14 @@ textarea { resize: vertical; }
 .universe-manager-content h3 { margin: 6px 0 10px; }
 .universe-manager-section { display: grid; gap: 12px; }
 .universe-manager-section > p { margin: 0; }
-.universe-cover-preview { display: flex; min-height: 88px; align-items: center; justify-content: flex-start; }
-.universe-cover-preview img { display: block; max-width: min(100%, 240px); max-height: 150px; border: 1px solid var(--border); border-radius: 14px; object-fit: cover; }
+.universe-cover-preview { display: flex; min-height: 88px; align-items: center; justify-content: flex-start; padding: 8px 0; }
+.universe-cover-preview img { display: block; width: min(100%, 320px); max-height: 190px; border: 1px solid var(--border); border-radius: 14px; object-fit: cover; }
+.universe-manager-content [data-universe-cover-file-group] small,
+#create-universe-form [data-universe-cover-file-group] small { display: block; margin-top: 6px; line-height: 1.5; }
+.universe-manager-content [data-universe-cover-file-group][hidden],
+.universe-manager-content [data-universe-cover-link-group][hidden],
+#create-universe-form [data-universe-cover-file-group][hidden],
+#create-universe-form [data-universe-cover-link-group][hidden] { display: none !important; }
 .universe-member-list, .universe-request-list, .universe-external-results { display: grid; gap: 10px; }
 .universe-member-row, .universe-request-card, .universe-search-result {
     display: grid;

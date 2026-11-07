@@ -1,6 +1,18 @@
 import { supabase } from "../core/supabase.js";
 import { slugify } from "../core/utils.js";
 
+const UNIVERSE_COVER_BUCKET = "story-universe-covers";
+const UNIVERSE_COVER_MAX_BYTES = 5 * 1024 * 1024;
+const UNIVERSE_COVER_ALLOWED_TYPES = new Map([
+    ["image/jpeg", "jpg"],
+    ["image/png", "png"],
+    ["image/webp", "webp"],
+    ["image/gif", "gif"],
+    ["image/avif", "avif"],
+]);
+const universeCoverUrlCache = new Map();
+const UNIVERSE_COVER_PATH_RE = /^[a-f0-9-]{36}\/\d+\/[a-f0-9-]{36}\.(?:jpg|jpeg|png|webp|gif|avif)$/i;
+
 function positiveId(value, label) {
     const id = Number(value);
     if (!Number.isSafeInteger(id) || id <= 0) {
@@ -46,6 +58,7 @@ export async function getMyStoryUniverses() {
             slug,
             description,
             cover_url,
+            cover_path,
             created_at,
             updated_at,
             story_universe_stories (
@@ -72,11 +85,13 @@ export async function getMyStoryUniverses() {
         .order("updated_at", { ascending: false });
 
     if (error) throw error;
-    return (data ?? []).map((universe) => ({
+    return Promise.all((data ?? []).map(async (universe) => ({
         ...universe,
+        cover_display_url: await getStoryUniverseCoverDisplayUrl(universe.cover_path)
+            || (isHttpsCoverUrl(universe.cover_url) ? universe.cover_url : null),
         story_universe_stories: [...(universe.story_universe_stories ?? [])]
             .sort((a, b) => Number(a.reading_order) - Number(b.reading_order)),
-    }));
+    })));
 }
 
 export async function getIncomingStoryUniverseRequests() {
@@ -136,6 +151,101 @@ export async function searchPublishedStoriesForUniverse(query, ownWriterId) {
 
     if (error) throw error;
     return data ?? [];
+}
+
+function isHttpsCoverUrl(value) {
+    return typeof value === "string" && /^https:\/\/[^\s]+$/i.test(value.trim());
+}
+
+export function isStoryUniverseCoverPath(value) {
+    return typeof value === "string" && UNIVERSE_COVER_PATH_RE.test(value.trim());
+}
+
+/** Retorna uma URL assinada do bucket privado ou preserva links HTTPS antigos. */
+export async function getStoryUniverseCoverDisplayUrl(value) {
+    const cover = String(value ?? "").trim();
+    if (!cover) return null;
+    if (isHttpsCoverUrl(cover)) return cover;
+    if (!isStoryUniverseCoverPath(cover)) return null;
+
+    const cached = universeCoverUrlCache.get(cover);
+    if (cached && cached.expiresAt > Date.now()) return cached.url;
+
+    const { data, error } = await supabase.storage
+        .from(UNIVERSE_COVER_BUCKET)
+        .createSignedUrl(cover, 60 * 60);
+    if (error) {
+        console.warn("[Universos] Não foi possível gerar a URL da capa:", error);
+        return null;
+    }
+
+    const url = data?.signedUrl || null;
+    if (url) {
+        universeCoverUrlCache.set(cover, {
+            url,
+            expiresAt: Date.now() + 55 * 60 * 1000,
+        });
+    }
+    return url;
+}
+
+function validateUniverseCoverFile(file) {
+    if (!(file instanceof File)) throw new Error("Selecione um arquivo de imagem.");
+    const mime = String(file.type || "").toLowerCase();
+    if (!UNIVERSE_COVER_ALLOWED_TYPES.has(mime)) {
+        throw new Error("Use uma imagem JPG, PNG, WEBP, GIF ou AVIF. SVG não é aceito.");
+    }
+    if (file.size <= 0 || file.size > UNIVERSE_COVER_MAX_BYTES) {
+        throw new Error("A capa do universo precisa ter até 5 MB.");
+    }
+    return UNIVERSE_COVER_ALLOWED_TYPES.get(mime);
+}
+
+/** Envia a capa para um bucket privado, separada por usuário e universo. */
+export async function uploadStoryUniverseCover(universeId, file) {
+    const id = positiveId(universeId, "Universo");
+    const extension = validateUniverseCoverFile(file);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    const userId = authData?.user?.id;
+    if (!userId) throw new Error("Entre na sua conta de escritor para enviar uma capa.");
+
+    const path = `${userId}/${id}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage
+        .from(UNIVERSE_COVER_BUCKET)
+        .upload(path, file, {
+            cacheControl: "3600",
+            contentType: file.type,
+            upsert: false,
+        });
+    if (error) throw error;
+    universeCoverUrlCache.delete(path);
+    return path;
+}
+
+/** Atualiza o caminho no banco; o RPC confirma que o usuário é dono do universo. */
+export async function setStoryUniverseCoverPath(universeId, coverPath = null) {
+    const id = positiveId(universeId, "Universo");
+    const path = coverPath == null ? null : String(coverPath).trim();
+    if (path && !isStoryUniverseCoverPath(path)) {
+        throw new Error("Caminho da capa do universo inválido.");
+    }
+    const { error } = await supabase.rpc("set_story_universe_cover_path", {
+        p_universe_id: id,
+        p_cover_path: path,
+    });
+    if (error) throw error;
+}
+
+/** Remove apenas objetos com o formato de caminho esperado; o Storage valida a propriedade. */
+export async function removeStoryUniverseCover(coverPath) {
+    const path = String(coverPath ?? "").trim();
+    if (!isStoryUniverseCoverPath(path)) return;
+    const { error } = await supabase.storage
+        .from(UNIVERSE_COVER_BUCKET)
+        .remove([path]);
+    if (error) throw error;
+    universeCoverUrlCache.delete(path);
 }
 
 export async function createStoryUniverse({ storyId, name, description = null, coverUrl = null }) {

@@ -30,7 +30,7 @@ import {
     moderateReview,
     deleteReview,
 } from "../services/review.service.js";
-import { initStoryUniverseDashboard } from "./story-universe-manager.js?v=20261107-story-universes-1";
+import { initStoryUniverseDashboard } from "./story-universe-manager.js?v=20261107-story-universe-covers-2";
 
 import {
     getStoryCoverUrl,
