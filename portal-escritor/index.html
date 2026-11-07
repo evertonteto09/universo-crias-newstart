@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Portal do Escritor</title>
-    <link rel="stylesheet" href="../assets/css/style.css?v=20261107-tab-icons-1">
+    <link rel="stylesheet" href="../assets/css/style.css?v=20261107-story-universes-1">
     <link rel="icon" type="image/png" href="../assets/img/favicons/icon.png" data-universo-favicon="true">
 </head>
 <body>
@@ -56,6 +56,35 @@
                 Crie obras, configure temporadas, escreva
                 episódios e publique somente quando estiver pronto.
             </p>
+        </section>
+
+        <section id="universe-requests-section" class="panel-section" hidden>
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">
+                        PARTICIPAÇÃO EM UNIVERSOS
+                    </span>
+                    <h2>Solicitações recebidas</h2>
+                </div>
+            </div>
+            <p class="muted">Outros escritores podem convidar uma de suas histórias publicadas para participar de um universo. A decisão é sempre sua.</p>
+            <div id="universe-requests-list" class="universe-request-list"></div>
+        </section>
+
+        <section id="writer-universes-section" class="panel-section">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">
+                        HISTÓRIAS CONECTADAS
+                    </span>
+                    <h2>Meus universos</h2>
+                </div>
+                <button id="new-universe-button" class="primary-button" type="button">+ Criar universo</button>
+            </div>
+            <p class="muted">Agrupe histórias que compartilham o mesmo mundo. Você pode adicionar suas obras diretamente ou solicitar a participação de histórias de outros escritores.</p>
+            <div id="writer-universe-grid" class="universe-admin-grid">
+                <article class="loading-card">Carregando universos...</article>
+            </div>
         </section>
 
         <section>
@@ -119,7 +148,7 @@
 
     <script
         type="module"
-        src="../assets/js/pages/writer-dashboard.js?v=20261107-tab-icons-1"
+        src="../assets/js/pages/writer-dashboard.js?v=20261107-story-universes-1"
     ></script>
 </body>
 </html>

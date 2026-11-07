@@ -4513,3 +4513,78 @@ textarea { resize: vertical; }
     .custom-theme-favicon-control { grid-template-columns: 1fr; }
     .custom-theme-favicon-preview-row { justify-self: start; }
 }
+
+/* Gerenciamento funcional de universos de histórias (primeira versão). */
+.universe-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+.universe-admin-card {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+.universe-admin-card-cover { min-height: 150px; background: var(--surface-2); }
+.universe-admin-card-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.universe-admin-cover-placeholder { display: grid; width: 100%; height: 100%; min-height: 150px; place-items: center; font-size: 2.4rem; background: linear-gradient(145deg, var(--surface-2), var(--surface)); }
+.universe-admin-card-copy { display: grid; align-content: center; gap: 8px; min-width: 0; padding: 16px; }
+.universe-admin-card-copy h3, .universe-admin-card-copy p { margin: 0; }
+.universe-admin-card-copy p { color: var(--muted); line-height: 1.5; }
+.universe-admin-card-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: .82rem; }
+.universe-admin-card-copy button { justify-self: start; margin-top: 5px; }
+.universe-dialog { max-width: 640px; }
+.universe-manager-dialog { width: min(940px, calc(100% - 28px)); max-width: 940px; }
+.universe-manager-content { display: grid; gap: 22px; padding: clamp(18px, 3vw, 28px); }
+.universe-manager-content > .section-heading { align-items: start; margin: 0; }
+.universe-manager-content h3 { margin: 6px 0 10px; }
+.universe-manager-section { display: grid; gap: 12px; }
+.universe-manager-section > p { margin: 0; }
+.universe-cover-preview { display: flex; min-height: 88px; align-items: center; justify-content: flex-start; }
+.universe-cover-preview img { display: block; max-width: min(100%, 240px); max-height: 150px; border: 1px solid var(--border); border-radius: 14px; object-fit: cover; }
+.universe-member-list, .universe-request-list, .universe-external-results { display: grid; gap: 10px; }
+.universe-member-row, .universe-request-card, .universe-search-result {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+}
+.universe-member-order { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: var(--surface); color: var(--muted); font-weight: 800; }
+.universe-member-copy { display: grid; gap: 3px; min-width: 0; }
+.universe-member-copy span, .universe-member-copy small, .universe-search-result small { color: var(--muted); }
+.universe-member-actions, .universe-request-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.universe-member-actions button { padding: 8px 10px; }
+.universe-member-actions button:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.universe-pending-status { color: #e5bd64 !important; }
+.universe-rejected-status { color: #ff8989 !important; }
+.universe-search-form { display: grid; gap: 10px; }
+.universe-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.universe-search-result { grid-template-columns: minmax(0, 1fr) auto; }
+.universe-search-result > div { display: grid; gap: 4px; }
+.universe-request-card { grid-template-columns: minmax(0, 1fr) auto; }
+.universe-request-card h3, .universe-request-card p { margin: 5px 0; }
+.universe-request-card p { color: var(--muted); line-height: 1.5; }
+.universe-danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid rgba(220, 80, 80, .4); border-radius: 16px; background: color-mix(in srgb, #9e3030 8%, var(--surface)); }
+.universe-danger-zone h3, .universe-danger-zone p { margin: 5px 0; }
+.universe-manager-footer { justify-content: flex-end; }
+@media (max-width: 760px) {
+    .universe-admin-grid { grid-template-columns: 1fr; }
+    .universe-member-row { grid-template-columns: auto minmax(0, 1fr); }
+    .universe-member-actions { grid-column: 2; }
+    .universe-request-card { grid-template-columns: 1fr; }
+    .universe-danger-zone { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 480px) {
+    .universe-admin-card { grid-template-columns: 88px minmax(0, 1fr); }
+    .universe-admin-card-cover, .universe-admin-cover-placeholder { min-height: 135px; }
+    .universe-search-row { grid-template-columns: 1fr; }
+    .universe-search-result { grid-template-columns: 1fr; }
+}

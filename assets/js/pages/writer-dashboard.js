@@ -30,6 +30,7 @@ import {
     moderateReview,
     deleteReview,
 } from "../services/review.service.js";
+import { initStoryUniverseDashboard } from "./story-universe-manager.js?v=20261107-story-universes-1";
 
 import {
     getStoryCoverUrl,
@@ -587,6 +588,8 @@ async function loadStories() {
 
         stories =
             await getMyStories();
+
+        await initStoryUniverseDashboard({ writer, stories });
 
         if (!stories.length) {
             grid.innerHTML = `
