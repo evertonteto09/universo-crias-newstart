@@ -1,0 +1,2 @@
+[functions.crias-presence-image]
+verify_jwt = false
