@@ -6,23 +6,23 @@ import { escapeHtml } from "./utils.js";
  * [[emoji:ID]]. No editor, o token é representado por uma imagem atômica.
  */
 export const EMOJI_CATALOG = Object.freeze([
-    { id: "1113196881007345726", name: "Carinho azul", file: "1113196881007345726.png" },
-    { id: "1117810861097091134", name: "Personagem de anime com óculos", file: "1117810861097091134.png" },
-    { id: "1171628585182838864", name: "Gato de óculos", file: "1171628585182838864.png" },
+    { id: "1113196881007345726", name: "Fantasminha suquinho", file: "1113196881007345726.png" },
+    { id: "1117810861097091134", name: "Zero observando", file: "1117810861097091134.png" },
+    { id: "1171628585182838864", name: "Gato na guerra", file: "1171628585182838864.png" },
     { id: "1339388374263271434", name: "Gato fazendo joinha", file: "1339388374263271434.png" },
     { id: "1364037079507533905", name: "Cachorrinho", file: "1364037079507533905.png" },
-    { id: "1364037208691970090", name: "Rosto surpreso", file: "1364037208691970090.png" },
+    { id: "1364037208691970090", name: "Bebê estourado", file: "1364037208691970090.png" },
     { id: "1411891533854150656", name: "Gato palhaço", file: "1411891533854150656.png" },
     { id: "1453803004376645673", name: "Gato emocionado", file: "1453803004376645673.png" },
-    { id: "1499030628761600010", name: "Sapo com uma cruz", file: "1499030628761600010.png" },
-    { id: "1559955451934802031", name: "Pessoa de óculos", file: "1559955451934802031.png" },
-    { id: "1568365307570032800", name: "Jogador sorrindo", file: "1568365307570032800.png" },
+    { id: "1499030628761600010", name: "Pepe cruz", file: "1499030628761600010.png" },
+    { id: "1559955451934802031", name: "Mamaco", file: "1559955451934802031.png" },
+    { id: "1568365307570032800", name: "Jogador rebaixado", file: "1568365307570032800.png" },
     { id: "1568365346417549463", name: "Meme Does he know", file: "1568365346417549463.png" },
-    { id: "1568365438155366430", name: "Jogador de futebol", file: "1568365438155366430.png" },
-    { id: "1568365515498590249", name: "Guaxinim", file: "1568365515498590249.png" },
-    { id: "1568365541591355392", name: "Personagem de anime em preto e branco", file: "1568365541591355392.png" },
-    { id: "1568365580900114453", name: "Coelho", file: "1568365580900114453.png" },
-    { id: "492031932717072395", name: "Calopsita de chapéu", file: "492031932717072395.png" },
+    { id: "1568365438155366430", name: "Jogador Ruim", file: "1568365438155366430.png" },
+    { id: "1568365515498590249", name: "Gato estourado", file: "1568365515498590249.png" },
+    { id: "1568365541591355392", name: "Goku análise", file: "1568365541591355392.png" },
+    { id: "1568365580900114453", name: "Coeio", file: "1568365580900114453.png" },
+    { id: "492031932717072395", name: "Calopsita caboiw", file: "492031932717072395.png" },
 ]);
 
 const EMOJI_BY_ID = new Map(EMOJI_CATALOG.map((emoji) => [emoji.id, emoji]));
