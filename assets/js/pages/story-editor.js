@@ -1271,7 +1271,7 @@ function openNewsForm(existingNews = null) {
             </label>
             <small class="field-help dynamic-format-help">
                 Formatação: <code>**negrito**</code>, <code>*itálico*</code>,
-                <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>`código`</code>.
+                <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>&#96;código&#96;</code>.
                 Títulos: <code>#</code>, <code>##</code> ou <code>###</code> no início da linha.
                 Citações: comece o bloco com <code>&lt;</code> e termine com <code>&gt;</code>.
                 As imagens continuam sendo inseridas pelo gerenciador abaixo.

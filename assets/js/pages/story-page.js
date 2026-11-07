@@ -351,7 +351,7 @@ async function renderStoryReviewForm(
                     </label>
                     <small class="field-help dynamic-format-help">
                         Formatação: <code>**negrito**</code>, <code>*itálico*</code>,
-                        <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>`código`</code>.
+                        <code>__sublinhado__</code>, <code>||spoiler||</code> e <code>&#96;código&#96;</code>.
                     </small>
                     <div id="story-review-emoji-picker" class="emoji-picker-host"></div>
 
