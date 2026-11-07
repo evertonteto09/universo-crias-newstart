@@ -3554,6 +3554,7 @@ textarea { resize: vertical; }
 
 :root[data-theme="personalizado"] input:not(.custom-theme-preview-input):not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]),
 :root[data-theme="personalizado"] textarea,
+:root[data-theme="personalizado"] .emoji-rich-editor,
 :root[data-theme="personalizado"] select {
     background-color: var(--custom-theme-input-bg-color, #0C1218) !important;
     color: var(--custom-theme-interactive-text-color, #F4FBFF) !important;
@@ -3708,9 +3709,11 @@ textarea { resize: vertical; }
 
 :root[data-theme="personalizado"] input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):hover,
 :root[data-theme="personalizado"] textarea:hover,
+:root[data-theme="personalizado"] .emoji-rich-editor:hover,
 :root[data-theme="personalizado"] select:hover,
 :root[data-theme="personalizado"] input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):focus-visible,
 :root[data-theme="personalizado"] textarea:focus-visible,
+:root[data-theme="personalizado"] .emoji-rich-editor:focus-visible,
 :root[data-theme="personalizado"] select:focus-visible {
     border-color: var(--custom-theme-hover-color, #00E5FF) !important;
     outline: 2px solid color-mix(in srgb, var(--custom-theme-hover-color, #00E5FF) 32%, transparent);
@@ -4339,4 +4342,76 @@ textarea { resize: vertical; }
     .emoji-picker-grid {
         grid-template-columns: repeat(5, minmax(0, 1fr));
     }
+}
+
+
+/* Editor rico dos emojis: as imagens são átomos visuais, enquanto o valor
+   serializado continua no textarea oculto para preservar o formato salvo. */
+.emoji-source-textarea {
+    display: none !important;
+}
+
+.emoji-rich-editor {
+    width: 100%;
+    min-height: 9em;
+    padding: 13px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-y: auto;
+    resize: vertical;
+    cursor: text;
+    outline: none;
+}
+
+.emoji-rich-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--muted);
+    opacity: .85;
+    pointer-events: none;
+}
+
+.emoji-rich-editor:focus-visible {
+    border-color: var(--accent);
+    outline: 2px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    outline-offset: 1px;
+}
+
+.emoji-rich-editor .emoji-editor-atom {
+    display: inline-block;
+    width: 1.55em;
+    height: 1.55em;
+    max-width: 1.8em;
+    object-fit: contain;
+    vertical-align: -0.38em;
+    margin: 0 .035em;
+    user-select: all;
+    -webkit-user-drag: none;
+}
+
+.emoji-rich-editor[data-limit-reached="true"] {
+    border-color: var(--danger, #dc5656);
+}
+
+:root[data-theme="personalizado"] .emoji-rich-editor {
+    background-color: var(--custom-theme-input-bg-color, #0C1218) !important;
+    color: var(--custom-theme-interactive-text-color, #F4FBFF) !important;
+    border-color: color-mix(in srgb, var(--custom-theme-input-bg-color, #0C1218) 78%, var(--custom-theme-interactive-text-color, #F4FBFF)) !important;
+    caret-color: var(--custom-theme-interactive-text-color, #F4FBFF);
+}
+
+:root[data-theme="personalizado"] .emoji-rich-editor:empty::before {
+    color: color-mix(in srgb, var(--custom-theme-interactive-text-color, #F4FBFF) 72%, transparent);
+}
+
+:root[data-theme="personalizado"] .emoji-rich-editor:hover,
+:root[data-theme="personalizado"] .emoji-rich-editor:focus-visible {
+    border-color: var(--custom-theme-hover-color, #00E5FF) !important;
+    outline: 2px solid color-mix(in srgb, var(--custom-theme-hover-color, #00E5FF) 32%, transparent);
+    outline-offset: 1px;
 }

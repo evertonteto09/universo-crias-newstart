@@ -13,8 +13,8 @@ import {
 import {
     renderDynamicContent,
     bindDynamicText,
-} from "../core/dynamic-text.js?v=20261106-emojis-1";
-import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
+} from "../core/dynamic-text.js?v=20261106-emojis-inline-2";
+import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
 
 import {
     getPublishedChapter,

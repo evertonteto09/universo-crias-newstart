@@ -63,7 +63,7 @@ import {
     openFormModal,
     openConfirmModal,
 } from "../core/modal.js";
-import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
+import { mountEmojiPicker, renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
 
 import {
     initCriasPresence,

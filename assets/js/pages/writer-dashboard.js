@@ -1,6 +1,6 @@
 import { setupTheme } from "../core/theme.js?v=20261106-custom-theme-bookmark-color-1";
 import { openConfirmModal } from "../core/modal.js";
-import { renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-1";
+import { renderEmojiText } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
 import {
     escapeHtml,
     storyCoverSource,
