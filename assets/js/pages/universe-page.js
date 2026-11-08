@@ -7,7 +7,7 @@ import { getStoryCoverUrl } from "../services/storage.service.js?v=20261028-spoi
 import { getPublicStoryUniverseBySlug } from "../services/story-universe.service.js?v=20261107-reader-universes-2";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
 import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
-import { getPresenceUniverseCoverUrl } from "../services/crias-presence-images.service.js?v=20261107-universe-presence-1";
+import { CRIAS_PRESENCE_LOGO_URL, getPresenceUniverseCoverUrl } from "../services/crias-presence-images.service.js?v=20261107-universe-presence-1";
 
 setupTheme();
 setupProfanityFilter();
@@ -104,6 +104,8 @@ async function load() {
             pageContext: "universe",
             largeImageUrl: presenceCoverUrl || undefined,
             largeImageText: presenceCoverUrl ? `Capa do universo: ${universe.name}` : "Universo dos Crias",
+            smallImageUrl: CRIAS_PRESENCE_LOGO_URL,
+            smallImageText: "Universo dos Crias",
             currentPageUrl: publicUniverseUrl.href,
             currentPageButtonLabel: "Ver universo",
         });

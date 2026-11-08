@@ -38,6 +38,7 @@ const storiesSection = document.querySelector("#stories-library-section");
 const universesSection = document.querySelector("#universes-library-section");
 const storiesFilters = document.querySelector("#story-library-filters");
 const mainNav = document.querySelector(".main-nav");
+const themeToggle = document.querySelector("#theme-toggle");
 const mobileWriterFilterMedia = window.matchMedia("(max-width: 680px)");
 const storiesModeButton = document.querySelector("#library-mode-stories");
 const universesModeButton = document.querySelector("#library-mode-universes");
@@ -58,8 +59,8 @@ let storyRatingSummaries = {};
 let selectedWriter = "all";
 let renderSequence = 0;
 
-// Em telas mobile, o filtro de escritor volta para o início da navegação
-// principal. Em telas maiores, permanece abaixo do seletor Histórias/Universos.
+// Em telas mobile, o filtro de escritor fica entre o filtro de conteúdo e o tema.
+// Em telas maiores, permanece abaixo do seletor Histórias/Universos.
 function placeWriterFilterForViewport() {
     if (!writerFilter || !storiesFilters || !mainNav) {
         return;
@@ -68,9 +69,9 @@ function placeWriterFilterForViewport() {
     const isMobile = mobileWriterFilterMedia.matches;
 
     if (isMobile) {
-        if (writerFilter.parentElement !== mainNav) {
+        if (writerFilter.parentElement !== mainNav || writerFilter.nextElementSibling !== themeToggle) {
             closeWriterMenu();
-            mainNav.insertBefore(writerFilter, mainNav.firstElementChild);
+            mainNav.insertBefore(writerFilter, themeToggle);
         }
     } else if (writerFilter.parentElement !== storiesFilters) {
         closeWriterMenu();
