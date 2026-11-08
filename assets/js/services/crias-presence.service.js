@@ -613,7 +613,7 @@ export function initCriasPresence(initialActivity = {}) {
                     <label class="cp-setting-row" for="cp-setting-writer-activity">
                         <span class="cp-setting-copy">
                             <strong>Mostrar atividade do escritor</strong>
-                            <small>Permite exibir quando você está no portal ou editando uma obra.</small>
+                            <small>Permite exibir quando você está no portal ou editando uma história, episódio ou universo.</small>
                         </span>
                         <input id="cp-setting-writer-activity" type="checkbox">
                     </label>
@@ -621,7 +621,7 @@ export function initCriasPresence(initialActivity = {}) {
                     <label class="cp-setting-row" for="cp-setting-images">
                         <span class="cp-setting-copy">
                             <strong>Mostrar imagens das obras</strong>
-                            <small>Exibe a logo ou as capas de histórias e episódios na atividade do Discord.</small>
+                            <small>Exibe a logo ou as capas de histórias, episódios e universos na atividade do Discord.</small>
                         </span>
                         <input id="cp-setting-images" type="checkbox">
                     </label>
@@ -885,7 +885,7 @@ export function initCriasPresence(initialActivity = {}) {
 
         const details = activity.details;
         const state = activity.state;
-        const isWriterActivity = /^(No portal do Escritor|Gerenciando histórias|Editando uma história|Editando um episódio|Criando uma história)/i.test(details);
+        const isWriterActivity = /^(No portal do Escritor|Gerenciando histórias|Editando uma história|Editando um episódio|Editando um universo|Criando uma história)/i.test(details);
 
         // Se a atividade de escritor estiver oculta, não compartilhamos a capa
         // da obra que pode estar em rascunho; a logo genérica é usada no lugar.
@@ -949,6 +949,13 @@ export function initCriasPresence(initialActivity = {}) {
                 safeState = episodeLabel;
             }
             return withPrivacyFilteredImages({ details, state: safeState });
+        }
+
+        if (details === "Editando um universo") {
+            return withPrivacyFilteredImages({
+                details,
+                state: settings.showStoryTitle && state ? state : "Editor de universos",
+            }, { hideImageTitle: !settings.showStoryTitle });
         }
 
         return withPrivacyFilteredImages({ details, state });

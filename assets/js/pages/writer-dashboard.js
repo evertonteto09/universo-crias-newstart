@@ -30,7 +30,7 @@ import {
     moderateReview,
     deleteReview,
 } from "../services/review.service.js";
-import { initStoryUniverseDashboard } from "./story-universe-manager.js?v=20261108-universe-collaboration-1";
+import { initStoryUniverseDashboard } from "./story-universe-manager.js?v=20261108-universe-editor-presence-1";
 
 import {
     getStoryCoverUrl,
@@ -39,7 +39,11 @@ import {
 
 import {
     initCriasPresence,
-} from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
+} from "../services/crias-presence.service.js?v=20261108-universe-editor-presence-1";
+import {
+    CRIAS_PRESENCE_LOGO_URL,
+    getPresenceUniverseCoverUrl,
+} from "../services/crias-presence-images.service.js?v=20261108-universe-editor-presence-1";
 
 setupTheme();
 
@@ -48,6 +52,54 @@ const criasPresence = initCriasPresence({
     state: "Universo dos Crias",
     pageContext: "writer",
 });
+
+let universePresenceUpdateSequence = 0;
+
+function resetWriterPresence() {
+    universePresenceUpdateSequence += 1;
+    criasPresence.update({
+        details: "No portal do Escritor",
+        state: "Universo dos Crias",
+        pageContext: "writer",
+    });
+}
+
+async function updateUniverseEditorPresence(universe) {
+    const sequence = ++universePresenceUpdateSequence;
+    const universeName = String(universe?.name || "Universo dos Crias").trim();
+    let coverUrl = null;
+
+    try {
+        const hasPublicStory = (universe?.story_universe_stories ?? []).some((entry) =>
+            entry?.status === "approved" && entry?.stories?.status === "published"
+        );
+        // Para universos ainda privados, tenta usar a URL assinada já obtida
+        // pelo portal. O helper só a aceita se respeitar o limite de 300 caracteres
+        // do Discord; caso contrário, a atividade usa a logo do site.
+        const imageSource = universe?.cover_path && !hasPublicStory && universe?.cover_display_url
+            ? { id: universe.id, cover_url: universe.cover_display_url }
+            : universe;
+        coverUrl = await getPresenceUniverseCoverUrl(imageSource);
+    } catch (error) {
+        console.warn("[Crias Presence] Não foi possível preparar a capa do universo em edição.", error);
+    }
+
+    // Uma atualização mais recente (ou o fechamento do gerenciador) invalida
+    // qualquer consulta de imagem que ainda esteja em andamento.
+    if (sequence !== universePresenceUpdateSequence) return;
+
+    criasPresence.update({
+        details: "Editando um universo",
+        state: universeName,
+        pageContext: "writer",
+        largeImageUrl: coverUrl || CRIAS_PRESENCE_LOGO_URL,
+        largeImageText: coverUrl ? `Capa do universo: ${universeName}` : "Universo dos Crias",
+        ...(coverUrl ? {
+            smallImageUrl: CRIAS_PRESENCE_LOGO_URL,
+            smallImageText: "Universo dos Crias",
+        } : {}),
+    });
+}
 
 const writerName =
     document.querySelector(
@@ -589,7 +641,12 @@ async function loadStories() {
         stories =
             await getMyStories();
 
-        await initStoryUniverseDashboard({ writer, stories });
+        await initStoryUniverseDashboard({
+            writer,
+            stories,
+            onUniverseEditorOpen: updateUniverseEditorPresence,
+            onUniverseEditorClose: resetWriterPresence,
+        });
 
         if (!stories.length) {
             grid.innerHTML = `

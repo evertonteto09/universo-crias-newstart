@@ -573,7 +573,12 @@ function renderUniverseCoverFields(prefix, universe = null) {
     `;
 }
 
-export async function initStoryUniverseDashboard({ writer, stories = [] }) {
+export async function initStoryUniverseDashboard({
+    writer,
+    stories = [],
+    onUniverseEditorOpen = null,
+    onUniverseEditorClose = null,
+}) {
     const universeGrid = document.querySelector("#writer-universe-grid");
     const requestsSection = document.querySelector("#universe-requests-section");
     const requestsList = document.querySelector("#universe-requests-list");
@@ -604,6 +609,13 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
     const managerDialog = document.createElement("dialog");
     managerDialog.className = "writer-dialog universe-manager-dialog";
     document.body.append(createDialog, managerDialog);
+
+    managerDialog.addEventListener("close", () => {
+        managerCoverEditor?.cleanup();
+        managerCoverEditor = null;
+        activeUniverseId = null;
+        onUniverseEditorClose?.();
+    });
 
     function renderCreateOptions() {
         const select = createDialog.querySelector("#new-universe-main-story");
@@ -756,8 +768,10 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
 
             bindManager(universe);
             if (!managerDialog.open) managerDialog.showModal();
+            await onUniverseEditorOpen?.(universe);
         } catch (error) {
             console.error("[Universos] Falha ao abrir o gerenciador:", error);
+            onUniverseEditorClose?.();
             managerDialog.innerHTML = `<div class="universe-manager-content"><h2>Não foi possível abrir o universo</h2><p class="form-message error">${escapeHtml(error?.message || "Erro desconhecido")}</p><button type="button" class="secondary-button" data-close-universe-manager>Fechar</button></div>`;
             if (!managerDialog.open) managerDialog.showModal();
             managerDialog.querySelectorAll("[data-close-universe-manager]").forEach((button) => button.addEventListener("click", () => managerDialog.close()));
