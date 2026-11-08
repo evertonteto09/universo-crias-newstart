@@ -15,7 +15,9 @@ import {
     uploadStoryUniverseCover,
     setStoryUniverseCoverPath,
     removeStoryUniverseCover,
-} from "../services/story-universe.service.js?v=20261107-story-universe-covers-3";
+    addStoryUniverseCollaborator,
+    removeStoryUniverseCollaborator,
+} from "../services/story-universe.service.js?v=20261108-universe-collaboration-1";
 
 const RELATION_LABELS = {
     main: "Obra principal",
@@ -469,7 +471,7 @@ function renderUniverseCard(universe) {
         <article class="universe-admin-card">
             <div class="universe-admin-card-cover">${cover}</div>
             <div class="universe-admin-card-copy">
-                <span class="eyebrow">UNIVERSO</span>
+                <span class="eyebrow">${universe.management_role === "owner" ? "SEU UNIVERSO · RESPONSÁVEL" : "UNIVERSO COMPARTILHADO · COAUTOR"}</span>
                 <h3>${escapeHtml(universe.name)}</h3>
                 <p>${escapeHtml(universe.description || "Sem descrição.")}</p>
                 <div class="universe-admin-card-meta">
@@ -493,7 +495,7 @@ function renderRequestCard(request) {
                 <span class="eyebrow">SOLICITAÇÃO DE UNIVERSO</span>
                 <h3>${escapeHtml(story.title || "História")}</h3>
                 <p>O universo <strong>${escapeHtml(universe.name || "Universo")}</strong> deseja incluir esta obra como <strong>${escapeHtml(relationship)}</strong>.</p>
-                <small class="muted">Solicitação enviada pelo responsável pelo universo.</small>
+                <small class="muted">Solicitação enviada por um gestor do universo.</small>
             </div>
             <div class="universe-request-actions">
                 <button type="button" class="primary-button" data-approve-universe-request="${Number(request.universe_id)}:${Number(request.story_id)}">Aceitar</button>
@@ -615,10 +617,10 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
     async function loadUniverses() {
         universeGrid.innerHTML = `<article class="loading-card">Carregando universos...</article>`;
         try {
-            universes = await getMyStoryUniverses();
+            universes = await getMyStoryUniverses(writer?.writer_id);
             universeGrid.innerHTML = universes.length
                 ? universes.map(renderUniverseCard).join("")
-                : `<article class="empty-card">Você ainda não criou nenhum universo. Comece agrupando uma história sua e adicione outras obras depois.</article>`;
+                : `<article class="empty-card">Você ainda não participa da gestão de nenhum universo. Crie um com uma história sua ou peça para o responsável adicionar você como coautor.</article>`;
             universeGrid.querySelectorAll("[data-manage-universe]").forEach((button) => {
                 button.addEventListener("click", () => openManager(Number(button.dataset.manageUniverse)));
             });
@@ -674,6 +676,32 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
             const membersMarkup = entries.length
                 ? entries.map((entry, index) => renderMemberRow(entry, index, approvedEntries)).join("")
                 : `<article class="empty-card">Este universo ainda não possui histórias vinculadas.</article>`;
+            const isUniverseOwner = universe.management_role === "owner";
+            const collaboratorsMarkup = (universe.collaborators ?? []).length
+                ? universe.collaborators.map((member) => `
+                    <article class="universe-collaborator-row" data-universe-collaborator="${Number(member.writer_id)}">
+                        <div><strong>${escapeHtml(member.name || "Escritor")}</strong><small>${member.username ? `@${escapeHtml(member.username)}` : "Conta de escritor"}</small></div>
+                        <button type="button" class="danger-button" data-remove-universe-collaborator="${Number(member.writer_id)}" data-collaborator-name="${escapeHtml(member.name || member.username || "este coautor")}">Remover acesso</button>
+                    </article>
+                `).join("")
+                : `<article class="empty-card">Nenhum coautor foi adicionado ainda.</article>`;
+            const collaborationMarkup = isUniverseOwner ? `
+                <section class="universe-manager-section universe-collaboration-section">
+                    <div><span class="eyebrow">GESTÃO COMPARTILHADA</span><h3>Coautores do universo</h3></div>
+                    <p class="muted">Adicione um escritor pelo @username para compartilhar a gestão. Ele poderá editar o universo, organizar e convidar histórias e gerenciar a capa, mas não poderá excluir o universo nem administrar a lista de coautores.</p>
+                    <form id="add-universe-collaborator-form" class="universe-search-form">
+                        <label for="universe-collaborator-username">Nome de usuário do escritor</label>
+                        <div class="universe-search-row"><input id="universe-collaborator-username" maxlength="80" autocomplete="off" placeholder="Ex.: @username" required><button type="submit" class="primary-button">Adicionar coautor</button></div>
+                    </form>
+                    <p id="universe-collaborator-feedback" class="form-message" role="status" aria-live="polite"></p>
+                    <div class="universe-collaborator-list">${collaboratorsMarkup}</div>
+                </section>
+            ` : `
+                <section class="universe-manager-section universe-collaboration-note">
+                    <span class="eyebrow">GESTÃO COMPARTILHADA</span>
+                    <p class="muted">Você tem acesso de coautor a este universo. É possível gerenciar informações, capa, histórias e convites. A exclusão do universo e a gestão dos coautores permanecem com o responsável original.</p>
+                </section>
+            `;
 
             managerDialog.innerHTML = `
                 <div class="universe-manager-content">
@@ -687,6 +715,8 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
                         <div class="main-nav"><button type="submit" class="primary-button">Salvar informações</button><button type="button" class="secondary-button" data-remove-universe-cover ${(universe.cover_url || universe.cover_path) ? "" : "disabled"}>Remover imagem</button></div>
                         <p id="universe-details-feedback" class="form-message" role="status" aria-live="polite"></p>
                     </form>
+
+                    ${collaborationMarkup}
 
                     <section class="universe-manager-section">
                         <div class="section-heading"><div><span class="eyebrow">ORDEM DE LEITURA</span><h3>Histórias deste universo</h3></div><span class="muted">Use ↑ e ↓ para organizar.</span></div>
@@ -714,10 +744,12 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
                         <div id="universe-external-results" class="universe-external-results"></div>
                     </section>
 
-                    <section class="universe-danger-zone">
-                        <div><span class="eyebrow danger-eyebrow">ZONA DE PERIGO</span><h3>Excluir universo</h3><p class="muted">Isso remove o universo e todos os vínculos, mas não exclui nenhuma história nem seus episódios.</p></div>
-                        <button type="button" class="danger-button" data-delete-universe="${Number(universe.id)}">Excluir universo</button>
-                    </section>
+                    ${isUniverseOwner ? `
+                        <section class="universe-danger-zone">
+                            <div><span class="eyebrow danger-eyebrow">ZONA DE PERIGO</span><h3>Excluir universo</h3><p class="muted">Isso remove o universo e todos os vínculos, mas não exclui nenhuma história nem seus episódios.</p></div>
+                            <button type="button" class="danger-button" data-delete-universe="${Number(universe.id)}">Excluir universo</button>
+                        </section>
+                    ` : ""}
                     <div class="main-nav universe-manager-footer"><button type="button" class="secondary-button" data-close-universe-manager>Fechar</button></div>
                 </div>
             `;
@@ -735,6 +767,45 @@ export async function initStoryUniverseDashboard({ writer, stories = [] }) {
     function bindManager(universe) {
         managerDialog.querySelectorAll("[data-close-universe-manager]").forEach((button) => button.addEventListener("click", () => managerDialog.close()));
         managerCoverEditor = bindUniverseCoverEditor(managerDialog, universe);
+
+        managerDialog.querySelector("#add-universe-collaborator-form")?.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const input = form.querySelector("#universe-collaborator-username");
+            const feedback = managerDialog.querySelector("#universe-collaborator-feedback");
+            const button = form.querySelector('button[type="submit"]');
+            const username = input.value.trim();
+            if (!username) return;
+            button.disabled = true;
+            feedback.textContent = "Adicionando coautor...";
+            feedback.className = "form-message";
+            try {
+                await addStoryUniverseCollaborator(universe.id, username);
+                await openManager(universe.id, { message: `@${username.replace(/^@+/, "")} agora pode gerenciar este universo.`, type: "success" });
+            } catch (error) {
+                feedback.textContent = error?.message || "Não foi possível adicionar o coautor.";
+                feedback.className = "form-message error";
+                button.disabled = false;
+            }
+        });
+
+        managerDialog.querySelectorAll("[data-remove-universe-collaborator]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const targetWriterId = Number(button.dataset.removeUniverseCollaborator);
+                const name = button.dataset.collaboratorName || "este coautor";
+                openConfirmModal({
+                    eyebrow: "GESTÃO COMPARTILHADA",
+                    title: "Remover acesso?",
+                    message: `Remover o acesso de <strong>${escapeHtml(name)}</strong> a este universo?`,
+                    details: "As histórias e os arquivos do universo não serão excluídos. O escritor perderá somente as permissões de gerenciamento compartilhado.",
+                    confirmLabel: "Remover acesso",
+                    onConfirm: async () => {
+                        await removeStoryUniverseCollaborator(universe.id, targetWriterId);
+                        await openManager(universe.id, { message: "Acesso do coautor removido.", type: "success" });
+                    },
+                });
+            });
+        });
 
         managerDialog.querySelector("#universe-details-form")?.addEventListener("submit", async (event) => {
             event.preventDefault();

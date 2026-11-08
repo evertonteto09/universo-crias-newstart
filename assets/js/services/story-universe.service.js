@@ -45,15 +45,41 @@ function cleanRelationship(value) {
     return relationship;
 }
 
-export async function getMyStoryUniverses() {
+export async function getMyStoryUniverses(writerId = null) {
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
     if (!authData?.user?.id) return [];
 
+    const normalizedWriterId = Number(writerId);
+    const hasWriterId = Number.isSafeInteger(normalizedWriterId) && normalizedWriterId > 0;
+    const [ownedResult, collaboratorResult] = await Promise.all([
+        supabase
+            .from("story_universes")
+            .select("id")
+            .eq("created_by", authData.user.id),
+        hasWriterId
+            ? supabase
+                .from("story_universe_collaborators")
+                .select("universe_id")
+                .eq("writer_id", normalizedWriterId)
+            : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (ownedResult.error) throw ownedResult.error;
+    if (collaboratorResult.error) throw collaboratorResult.error;
+
+    const universeIds = [...new Set([
+        ...(ownedResult.data ?? []).map((row) => Number(row.id)),
+        ...(collaboratorResult.data ?? []).map((row) => Number(row.universe_id)),
+    ])].filter((id) => Number.isSafeInteger(id) && id > 0);
+    if (!universeIds.length) return [];
+
+    // This query now contains only universes owned by or shared with this writer.
     const { data, error } = await supabase
         .from("story_universes")
         .select(`
             id,
+            created_by,
             name,
             slug,
             description,
@@ -61,6 +87,13 @@ export async function getMyStoryUniverses() {
             cover_path,
             created_at,
             updated_at,
+            story_universe_collaborators (
+                writer_id,
+                writers!story_universe_collaborators_writer_id_fkey (
+                    name,
+                    username
+                )
+            ),
             story_universe_stories (
                 universe_id,
                 story_id,
@@ -81,17 +114,29 @@ export async function getMyStoryUniverses() {
                 )
             )
         `)
-        .eq("created_by", authData.user.id)
+        .in("id", universeIds)
         .order("updated_at", { ascending: false });
 
     if (error) throw error;
-    return Promise.all((data ?? []).map(async (universe) => ({
-        ...universe,
-        cover_display_url: await getStoryUniverseCoverDisplayUrl(universe.cover_path)
-            || (isHttpsCoverUrl(universe.cover_url) ? universe.cover_url : null),
-        story_universe_stories: [...(universe.story_universe_stories ?? [])]
-            .sort((a, b) => Number(a.reading_order) - Number(b.reading_order)),
-    })));
+
+    return Promise.all((data ?? []).map(async (universe) => {
+        const isOwner = String(universe.created_by) === String(authData.user.id);
+        const collaborators = (universe.story_universe_collaborators ?? [])
+            .map((row) => ({
+                writer_id: Number(row.writer_id),
+                name: row.writers?.name || row.writers?.username || "Escritor",
+                username: row.writers?.username || "",
+            }));
+        return {
+            ...universe,
+            management_role: isOwner ? "owner" : "collaborator",
+            collaborators,
+            cover_display_url: await getStoryUniverseCoverDisplayUrl(universe.cover_path)
+                || (isHttpsCoverUrl(universe.cover_url) ? universe.cover_url : null),
+            story_universe_stories: [...(universe.story_universe_stories ?? [])]
+                .sort((a, b) => Number(a.reading_order) - Number(b.reading_order)),
+        };
+    }));
 }
 
 export async function getIncomingStoryUniverseRequests() {
@@ -201,16 +246,26 @@ function validateUniverseCoverFile(file) {
     return UNIVERSE_COVER_ALLOWED_TYPES.get(mime);
 }
 
-/** Envia a capa para um bucket privado, separada por usuário e universo. */
+/** Envia a capa para o bucket privado sob o diretório do proprietário original do universo. */
 export async function uploadStoryUniverseCover(universeId, file) {
     const id = positiveId(universeId, "Universo");
     const extension = validateUniverseCoverFile(file);
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
-    const userId = authData?.user?.id;
-    if (!userId) throw new Error("Entre na sua conta de escritor para enviar uma capa.");
+    if (!authData?.user?.id) throw new Error("Entre na sua conta de escritor para enviar uma capa.");
 
-    const path = `${userId}/${id}/${crypto.randomUUID()}.${extension}`;
+    // Coauthors store replacement covers under the universe owner's folder.
+    // This preserves the path contract used by the private bucket and Presence Edge Function.
+    const { data: universe, error: universeError } = await supabase
+        .from("story_universes")
+        .select("id, created_by")
+        .eq("id", id)
+        .maybeSingle();
+    if (universeError) throw universeError;
+    if (!universe?.created_by) throw new Error("Universo não encontrado ou sem permissão para gerenciar a capa.");
+
+    const ownerId = String(universe.created_by).toLowerCase();
+    const path = `${ownerId}/${id}/${crypto.randomUUID()}.${extension}`;
     const { error } = await supabase.storage
         .from(UNIVERSE_COVER_BUCKET)
         .upload(path, file, {
@@ -223,7 +278,7 @@ export async function uploadStoryUniverseCover(universeId, file) {
     return path;
 }
 
-/** Atualiza o caminho no banco; o RPC confirma que o usuário é dono do universo. */
+/** Atualiza o caminho no banco; o RPC confirma se o usuário é proprietário ou coautor autorizado. */
 export async function setStoryUniverseCoverPath(universeId, coverPath = null) {
     const id = positiveId(universeId, "Universo");
     const path = coverPath == null ? null : String(coverPath).trim();
@@ -246,6 +301,30 @@ export async function removeStoryUniverseCover(coverPath) {
         .remove([path]);
     if (error) throw error;
     universeCoverUrlCache.delete(path);
+}
+
+/** Lista e mantém a permissão de gerenciar coautores exclusiva ao proprietário. */
+export async function addStoryUniverseCollaborator(universeId, writerUsername) {
+    const id = positiveId(universeId, "Universo");
+    const username = String(writerUsername ?? "").trim().replace(/^@+/, "");
+    if (!username || username.length > 80) throw new Error("Informe um @username válido.");
+    const { data, error } = await supabase.rpc("add_story_universe_collaborator", {
+        p_universe_id: id,
+        p_writer_username: username,
+    });
+    if (error) throw error;
+    return Array.isArray(data) ? data[0] ?? null : data;
+}
+
+export async function removeStoryUniverseCollaborator(universeId, writerId) {
+    const id = positiveId(universeId, "Universo");
+    const targetWriterId = positiveId(writerId, "Coautor");
+    const { error } = await supabase.rpc("remove_story_universe_collaborator", {
+        p_universe_id: id,
+        p_writer_id: targetWriterId,
+    });
+    if (error) throw error;
+    return true;
 }
 
 export async function createStoryUniverse({ storyId, name, description = null, coverUrl = null }) {

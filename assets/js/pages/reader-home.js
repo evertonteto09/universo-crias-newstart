@@ -10,22 +10,15 @@ import { getPublishedStories } from "../services/story.service.js?v=20261107-tab
 import { getStoryAuthors } from "../core/story-authors.js?v=20261027-coauthor-2";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-universe-presence-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
 import { getPublicStoryUniverses } from "../services/story-universe.service.js?v=20261107-reader-universes-2";
 
 setupTheme();
 setupProfanityFilter();
 
-const initialLibraryMode = new URLSearchParams(window.location.search).get("view") === "universes"
-    ? "universes"
-    : "stories";
-
 const criasPresence = initCriasPresence({
-    details: initialLibraryMode === "universes" ? "Navegando pelos Universos" : "Navegando pelas Histórias",
+    details: "Navegando pelas histórias",
     state: "Universo dos Crias",
-    pageContext: "home",
-    currentPageUrl: window.location.href,
-    currentPageButtonLabel: initialLibraryMode === "universes" ? "Ver universos" : "Ver histórias",
 });
 
 const grid =
@@ -44,6 +37,8 @@ const universeCount = document.querySelector("#universe-count");
 const storiesSection = document.querySelector("#stories-library-section");
 const universesSection = document.querySelector("#universes-library-section");
 const storiesFilters = document.querySelector("#story-library-filters");
+const mainNav = document.querySelector(".main-nav");
+const mobileWriterFilterMedia = window.matchMedia("(max-width: 680px)");
 const storiesModeButton = document.querySelector("#library-mode-stories");
 const universesModeButton = document.querySelector("#library-mode-universes");
 
@@ -58,10 +53,34 @@ const writerFilterMenu =
 
 let allStories = [];
 let allUniverses = [];
-let currentLibraryMode = initialLibraryMode;
+let currentLibraryMode = "stories";
 let storyRatingSummaries = {};
 let selectedWriter = "all";
 let renderSequence = 0;
+
+// Em telas mobile, o filtro de escritor volta para o início da navegação
+// principal. Em telas maiores, permanece abaixo do seletor Histórias/Universos.
+function placeWriterFilterForViewport() {
+    if (!writerFilter || !storiesFilters || !mainNav) {
+        return;
+    }
+
+    const isMobile = mobileWriterFilterMedia.matches;
+
+    if (isMobile) {
+        if (writerFilter.parentElement !== mainNav) {
+            closeWriterMenu();
+            mainNav.insertBefore(writerFilter, mainNav.firstElementChild);
+        }
+    } else if (writerFilter.parentElement !== storiesFilters) {
+        closeWriterMenu();
+        storiesFilters.appendChild(writerFilter);
+    }
+
+    writerFilter.hidden = currentLibraryMode !== "stories";
+    // A linha fica vazia no mobile porque o mesmo filtro está no cabeçalho.
+    storiesFilters.hidden = isMobile || currentLibraryMode !== "stories";
+}
 
 function normalizeSearchText(value) {
     return String(value ?? "")
@@ -312,7 +331,10 @@ function setLibraryMode(mode, { syncUrl = false } = {}) {
     universesModeButton?.setAttribute("aria-pressed", String(!isStories));
     storiesSection.hidden = !isStories;
     universesSection.hidden = isStories;
-    if (storiesFilters) storiesFilters.hidden = !isStories;
+    if (writerFilter) writerFilter.hidden = !isStories;
+    if (storiesFilters) {
+        storiesFilters.hidden = mobileWriterFilterMedia.matches || !isStories;
+    }
     if (searchInput) searchInput.placeholder = isStories ? "Pesquisar por história ou autor..." : "Pesquisar por universo...";
     if (syncUrl) {
         const url = new URL(window.location.href);
@@ -324,22 +346,6 @@ function setLibraryMode(mode, { syncUrl = false } = {}) {
         }
         window.history.replaceState(window.history.state, "", url);
     }
-
-    const activityUrl = new URL(window.location.href);
-    if (isStories) {
-        activityUrl.searchParams.delete("view");
-        if (activityUrl.hash === "#universes-library-section") activityUrl.hash = "";
-    } else {
-        activityUrl.searchParams.set("view", "universes");
-    }
-
-    criasPresence.update({
-        details: isStories ? "Navegando pelas Histórias" : "Navegando pelos Universos",
-        state: "Universo dos Crias",
-        pageContext: "home",
-        currentPageUrl: activityUrl.href,
-        currentPageButtonLabel: isStories ? "Ver histórias" : "Ver universos",
-    });
 
     if (isStories) applyFilters(); else applyUniverseSearch();
 }
@@ -583,6 +589,14 @@ async function load() {
     if (requestedView === "universes" && window.location.hash === "#universes-library-section") {
         window.setTimeout(() => universesSection?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
     }
+}
+
+placeWriterFilterForViewport();
+if (typeof mobileWriterFilterMedia.addEventListener === "function") {
+    mobileWriterFilterMedia.addEventListener("change", placeWriterFilterForViewport);
+} else {
+    // Compatibility fallback for older mobile browsers.
+    mobileWriterFilterMedia.addListener(placeWriterFilterForViewport);
 }
 
 writerFilterToggle?.addEventListener(
