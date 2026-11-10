@@ -1,5 +1,5 @@
 import { escapeHtml } from "./utils.js";
-import { renderEmojiTokens } from "./emoji-picker.js?v=20261106-emojis-inline-2";
+import { renderEmojiTokens } from "./emoji-picker.js?v=20261110-emojis-inline-3";
 import {
     getChapterImageUrl,
     getStoryNewsImageUrl,

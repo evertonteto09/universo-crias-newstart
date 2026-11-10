@@ -1,5 +1,5 @@
 import { setupTheme } from "../core/theme.js?v=20261107-tab-icons-1";
-import { EMOJI_CATALOG } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { EMOJI_CATALOG } from "../core/emoji-picker.js?v=20261110-emojis-inline-3";
 import { getStoryFaviconUrl, normalizeStoryFavicon } from "../core/favicon.js?v=20261107-tab-icons-1";
 import {
     escapeHtml,
@@ -65,7 +65,7 @@ import {
     openFormModal,
     openConfirmModal,
 } from "../core/modal.js";
-import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261110-emojis-inline-3";
 import { renderDynamicContent, bindDynamicText } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
 
 import {

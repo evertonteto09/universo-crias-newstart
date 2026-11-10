@@ -23,6 +23,12 @@ export const EMOJI_CATALOG = Object.freeze([
     { id: "1568365541591355392", name: "Goku análise", file: "1568365541591355392.png" },
     { id: "1568365580900114453", name: "Coeio", file: "1568365580900114453.png" },
     { id: "492031932717072395", name: "Calopsita caboiw", file: "492031932717072395.png" },
+    { id: "356771720863940608", name: "Pensante", file: "356771720863940608.png" },
+    { id: "585884192361938960", name: "Pensando", file: "585884192361938960.png" },
+    { id: "837256747965874216", name: "Knuckles estourado", file: "837256747965874216.png" },
+    { id: "954821095310123039", name: "Zero num sei", file: "954821095310123039.png" },
+    { id: "1112775991446741053", name: "Zero comendo", file: "1112775991446741053.png" },
+    { id: "1245115324383232061", name: "Pica calvo", file: "1245115324383232061.png" },
 ]);
 
 const EMOJI_BY_ID = new Map(EMOJI_CATALOG.map((emoji) => [emoji.id, emoji]));

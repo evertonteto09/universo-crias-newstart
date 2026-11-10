@@ -16,7 +16,7 @@ import {
     renderDynamicInlineBlock,
     bindDynamicText,
 } from "../core/dynamic-text.js?v=20261106-dynamic-reviews-news-1";
-import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261106-emojis-inline-2";
+import { mountEmojiPicker } from "../core/emoji-picker.js?v=20261110-emojis-inline-3";
 
 import {
     getPublishedChapter,
