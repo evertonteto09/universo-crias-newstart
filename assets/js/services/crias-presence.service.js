@@ -55,19 +55,7 @@ function loadSavedSettings() {
     }
 }
 
-/**
- * Inicializa o Crias Presence no cabeçalho do site.
- *
- * O serviço gerencia:
- * - Conexão com o programa local.
- * - Autorização com código temporário.
- * - Reutilização da sessão na mesma aba.
- * - Atualização e remoção da Rich Presence.
- * - Interface integrada aos temas do site.
- */
 export function initCriasPresence(initialActivity = {}) {
-    // Evita criar vários menus se o serviço for inicializado
-    // mais de uma vez na mesma página.
     const existing = document.getElementById(WIDGET_ID);
 
     if (existing?.criasPresenceApi) {
@@ -75,8 +63,6 @@ export function initCriasPresence(initialActivity = {}) {
         return existing.criasPresenceApi;
     }
 
-    // O GitHub Pages usa o mesmo Origin independente do caminho do projeto.
-    // A conexão continua sendo feita apenas para o serviço loopback instalado.
     const isGitHubPagesOrigin = window.location.origin === GITHUB_PAGES_ORIGIN;
 
     let activity = normalizeActivity(initialActivity);
@@ -98,10 +84,6 @@ export function initCriasPresence(initialActivity = {}) {
     const RATE_LIMIT_RETRY_MS = 500;
     const RECONNECT_BASE_DELAY_MS = 1000;
     const RECONNECT_MAX_DELAY_MS = 10000;
-
-    // ==================================================
-    // ESTILOS
-    // ==================================================
 
     function installStyles() {
         if (document.getElementById(STYLE_ID)) {
@@ -457,10 +439,6 @@ export function initCriasPresence(initialActivity = {}) {
 
     installStyles();
 
-    // ==================================================
-    // CRIAÇÃO DO BOTÃO E DO MENU
-    // ==================================================
-
     const host = document.createElement("div");
     host.id = WIDGET_ID;
 
@@ -678,8 +656,6 @@ export function initCriasPresence(initialActivity = {}) {
         </section>
     `;
 
-    // Resolve a página a partir da localização deste módulo, para funcionar
-    // tanto em /universo-crias-newstart/ no GitHub Pages quanto no Live Server local.
     const downloadPageLink = host.querySelector("#cp-download-link");
     if (downloadPageLink) {
         downloadPageLink.href = new URL("../../../crias-presence/", import.meta.url).href;
@@ -690,7 +666,6 @@ export function initCriasPresence(initialActivity = {}) {
         }
     }
 
-    // Coloca o botão próximo aos filtros e antes do seletor de tema.
     const navigation = document.querySelector(".main-nav");
     const header = document.querySelector(".site-header");
     const themeButton = document.querySelector("#theme-toggle");
@@ -706,10 +681,6 @@ export function initCriasPresence(initialActivity = {}) {
     } else {
         document.body.prepend(host);
     }
-
-    // ==================================================
-    // REFERÊNCIAS DA INTERFACE
-    // ==================================================
 
     const toggleButton = host.querySelector("#cp-toggle");
     const closeButton = host.querySelector("#cp-close");
@@ -741,10 +712,6 @@ export function initCriasPresence(initialActivity = {}) {
         showCurrentPageButton: host.querySelector("#cp-setting-current-page-button"),
     };
 
-    // ==================================================
-    // UTILITÁRIOS
-    // ==================================================
-
     function normalizeText(value) {
         if (typeof value !== "string") {
             return "";
@@ -774,8 +741,6 @@ export function initCriasPresence(initialActivity = {}) {
             const url = new URL(value.trim(), window.location.href);
             if (url.username || url.password) return "";
 
-            // Em localhost, Rich Presence deve apontar para a versão publicada do
-            // site, não para o computador de quem está desenvolvendo.
             if (["localhost", "127.0.0.1"].includes(url.hostname) && ["http:", "https:"].includes(url.protocol)) {
                 const relativePath = url.pathname.replace(/^\/+/, "") || "index.html";
                 const publicUrl = new URL(relativePath, PUBLIC_SITE_BASE_URL);
@@ -849,9 +814,6 @@ export function initCriasPresence(initialActivity = {}) {
     function withPrivacyFilteredImages(textActivity, { hideArtwork = false, hideImageTitle = false } = {}) {
         const result = { ...textActivity };
 
-        // Páginas públicas de leitura, incluindo a biblioteca de universos e
-        // a página individual de um universo, podem acrescentar o botão contextual.
-        // Portal, editores e páginas auxiliares mantêm apenas o botão institucional.
         if (
             settings.showCurrentPageButton &&
             READER_PAGE_CONTEXTS.has(activity.pageContext) &&
@@ -887,8 +849,6 @@ export function initCriasPresence(initialActivity = {}) {
         const state = activity.state;
         const isWriterActivity = /^(No portal do Escritor|Gerenciando histórias|Editando uma história|Editando um episódio|Editando um universo|Criando uma história)/i.test(details);
 
-        // Se a atividade de escritor estiver oculta, não compartilhamos a capa
-        // da obra que pode estar em rascunho; a logo genérica é usada no lugar.
         if (isWriterActivity && !settings.showWriterActivity) {
             return withPrivacyFilteredImages({
                 details: "No Universo dos Crias",
@@ -1097,10 +1057,6 @@ export function initCriasPresence(initialActivity = {}) {
         });
     }
 
-    // ==================================================
-    // PERMISSÃO DE ACESSO AO LOOPBACK NO SITE PUBLICADO
-    // ==================================================
-
     async function getLoopbackPermissionState() {
         if (!isGitHubPagesOrigin) {
             return "granted";
@@ -1118,19 +1074,11 @@ export function initCriasPresence(initialActivity = {}) {
             });
             return permission.state;
         } catch {
-            // Alguns navegadores ainda não reconhecem o nome da permissão.
             return "unsupported";
         }
     }
 
-    // ==================================================
-    // CONEXÃO WEBSOCKET
-    // ==================================================
-
     async function connect(force = false, userInitiated = false) {
-        // Em HTTPS público, não disparamos a primeira solicitação de acesso
-        // local automaticamente enquanto a permissão ainda precisa de decisão.
-        // O botão chama connect(..., true) para manter o gesto do usuário.
         if (isGitHubPagesOrigin && !userInitiated) {
             const permissionState = await getLoopbackPermissionState();
 
@@ -1236,7 +1184,6 @@ export function initCriasPresence(initialActivity = {}) {
                     const hasValidExistingToken =
                         isValidSessionToken(existingToken);
 
-                    // Remove tokens corrompidos ou gravados em formato inesperado.
                     if (existingToken !== null && !hasValidExistingToken) {
                         sessionStorage.removeItem(SESSION_KEY);
                     }
@@ -1284,9 +1231,6 @@ export function initCriasPresence(initialActivity = {}) {
                         Object.prototype.hasOwnProperty.call(data, "sessionToken");
                     const existingToken = sessionStorage.getItem(SESSION_KEY);
 
-                    // Na primeira autorização o programa devolve o token.
-                    // Na restauração, AUTH_OK pode vir sem token porque o site
-                    // já enviou o token válido em AUTH_SESSION.
                     if (includesSessionToken) {
                         if (!isValidSessionToken(data.sessionToken)) {
                             sessionStorage.removeItem(SESSION_KEY);
@@ -1308,8 +1252,6 @@ export function initCriasPresence(initialActivity = {}) {
                             data.sessionToken
                         );
                     } else if (!isValidSessionToken(existingToken)) {
-                        // Não aceitar uma confirmação de sessão sem que exista
-                        // um token válido previamente enviado para restauração.
                         sessionStorage.removeItem(SESSION_KEY);
                         authorized = false;
                         pendingAction = null;
@@ -1461,7 +1403,6 @@ export function initCriasPresence(initialActivity = {}) {
         });
 
         connection.addEventListener("close", () => {
-            // Ignora eventos de conexões antigas após uma reconexão.
             if (socket !== connection) {
                 return;
             }
@@ -1527,10 +1468,6 @@ export function initCriasPresence(initialActivity = {}) {
         }, delay);
     }
 
-    // ==================================================
-    // EVENTOS DA INTERFACE
-    // ==================================================
-
     toggleButton.addEventListener("click", () => {
         if (popover.hidden) {
             openMenu();
@@ -1542,7 +1479,6 @@ export function initCriasPresence(initialActivity = {}) {
     closeButton.addEventListener("click", closeMenu);
 
     connectButton.addEventListener("click", () => {
-        // A tentativa explícita permite que o navegador apresente o aviso LNA.
         connect(false, true);
     });
 
@@ -1625,7 +1561,6 @@ export function initCriasPresence(initialActivity = {}) {
         });
     }
 
-    // Preferências alteradas em outra aba são aplicadas aqui também.
     window.addEventListener("storage", (event) => {
         if (event.key !== SETTINGS_KEY) {
             return;
@@ -1648,7 +1583,6 @@ export function initCriasPresence(initialActivity = {}) {
             showStorySection: preferences.presence_show_story_section,
             showCurrentPageButton: preferences.presence_show_current_page_button,
         };
-        // Evita escrever de volta para a nuvem ao aplicar uma mudança recebida dela.
         try {
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         } catch (error) {
@@ -1661,8 +1595,6 @@ export function initCriasPresence(initialActivity = {}) {
         applyAccountPreferences(event.detail?.preferences);
     });
 
-    // Cobre também o caso em que a leitura da conta terminou antes de este
-    // widget registrar o evento global de preferências.
     syncUserPreferences().then((account) => {
         if (account?.preferences) applyAccountPreferences(account.preferences);
     }).catch((error) => {
@@ -1734,10 +1666,6 @@ export function initCriasPresence(initialActivity = {}) {
         }
     });
 
-    // ==================================================
-    // INICIALIZAÇÃO
-    // ==================================================
-
     setStatus(
         settings.enabled
             ? "Aguardando conexão com o programa."
@@ -1793,10 +1721,6 @@ export function initCriasPresence(initialActivity = {}) {
     }, delay);
 
 }
-
-    // Se existir uma sessão, tenta recuperá-la. No GitHub Pages a tentativa
-    // automática só ocorre se o navegador já concedeu a permissão loopback;
-    // caso ainda seja necessária uma decisão, o usuário inicia pelo botão.
     if (sessionStorage.getItem(SESSION_KEY)) {
         connect(false, false);
     }

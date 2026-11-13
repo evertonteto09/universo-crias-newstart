@@ -59,8 +59,6 @@ let storyRatingSummaries = {};
 let selectedWriter = "all";
 let renderSequence = 0;
 
-// Em telas mobile, o filtro de escritor fica entre o filtro de conteúdo e o tema.
-// Em telas maiores, permanece abaixo do seletor Histórias/Universos.
 function placeWriterFilterForViewport() {
     if (!writerFilter || !storiesFilters || !mainNav) {
         return;
@@ -79,7 +77,6 @@ function placeWriterFilterForViewport() {
     }
 
     writerFilter.hidden = currentLibraryMode !== "stories";
-    // A linha fica vazia no mobile porque o mesmo filtro está no cabeçalho.
     storiesFilters.hidden = isMobile || currentLibraryMode !== "stories";
 }
 
@@ -596,7 +593,6 @@ placeWriterFilterForViewport();
 if (typeof mobileWriterFilterMedia.addEventListener === "function") {
     mobileWriterFilterMedia.addEventListener("change", placeWriterFilterForViewport);
 } else {
-    // Compatibility fallback for older mobile browsers.
     mobileWriterFilterMedia.addListener(placeWriterFilterForViewport);
 }
 

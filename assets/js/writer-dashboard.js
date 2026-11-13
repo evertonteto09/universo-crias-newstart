@@ -155,8 +155,6 @@ newStoryButton.addEventListener(
     }
 );
 
-// Ao fechar o modal sem navegar para o editor, restaura a atividade
-// normal do painel. Também cobre o fechamento pelo Escape.
 dialog.addEventListener("close", () => {
     if (!navigatingToEditor) {
         criasPresence?.update({
@@ -542,8 +540,6 @@ async function loadStories() {
             });
         });
 
-        // Mostra feedback da primeira história
-        // para não deixar a seção vazia no desktop.
         await loadReviews(
             stories[0].id
         );
@@ -588,8 +584,6 @@ form.addEventListener(
                     coverPath: null,
                 });
 
-            // A capa e demais detalhes serão ajustados
-            // já no editor da nova obra.
             navigatingToEditor = true;
             dialog.close();
 
@@ -618,15 +612,11 @@ async function init() {
         return;
     }
 
-    // Só inicializa a presença depois de confirmar que existe
-    // uma sessão válida de escritor.
     criasPresence = initCriasPresence({
         details: "Gerenciando histórias",
         state: "Portal do Escritor",
     });
 
-    // Neste cabeçalho não há seletor de tema; posiciona o botão
-    // de presença ao lado dos controles e antes do botão Sair.
     const presenceWidget = document.querySelector("#crias-presence-control");
     const logoutButton = document.querySelector("#logout-button");
 

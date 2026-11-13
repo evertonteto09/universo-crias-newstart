@@ -43,7 +43,6 @@ function siteVariantForTheme(theme, customVariant = "normal") {
     }
     if (DARK_THEMES.has(theme)) return "branco";
     if (LIGHT_THEMES.has(theme)) return "preto";
-    // Neblina é o tema intermediário/neutro e preserva o símbolo colorido.
     return "normal";
 }
 

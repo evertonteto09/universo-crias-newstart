@@ -165,8 +165,6 @@ async function loadOrCreatePreferences(user, seedFromLocal = true) {
     if (error) throw error;
     if (data) return normalizePreferences(data);
 
-    // No primeiro login, preserva as configurações do navegador. Se houver uma
-    // imagem local, tenta migrá-la para o bucket privado da conta autenticada.
     const initial = seedFromLocal ? await readLocalPreferences() : { ...DEFAULT_PREFERENCES };
     let uploadedSeedPath = "";
     if (initial.custom_theme_background_source === "upload" && !initial.custom_theme_background_path) {
@@ -181,7 +179,6 @@ async function loadOrCreatePreferences(user, seedFromLocal = true) {
                 if (initial.custom_theme_background_type === "image") initial.custom_theme_background_type = "gradient";
             }
         } else if (initial.custom_theme_background_type === "image") {
-            // Não cria uma preferência de imagem sem arquivo ou caminho persistente.
             initial.custom_theme_background_type = "gradient";
         }
     }
@@ -329,7 +326,6 @@ export async function saveCustomThemePreferences(value = {}, { backgroundFile = 
         return { savedTo: stored.storage, preferences };
     }
 
-    // Cria/recupera a linha e mantém o ID antigo para removê-lo somente após salvar.
     const previous = await loadOrCreatePreferences(user, true);
     const previousPath = isOwnedThemeBackgroundPath(previous.custom_theme_background_path, user.id)
         ? previous.custom_theme_background_path
@@ -351,8 +347,6 @@ export async function saveCustomThemePreferences(value = {}, { backgroundFile = 
             } else {
                 let requestedPath = customTheme.custom_theme_background_path || previousPath;
                 if (!isOwnedThemeBackgroundPath(requestedPath, user.id)) {
-                    // Se o visitante escolheu uma imagem antes de entrar, migra o Blob
-                    // local para o bucket privado quando passa a usar uma conta existente.
                     const localFile = await getAnonymousCustomThemeBackgroundFile();
                     if (localFile) {
                         uploadedPath = await uploadThemeBackground(user, localFile);
@@ -366,7 +360,6 @@ export async function saveCustomThemePreferences(value = {}, { backgroundFile = 
                 customTheme.custom_theme_background_path = requestedPath;
             }
         } else {
-            // Deixa a imagem anterior guardada para que o usuário possa voltar a ela depois.
             if (customTheme.custom_theme_background_source === "upload") {
                 customTheme.custom_theme_background_url = "";
                 customTheme.custom_theme_background_path = customTheme.custom_theme_background_path || previousPath;

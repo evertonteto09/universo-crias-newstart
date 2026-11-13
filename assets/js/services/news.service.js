@@ -58,12 +58,6 @@ function normalizeContent(value) {
 }
 
 
-/**
- * Retorna as notícias de uma história para o escritor autenticado.
- *
- * A RLS do Supabase continua sendo a autoridade final:
- * somente notícias de histórias próprias podem ser alcançadas.
- */
 export async function getWriterStoryNews(storyId) {
     const numericStoryId =
         normalizeId(storyId);
@@ -90,9 +84,6 @@ export async function getWriterStoryNews(storyId) {
 }
 
 
-/**
- * Cria uma notícia dentro de uma história do escritor autenticado.
- */
 export async function createStoryNews({
     storyId,
     title,
@@ -127,9 +118,6 @@ export async function createStoryNews({
 }
 
 
-/**
- * Edita uma notícia pertencente a uma história do escritor.
- */
 export async function updateStoryNews(
     newsId,
     {
@@ -168,12 +156,6 @@ export async function updateStoryNews(
 }
 
 
-/**
- * Exclui uma notícia.
- *
- * A RLS garante que o escritor não consiga apagar
- * uma notícia de outra história.
- */
 export async function deleteStoryNews(
     newsId
 ) {
@@ -195,10 +177,6 @@ export async function deleteStoryNews(
 }
 
 
-/**
- * Retorna as notícias publicadas de uma história para leitores.
- * A RLS do Supabase controla quais registros podem ser vistos.
- */
 export async function getPublishedStoryNews(storyId) {
     const numericStoryId =
         normalizeId(storyId);

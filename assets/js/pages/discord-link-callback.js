@@ -75,7 +75,6 @@ async function finishLinking() {
         return;
     }
 
-    // getSession waits for Supabase Auth's PKCE callback initialization.
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
         console.warn("[Discord callback] Supabase não concluiu a sessão OAuth:", sessionError);
@@ -89,14 +88,11 @@ async function finishLinking() {
         return;
     }
 
-    // Nunca confirmar o vínculo em uma conta diferente daquela que iniciou o fluxo.
     if (user.id !== pending.userId) {
         goToDashboard("error", "session_changed");
         return;
     }
 
-    // Em redes móveis pode haver um pequeno atraso entre o retorno OAuth e a consulta
-    // da lista de identidades. Reconsultamos por alguns segundos antes de declarar falha.
     let lastError = null;
     for (let attempt = 0; attempt < 5; attempt += 1) {
         try {

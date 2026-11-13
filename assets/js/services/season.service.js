@@ -125,10 +125,6 @@ export async function deleteSeason(seasonId) {
     return data;
 }
 
-/**
- * Lê o estado persistido pela sincronização no banco.
- * O estado da temporada é mantido por trigger no Supabase, não pelo cliente.
- */
 export async function getSeasonPublicationStatus(seasonId) {
     const { data, error } = await supabase
         .from("seasons")

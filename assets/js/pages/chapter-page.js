@@ -366,11 +366,6 @@ function bindReviewForm() {
     );
 }
 
-/**
- * Usa a primeira imagem do episódio como capa decorativa do cabeçalho somente
- * quando a primeira linha não vazia for um identificador [[image:...]].
- * Uma cópia decorativa vai para o cabeçalho; a imagem original permanece no texto.
- */
 function syncEpisodeHeaderCover() {
     const header = document.querySelector(".reader-header");
     const contentRoot = document.querySelector("#chapter-content-rendered");
@@ -391,7 +386,6 @@ function syncEpisodeHeaderCover() {
         return;
     }
 
-    // A imagem definida no conteúdo precisa ser o primeiro bloco renderizado.
     const firstBlock = contentRoot.firstElementChild;
     const imageFigure = firstBlock?.matches(".dynamic-scene-image")
         ? firstBlock
@@ -420,8 +414,6 @@ function syncEpisodeHeaderCover() {
         return;
     }
 
-    // Ao atualizar o filtro de palavrões, o conteúdo é renderizado de novo.
-    // Se a capa decorativa já corresponde à imagem original, mantemos ambas.
     if (existingBackdrop && existingBackdrop.src === safeImageUrl) {
         header.classList.add("has-episode-cover");
         return;
@@ -429,8 +421,6 @@ function syncEpisodeHeaderCover() {
 
     existingBackdrop?.remove();
 
-    // A cópia é apenas decorativa e fica atrás do cabeçalho.
-    // A imagem original (imageFigure) permanece no corpo do episódio.
     const backdropImage = originalImage.cloneNode(false);
     backdropImage.className = "reader-header-cover";
     backdropImage.src = safeImageUrl;
@@ -460,8 +450,6 @@ async function isCurrentUserStoryOwner() {
             writer && writer.writer_id === currentStory.writer_id
         );
     } catch (error) {
-        // Leitores anônimos ou contas sem vínculo de escritor
-        // continuam podendo avaliar; o banco segue como proteção definitiva.
         console.debug("[Own episode review check]", error);
         return false;
     }
@@ -837,8 +825,6 @@ function renderPublicPremierePage(story, premiere, initialServerClock) {
         premiereCountdownInterval = setInterval(updateCountdown, 1000);
     }
     if (!premiere.is_published && !serverClock) {
-        // Sem amostra do relógio do banco, consultamos apenas o estado público;
-        // nunca usamos o relógio local como condição para liberar o conteúdo.
         premierePollingStarted = true;
         premiereStatusInterval = setInterval(syncAndCheckPublication, 10000);
     }
@@ -848,8 +834,6 @@ function renderPublicPremierePage(story, premiere, initialServerClock) {
 
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
-            // Reconsulta o banco ao voltar para a aba, corrigindo qualquer
-            // tempo que o navegador tenha deixado de contar enquanto suspenso.
             syncAndCheckPublication();
         }
     });

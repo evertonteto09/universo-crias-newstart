@@ -14,8 +14,6 @@ import { deleteReaderAccount } from "../services/account-deletion.service.js?v=2
 
 setupTheme();
 
-// Minha Conta não é uma página de leitura: atualiza a atividade para remover
-// o botão contextual de história/episódio que possa ter ficado da navegação anterior.
 initCriasPresence({
     details: "No Universo dos Crias",
     state: "Minha conta",
@@ -69,8 +67,6 @@ function visible(element, isVisible) {
 }
 
 function configureReaderDiscordEntry() {
-    // Se a última conta conhecida neste navegador é uma conta de escritor ainda
-    // sem vínculo, o login Discord de leitor fica atrás de uma confirmação explícita.
     const lastEmail = getLastWriterLoginEmail();
     const remembered = getRememberedAccountState(lastEmail);
     const knownUnlinkedWriter = Boolean(
@@ -178,7 +174,6 @@ function discordDefaultAvatarUrl(discordUserId) {
     const id = String(discordUserId || "").trim();
     if (!/^\d{5,25}$/.test(id)) return "";
     try {
-        // Discord snowflake: índice do avatar padrão = (id >> 22) % 6.
         const index = Number((BigInt(id) >> 22n) % 6n);
         return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
     } catch {
@@ -336,8 +331,6 @@ async function renderIdentities({ preserveMessage = false } = {}) {
             return identities;
         }
 
-        // Lista identidades da conta atual. Uma identidade pertencente a outro user_id
-        // não é consultável nem removível por esta interface.
         for (const identity of identities) {
             identitiesList.append(buildIdentityCard(identity, identities));
         }
@@ -390,8 +383,6 @@ async function handleUnlinkIdentity(identity, button) {
         setMessage(identitiesMessage, identityErrorMessage(error), "error");
     } finally {
         identityMutationInProgress = false;
-        // Atualiza a dica local do login Discord somente quando a sessão pertence a um escritor.
-        // O cache local nunca concede permissões; o Supabase continua sendo a fonte de verdade.
         try {
             const user = await getCurrentUser();
             const writer = user ? await getMyWriterAccount() : null;
@@ -402,8 +393,6 @@ async function handleUnlinkIdentity(identity, button) {
         } catch (stateError) {
             console.warn("[Account] Não foi possível atualizar o estado local do login:", stateError);
         }
-        // A lista e o avatar são refeitos a partir do Supabase depois da operação,
-        // seja sucesso ou erro, para não manter um avatar de identidade já removida.
         const refreshedIdentities = await renderIdentities({ preserveMessage: true });
         try {
             const refreshedUser = await getCurrentUser();
@@ -431,8 +420,6 @@ async function updatePreference(key, value) {
         await saveUserPreferencePatch({ [key]: value });
         setMessage(prefsMessage, "Preferência salva na sua conta.", "success");
     } catch (error) {
-        // Mostra os campos úteis do erro PostgREST (por exemplo, violação de CHECK)
-        // sem imprimir tokens de sessão ou outros dados de autenticação.
         console.error("[Account] Falha ao salvar preferência:", {
             code: error?.code,
             message: error?.message,
@@ -449,7 +436,6 @@ async function renderAccount() {
     try {
         user = await getCurrentUser();
     } catch (error) {
-        // Sem sessão ativa: a tela de login é a experiência esperada.
         console.debug("[Account] Nenhuma sessão ativa:", error?.message || error);
     }
 
@@ -471,7 +457,6 @@ async function renderAccount() {
         isWriter = Boolean(await getMyWriterAccount());
         accountRoleWasVerified = true;
     } catch (error) {
-        // Falha na verificação nunca libera a opção destrutiva por padrão.
         console.warn("[Account] Não foi possível consultar a conta de escritor:", error);
     }
 
@@ -492,8 +477,6 @@ async function renderAccount() {
         ? identities.find((identity) => identity?.provider === "discord")
         : null;
     renderDiscordAvatar(user, identities);
-    // Se o Discord estiver vinculado, exibimos o nome correspondente ao avatar.
-    // Caso contrário, preservamos o nome já disponível na conta do Supabase.
     displayName.textContent = discordIdentity ? identityDisplayName(discordIdentity) : displayNameFor(user);
     if (isWriter && identities) {
         rememberWriterLoginState(user, { isWriter: true, identities });

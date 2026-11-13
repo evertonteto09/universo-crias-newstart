@@ -940,9 +940,6 @@ async function render() {
     bindDeleteStory();
     bindStoryCollaborators();
 
-    // O botão é criado dentro do render(), portanto
-    // o listener precisa ser registrado depois que o
-    // elemento existir no DOM.
     const newSeasonButton =
         document.querySelector(
             "#new-season-button"
@@ -1414,8 +1411,6 @@ function openNewsForm(existingNews = null) {
         },
     });
 
-    // Modal atual e os uploads temporários são tratados juntos para evitar
-    // deixar arquivos órfãos quando o escritor cancela a criação/edição.
     const modal = modalApi.dialog;
     if (!modal) return;
     const form = modal.querySelector("[data-modal-form]");
@@ -1674,8 +1669,6 @@ function bindStoryPublication() {
         );
 
         try {
-            // O estado da história é independente do estado das temporadas.
-            // As temporadas são sincronizadas no banco quando episódios mudam.
             const updated = await updateStoryStatus(story.id, nextStatus);
             story = { ...story, ...updated };
             seasons = await getWriterSeasons(story.id);
@@ -2663,8 +2656,6 @@ function bindDeleteStory() {
                     const coverPath = story.cover_path;
                     let coverBackup = null;
 
-                    // Remove a capa enquanto a história ainda existe, pois a
-                    // política do Storage confirma a propriedade pela história.
                     if (coverPath) {
                         coverBackup = await downloadStoryCover(coverPath);
                         await removeStoryCover(coverPath);
@@ -2673,8 +2664,6 @@ function bindDeleteStory() {
                     try {
                         await deleteStory(story.id);
                     } catch (deleteError) {
-                        // Se a exclusão do registro falhar, tenta restaurar a capa
-                        // no mesmo caminho para que a obra não fique quebrada.
                         if (coverPath && coverBackup) {
                             try {
                                 await restoreStoryCover(coverPath, coverBackup);
@@ -2815,8 +2804,6 @@ async function init() {
 
         await render();
 
-        // Inicializa/atualiza a presença somente depois de autenticar o escritor
-        // e carregar a obra. A capa continua opcional e passa pelo controle de privacidade.
         await updateStoryEditorPresence();
     } catch (error) {
         console.error(error);

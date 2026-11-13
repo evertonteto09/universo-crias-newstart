@@ -21,19 +21,13 @@ async function extractFunctionError(error) {
             if (typeof payload?.message === "string" && payload.message.trim()) return payload.message;
             if (typeof payload?.error === "string" && payload.error.trim()) return payload.error;
         }
-    } catch {
-        // O erro original permanece como fallback; não expomos dados técnicos à tela.
-    }
+    } catch {}
     if (error?.name === "FunctionsFetchError") {
         return "Não foi possível conectar ao serviço de exclusão. Confira sua conexão e tente novamente.";
     }
     return fallback;
 }
 
-/**
- * Exclui a conta de leitor por meio de uma Edge Function que valida a sessão e
- * rejeita contas associadas a writer_accounts no servidor.
- */
 export async function deleteReaderAccount() {
     const { data, error } = await supabase.functions.invoke("delete-reader-account", {
         method: "POST",
@@ -49,8 +43,6 @@ export async function deleteReaderAccount() {
             : "O servidor não confirmou a exclusão da conta.");
     }
 
-    // A conta já foi apagada no servidor. Limpe a sessão local mesmo se o Auth
-    // não conseguir revogar uma sessão que deixou de existir no backend.
     try {
         await supabase.auth.signOut({ scope: "local" });
     } catch {
@@ -62,8 +54,6 @@ export async function deleteReaderAccount() {
         try { localStorage.removeItem(key); } catch { /* ignore */ }
     }
 
-    // Preferências locais e a imagem de fundo temporária também são limpas neste
-    // navegador, para que o tema de uma conta removida não permaneça aplicado.
     try {
         await saveAnonymousCustomThemeSettings({ ...DEFAULT_CUSTOM_THEME }, { clearBackground: true });
     } catch (cleanupError) {

@@ -102,15 +102,11 @@ function normalizeStoragePath(value) {
 }
 
 export function normalizeCustomThemeSettings(value = {}) {
-    // Compatibilidade: quem ainda não salvou a cor do texto interativo mantém
-    // a cor geral como referência, sem perder as demais personalizações.
     const generalTextColor = normalizeHexColor(
         value.custom_theme_text_color,
         DEFAULT_CUSTOM_THEME.custom_theme_text_color,
     );
     const color2 = normalizeHexColor(value.custom_theme_color_2, DEFAULT_CUSTOM_THEME.custom_theme_color_2);
-    // Compatibilidade: temas antigos usavam a segunda cor do gradiente nos rótulos.
-    // Se um registro antigo ainda não tiver a nova preferência, preserve essa aparência.
     const labelColorFallback = Object.hasOwn(value, "custom_theme_color_2")
         ? color2
         : DEFAULT_CUSTOM_THEME.custom_theme_label_color;
@@ -167,26 +163,20 @@ export function getCustomThemeBackgroundTransform(settings, width = window.inner
     const rotatedQuarterTurn = rotation % 180 !== 0;
     const safeWidth = Math.max(1, Number(width) || 1);
     const safeHeight = Math.max(1, Number(height) || 1);
-    // Um quarto de volta troca a largura pela altura; compensamos para manter o quadro coberto.
     const rotationCoverScale = rotatedQuarterTurn
         ? Math.max(safeWidth / safeHeight, safeHeight / safeWidth)
         : 1;
     const offsetX = Math.max(-50, Math.min(50, Number(settings.custom_theme_background_offset_x) || 0));
     const offsetY = Math.max(-50, Math.min(50, Number(settings.custom_theme_background_offset_y) || 0));
-    // Ao deslocar a imagem, aumentamos somente o necessário para não revelar bordas vazias.
     const panCoverScale = Math.max(1 + (2 * Math.abs(offsetX) / 100), 1 + (2 * Math.abs(offsetY) / 100));
     const zoom = (settings.custom_theme_background_zoom / 100) * rotationCoverScale * panCoverScale;
     const flipX = settings.custom_theme_background_flip_x ? -1 : 1;
     const flipY = settings.custom_theme_background_flip_y ? -1 : 1;
-    // O translate vem primeiro na lista para deslocar a imagem em coordenadas do quadro,
-    // independente da rotação/espelhamento. Offsets negativos mantêm a direção do arraste existente.
     return `translate(${-offsetX}%, ${-offsetY}%) scaleX(${flipX}) scaleY(${flipY}) rotate(${rotation}deg) scale(${zoom})`;
 }
 
 function applyBackgroundCropVariables(root, settings) {
     const customPosition = settings.custom_theme_background_position === "custom";
-    // A posição é controlada por translate(), não por object-position: esta última não move
-    // conteúdo quando a proporção da imagem coincide com a do quadro.
     root.style.setProperty("--custom-theme-background-object-position", "50% 50%");
     root.style.setProperty("--custom-theme-background-transform", customPosition
         ? getCustomThemeBackgroundTransform(settings)
@@ -317,7 +307,6 @@ export async function saveAnonymousCustomThemeSettings(value, { backgroundFile =
         if (settings.custom_theme_background_type !== "image" || settings.custom_theme_background_source !== "upload") {
             throw new Error("Selecione Imagem e Enviar imagem do dispositivo antes de salvar o arquivo.");
         }
-        // Arquivos de visitantes ficam no IndexedDB; nunca são enviados ao Supabase Storage.
         await writeStoreValue(ASSET_STORE_NAME, BACKGROUND_ASSET_KEY, backgroundFile).catch((error) => {
             throw new Error(`Não foi possível guardar a imagem neste navegador. ${error?.message || "Verifique o espaço e as permissões do navegador."}`);
         });
@@ -332,7 +321,6 @@ export async function saveAnonymousCustomThemeSettings(value, { backgroundFile =
         cachedSettings = settings;
         return { settings: { ...settings }, storage: "indexeddb" };
     } catch (error) {
-        // O fallback local é suficiente para preferências pequenas, mas nunca para um Blob.
         if (backgroundFile) {
             throw new Error("O navegador não conseguiu salvar a imagem no IndexedDB. A imagem não foi enviada para nenhum servidor.");
         }
@@ -538,7 +526,6 @@ export async function resolveCustomThemeBackground(value = {}) {
         }
     }
 
-    // Caminho de visitante anônimo: o arquivo permanece local no IndexedDB.
     try {
         const file = await getAnonymousCustomThemeBackgroundFile();
         if (!file) {

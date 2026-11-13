@@ -1,10 +1,5 @@
 import { supabase } from "../core/supabase.js";
 
-/**
- * Lists every collaborator for a story. The database RLS decides whether the
- * active account is the principal author, an assigned coauthor, or a public
- * reader of a published story.
- */
 export async function getStoryCollaborators(storyId) {
     const numericStoryId = Number(storyId);
     if (!Number.isSafeInteger(numericStoryId) || numericStoryId <= 0) {
@@ -31,7 +26,6 @@ export async function getStoryCollaborators(storyId) {
 }
 
 
-/** Checks authorization through the server-side helper, not just the public credits list. */
 export async function isCurrentUserStoryCollaborator(storyId) {
     const numericStoryId = Number(storyId);
     if (!Number.isSafeInteger(numericStoryId) || numericStoryId <= 0) {
@@ -46,7 +40,6 @@ export async function isCurrentUserStoryCollaborator(storyId) {
     return data === true;
 }
 
-/** Adds a writer by exact username. Authorization is enforced in the RPC. */
 export async function addStoryCollaborator(storyId, username) {
     const numericStoryId = Number(storyId);
     const cleanUsername = String(username ?? "").trim().replace(/^@+/, "");
@@ -70,7 +63,6 @@ export async function addStoryCollaborator(storyId, username) {
     return Array.isArray(data) ? data[0] ?? null : data;
 }
 
-/** Removes a collaborator. Only the principal author can pass the RPC check. */
 export async function removeStoryCollaborator(storyId, writerId) {
     const numericStoryId = Number(storyId);
     const numericWriterId = Number(writerId);

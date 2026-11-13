@@ -11,9 +11,6 @@ if (!isConfigured) {
     console.warn("[Supabase] Configure assets/js/config.js antes de usar o site.");
 }
 
-// Mantém a chave usada pela versão atual do site, mas deixa a sessão persistir
-// entre visitas. Assim, quem entrar com Discord continua conectado até sair
-// manualmente ou a sessão expirar, que é o comportamento esperado para contas.
 const AUTH_STORAGE_KEY = "historias-crias-auth-session";
 
 const LEGACY_AUTH_STORAGE_KEY = SUPABASE_URL
@@ -26,7 +23,6 @@ if (
     LEGACY_AUTH_STORAGE_KEY &&
     LEGACY_AUTH_STORAGE_KEY !== AUTH_STORAGE_KEY
 ) {
-    // Remove apenas a sessão antiga de uma versão anterior que usava outra chave.
     window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
 }
 

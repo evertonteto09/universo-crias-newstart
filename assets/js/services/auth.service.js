@@ -36,8 +36,6 @@ export async function signOut() {
     }
 }
 
-
-/** Entrar ou criar uma conta de usuário utilizando OAuth do Discord. */
 export async function signInWithDiscord(redirectTo = window.location.href) {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: "discord",
@@ -50,10 +48,6 @@ export async function signInWithDiscord(redirectTo = window.location.href) {
     if (error) throw error;
 }
 
-/**
- * Vincula o Discord à sessão atualmente autenticada. Para escritores existentes,
- * isso mantém o mesmo auth.users.id usado em writer_accounts.
- */
 export async function linkDiscordIdentity(redirectTo = window.location.href) {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
@@ -79,11 +73,6 @@ export async function getCurrentUserIdentities() {
     return data?.identities ?? [];
 }
 
-/**
- * Desvincula uma identidade Discord que pertence ao usuário autenticado atual.
- * Recebe apenas o ID da identidade (não aceita um objeto arbitrário do navegador),
- * relê a lista no servidor e verifica que a identidade é do usuário atual.
- */
 export async function unlinkDiscordIdentity(identityId) {
     if (typeof identityId !== "string" || !identityId.trim()) {
         throw new Error("Identidade inválida. Atualize a página e tente novamente.");

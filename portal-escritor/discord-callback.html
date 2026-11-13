@@ -22,8 +22,7 @@
         </section>
     </main>
 
-    <!-- Captura somente erros/status antes que o cliente OAuth processe ou limpe a URL.
-         Nunca armazenamos o código OAuth nem tokens. -->
+    <!-- Captura somente erros/status antes que o cliente OAuth processe ou limpe a URL. -->
     <script>
     (() => {
         try {
@@ -39,9 +38,7 @@
             if (snapshot.hasCode || snapshot.error || snapshot.errorCode || snapshot.errorDescription) {
                 sessionStorage.setItem("hdc-discord-link-oauth-result", JSON.stringify(snapshot));
             }
-        } catch (error) {
-            // O processamento principal continua; a mensagem de retorno será genérica.
-        }
+        } catch (error) {}
     })();
     </script>
     <script type="module" src="../assets/js/pages/discord-link-callback.js?v=20261107-tab-icons-1"></script>

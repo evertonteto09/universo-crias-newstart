@@ -1,10 +1,5 @@
 import { escapeHtml } from "./utils.js";
 
-/**
- * Emojis estáticos do Universo dos Crias.
- * Os arquivos ficam em assets/emojis; o texto salvo usa somente o token
- * [[emoji:ID]]. No editor, o token é representado por uma imagem atômica.
- */
 export const EMOJI_CATALOG = Object.freeze([
     { id: "1113196881007345726", name: "Fantasminha suquinho", file: "1113196881007345726.png" },
     { id: "1117810861097091134", name: "Zero observando", file: "1117810861097091134.png" },
@@ -47,14 +42,12 @@ export function getEmojiMarkup(id) {
     return `<img class="site-emoji" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(emoji.name)}" title="${escapeHtml(emoji.name)}" loading="lazy" decoding="async">`;
 }
 
-/** Recebe texto já escapado e substitui somente os tokens conhecidos. */
 export function renderEmojiTokens(escapedText) {
     return String(escapedText ?? "").replace(EMOJI_TOKEN_REGEX, (token, id) => {
         return getEmojiMarkup(id) ?? token;
     });
 }
 
-/** Escapa texto enviado por leitores/escritores e renderiza os emojis permitidos. */
 export function renderEmojiText(value) {
     return renderEmojiTokens(escapeHtml(value));
 }
@@ -222,7 +215,6 @@ function findDomPointForOffset(editor, requestedOffset) {
             if (node.nodeType === Node.ELEMENT_NODE) {
                 const nestedPoint = walk(node);
                 if (nestedPoint) return nestedPoint;
-                // DIV/P adicionam uma quebra lógica entre blocos no serializer.
                 if (["DIV", "P"].includes(node.tagName) && index < children.length - 1) {
                     if (remaining === 0) return { node: parent, offset: index + 1 };
                     remaining = Math.max(0, remaining - 1);
@@ -670,12 +662,6 @@ function ensureGlobalPickerListeners() {
     });
 }
 
-/**
- * Substitui visualmente o textarea por um editor contenteditable que mostra
- * cada emoji como uma imagem indivisível. O textarea original permanece como
- * fonte compatível para o restante do site: seu .value continua serializado
- * como [[emoji:ID]], sem expor o identificador na interface.
- */
 export function mountEmojiPicker({ textarea, host }) {
     if (!textarea || !host || host.dataset.emojiPickerReady === "true") return;
 
@@ -774,7 +760,5 @@ export function mountEmojiPicker({ textarea, host }) {
         target.focus({ preventScroll: true });
     });
 
-    // Mantém o editor conectado ao controle visual e informa ao leitor de tela
-    // que as imagens embutidas representam emojis selecionáveis/removíveis.
     editor.dataset.emojiRichEditor = "true";
 }

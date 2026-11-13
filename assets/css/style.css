@@ -85,7 +85,6 @@
     --shadow: 0 18px 50px rgba(53, 35, 70, .10);
 }
 
-/* Tema escuro com detalhes em azul-ciano. */
 :root[data-theme="ciano"] {
     --bg: #05090d;
     --surface: #0b1116;
@@ -100,7 +99,6 @@
     --shadow: 0 18px 50px rgba(0, 0, 0, .48);
 }
 
-/* Tema personalizado: gradiente configurado pelo usuário, mantendo cartões legíveis. */
 :root[data-theme="personalizado"] {
     --bg: #070b10;
     --surface: #0c1218;
@@ -137,7 +135,6 @@
     background-attachment: fixed;
 }
 
-/* A imagem fica numa camada separada para que escurecimento e desfoque não afetem os textos nem os cards. */
 #custom-theme-background-image-layer {
     display: none;
     position: fixed;
@@ -168,7 +165,6 @@
     filter: brightness(var(--custom-theme-background-brightness, 1)) blur(var(--custom-theme-background-blur, 0px));
 }
 
-/* No tema personalizado, o usuário controla a cor dos títulos e dos textos gerais. */
 :root[data-theme="personalizado"] h1,
 :root[data-theme="personalizado"] h2,
 :root[data-theme="personalizado"] h3,
@@ -187,16 +183,13 @@
     color: var(--custom-theme-interactive-text-color, #F4FBFF) !important;
 }
 
-/* Mantém o editor legível enquanto a pessoa experimenta cores muito claras ou escuras. */
 :root[data-theme="personalizado"] .custom-theme-dialog {
     --text: #F4FBFF;
     --muted: #BDCBD4;
     --custom-theme-title-color: #F4FBFF;
     --custom-theme-text-color: #F4FBFF;
-    /* A cor interativa continua herdada da preferência escolhida pelo usuário. */
 }
 
-/* Editor de gradiente personalizado */
 .custom-theme-dialog {
     width: min(680px, calc(100vw - 24px));
     max-width: 680px;
@@ -574,7 +567,6 @@
 .custom-theme-primary-actions { justify-content: flex-end; margin-left: auto; }
 .custom-theme-dialog button:disabled { opacity: .55; cursor: not-allowed; }
 
-/* Usa a cor de destaque do tema em controles nativos compatíveis. */
 input[type="checkbox"],
 input[type="radio"],
 input[type="range"] {
@@ -716,7 +708,6 @@ a { color: inherit; }
     margin-bottom: 60px;
 }
 
-/* Página inicial: texto à esquerda e emblema do projeto à direita. */
 .hero.hero-with-logo {
     width: 100%;
     max-width: 1180px;
@@ -1040,7 +1031,6 @@ a { color: inherit; }
 
 .reader-header { margin-bottom: 40px; }
 
-/* Cabeçalho com capa: ativado apenas quando o episódio começa com uma imagem. */
 .reader-header.has-episode-cover {
     position: relative;
     isolation: isolate;
@@ -1129,8 +1119,6 @@ label {
     font-weight: 600;
 }
 
-/* Os grupos alternados de imagem precisam respeitar o atributo hidden,
-   mesmo quando seus elementos são labels com display:grid. */
 .cover-editor > label[hidden],
 .story-news-image-tools-grid > label[hidden],
 #image-upload-panel[hidden],
@@ -1895,7 +1883,6 @@ textarea { resize: vertical; }
     gap: 8px;
 }
 
-/* Opções de visibilidade da estreia: rádio alinhado à esquerda do texto. */
 .modal-form .scheduled-publication-visibility {
     display: grid;
     gap: 10px;
@@ -2119,7 +2106,7 @@ textarea { resize: vertical; }
 
 /* ==========================
    LEITOR — AVALIAÇÕES E NAVEGAÇÃO
-========================== */
+   ========================== */
 
 .review-text {
     white-space: pre-wrap;
@@ -2314,7 +2301,7 @@ textarea { resize: vertical; }
 
 /* ==========================
    EXCLUSÕES / MODERAÇÃO
-========================== */
+   ========================== */
 
 .danger-button {
     border: 1px solid rgba(255, 100, 100, .30);
@@ -2595,7 +2582,7 @@ textarea { resize: vertical; }
 
 /* ==========================
    IMAGENS DENTRO DOS EPISÓDIOS
-========================== */
+   ========================== */
 
 .chapter-media-tools {
     display: flex;
@@ -2620,8 +2607,6 @@ textarea { resize: vertical; }
     box-shadow: var(--shadow);
 }
 
-
-/* Imagens marcadas como spoiler: blur até o leitor revelar com clique/teclado. */
 .dynamic-scene-image-spoiler {
     position: relative;
 }
@@ -2707,7 +2692,6 @@ textarea { resize: vertical; }
     line-height: 1.55;
 }
 
-/* Mais respiro entre o seletor/arquivo e as instruções do upload/link. */
 .modal-image-source-help {
     margin: 7px 0 8px;
 }
@@ -2976,7 +2960,7 @@ textarea { resize: vertical; }
 
 /* ==========================
    NOTÍCIAS DAS HISTÓRIAS
-========================== */
+   ======================== */
 
 .story-tabs {
     display: flex;
@@ -3286,8 +3270,6 @@ textarea { resize: vertical; }
     }
 }
 
-
-/* Conta do usuário / autenticação Discord */
 .account-page { max-width: 980px; }
 .account-card {
     margin: 28px auto;
@@ -3351,7 +3333,6 @@ textarea { resize: vertical; }
     .discord-login-button { width: 100%; }
 }
 
-/* Mantém o tooltip do vínculo do Discord acessível mesmo quando o botão está desativado. */
 .discord-link-control {
     display: inline-flex;
     align-items: center;
@@ -3361,8 +3342,6 @@ textarea { resize: vertical; }
     pointer-events: none;
 }
 
-
-/* Feedback explícito do fluxo OAuth de vinculação do Discord. */
 .discord-link-feedback:not([hidden]) {
     margin: 0 0 22px;
     padding: 14px 16px;
@@ -3381,7 +3360,6 @@ textarea { resize: vertical; }
     border-color: rgba(255, 126, 126, .5);
 }
 
-/* Gerenciamento de identidades de autenticação na página Minha conta. */
 .account-identities-section {
     margin-top: 34px;
     padding-top: 24px;
@@ -3447,8 +3425,6 @@ textarea { resize: vertical; }
     }
 }
 
-
-/* Avisos de prevenção de contas Discord órfãs durante o primeiro vínculo. */
 .account-linking-warning {
     margin: 0.85rem 0 1rem;
     padding: 0.9rem 1rem;
@@ -3463,11 +3439,9 @@ textarea { resize: vertical; }
     color: var(--text, inherit);
 }
 
-/* Botões OAuth ficam realmente ocultos até que a lógica da página decida exibi-los. */
 #discord-login-button[hidden] { display: none !important; }
 #reader-discord-guard[hidden] { display: none !important; }
 
-/* Mantém as ações do aviso de leitor empilhadas, sem sobreposição em telas estreitas. */
 #reader-discord-guard > a.secondary-button,
 #reader-discord-guard > button.secondary-button {
     display: flex;
@@ -3498,8 +3472,6 @@ textarea { resize: vertical; }
     .custom-theme-primary-actions button { flex: 1 1 auto; }
 }
 
-
-/* Cores de fundo configuráveis pelo usuário no tema personalizado. */
 :root[data-theme="personalizado"] .story-card,
 :root[data-theme="personalizado"] .writer-story-card,
 :root[data-theme="personalizado"] .review-card,
@@ -3522,8 +3494,6 @@ textarea { resize: vertical; }
     background-color: var(--custom-theme-card-bg-color, #0C1218) !important;
 }
 
-/* Janelas, menus suspensos, abas e painéis interativos. O editor de tema permanece
-   com o fundo fixo e texto claro para continuar utilizável durante a edição. */
 :root[data-theme="personalizado"] .writer-filter-menu,
 :root[data-theme="personalizado"] .writer-dialog,
 :root[data-theme="personalizado"] .site-modal-card,
@@ -3542,7 +3512,6 @@ textarea { resize: vertical; }
     background: var(--custom-theme-button-bg-color, #16002B) !important;
 }
 
-/* Botões comuns acompanham a cor escolhida; botões destrutivos mantêm sua cor de alerta. */
 :root[data-theme="personalizado"] .primary-button,
 :root[data-theme="personalizado"] .secondary-button,
 :root[data-theme="personalizado"] .theme-button,
@@ -3560,9 +3529,6 @@ textarea { resize: vertical; }
     background: var(--surface);
 }
 
-
-
-/* Ajustes finais do tema personalizado: painéis, campos de formulário e navegação. */
 :root[data-theme="personalizado"] .custom-theme-dialog {
     background: var(--custom-theme-menu-bg-color, #111A22) !important;
 }
@@ -3608,8 +3574,6 @@ textarea { resize: vertical; }
     cursor: pointer;
 }
 
-
-/* Tema personalizado: texto independente para controles interativos. */
 :root[data-theme="personalizado"] button:not(.danger-button):not(.danger-icon-button):not(.delete-review-button),
 :root[data-theme="personalizado"] input[type="button"],
 :root[data-theme="personalizado"] input[type="submit"],
@@ -3624,8 +3588,6 @@ textarea { resize: vertical; }
     opacity: 1;
 }
 
-/* Os campos do editor usam a cor de texto interativo escolhida pelo usuário.
-   O fundo segue a preferência dos campos de escrita, mantendo contraste configurável. */
 :root[data-theme="personalizado"] .custom-theme-dialog .primary-button,
 :root[data-theme="personalizado"] .custom-theme-dialog .secondary-button,
 :root[data-theme="personalizado"] .custom-theme-dialog .custom-theme-close {
@@ -3639,14 +3601,10 @@ textarea { resize: vertical; }
     caret-color: var(--custom-theme-interactive-text-color, #F4FBFF);
 }
 
-/* A lupa da pesquisa acompanha a cor de texto interativo no tema personalizado. */
 :root[data-theme="personalizado"] .story-search-icon {
     color: var(--custom-theme-interactive-text-color, #F4FBFF) !important;
 }
 
-
-/* No tema personalizado, links clicáveis usam a cor do texto interativo.
-   Cards que são links inteiros mantêm as cores próprias de título, descrição e rótulos. */
 :root[data-theme="personalizado"] a:not(.story-card):not(.chapter-row):not(.chapter-nav-button):not(.primary-button):not(.secondary-button):not(.theme-button):not(.custom-theme-preview-button) {
     color: var(--custom-theme-interactive-text-color, #F4FBFF) !important;
 }
@@ -3659,20 +3617,16 @@ textarea { resize: vertical; }
     text-underline-offset: 0.2em;
 }
 
-/* Os créditos da obra (autor/coautores) usam a cor independente dos rótulos. */
 :root[data-theme="personalizado"] .story-author,
 :root[data-theme="personalizado"] .story-author-credits,
 :root[data-theme="personalizado"] .story-author-credits strong {
     color: var(--custom-theme-label-color, var(--custom-theme-color-2, #16002B)) !important;
 }
 
-/* Rótulos de seção como BIBLIOTECA, PUBLICADAS e OBRA têm cor independente do gradiente. */
 :root[data-theme="personalizado"] .eyebrow:not(.danger-eyebrow) {
     color: var(--custom-theme-label-color, var(--custom-theme-color-2, #16002B)) !important;
 }
 
-/* Tema personalizado: cor global dos realces ao passar o mouse. O usuário controla
-   este tom separadamente do gradiente, dos fundos e das cores dos textos. */
 :root[data-theme="personalizado"] .main-nav a:hover,
 :root[data-theme="personalizado"] .text-link:hover,
 :root[data-theme="personalizado"] .chapter-nav-center:hover {
@@ -3750,7 +3704,6 @@ textarea { resize: vertical; }
     outline-offset: 2px;
 }
 
-/* As avaliações mantêm o dourado semântico; ações destrutivas continuam vermelhas. */
 :root[data-theme="personalizado"] .star-picker label:hover,
 :root[data-theme="personalizado"] .star-picker label:hover ~ label,
 :root[data-theme="personalizado"] .danger-button:hover,
@@ -4043,8 +3996,6 @@ textarea { resize: vertical; }
     .story-genre-option { padding: 8px; }
 }
 
-
-/* Conta de leitor: zona de exclusão permanente. */
 .account-danger-zone {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -4063,8 +4014,6 @@ textarea { resize: vertical; }
 .account-danger-zone .danger-button { flex: 0 0 auto; }
 .account-danger-zone .form-message { grid-column: 1 / -1; margin: 0; overflow-wrap: anywhere; }
 
-
-/* Gêneros nas histórias da página inicial. A linha só é renderizada quando há gêneros. */
 .story-card .story-card-genres {
     margin-top: -4px;
     font-size: .92rem;
@@ -4076,7 +4025,6 @@ textarea { resize: vertical; }
     font-weight: 750;
 }
 
-/* Pré-estreia pública: cartão clicável na história e relógio ampliado no episódio. */
 .chapter-row.chapter-premiere-card {
     cursor: pointer;
     border: 1px solid var(--border);
@@ -4104,7 +4052,6 @@ textarea { resize: vertical; }
     min-width: 0;
 }
 
-/* O selo da pré-estreia acompanha o título, sem ocupar uma segunda linha à toa. */
 .chapter-premiere-copy {
     flex-direction: row;
     flex-wrap: wrap;
@@ -4131,7 +4078,6 @@ textarea { resize: vertical; }
 }
 
 .chapter-premiere-countdown {
-    /* Nos temas padrão, acompanha o destaque principal do tema ativo. */
     color: var(--accent);
     font-size: .92rem;
     font-weight: 750;
@@ -4196,7 +4142,6 @@ textarea { resize: vertical; }
 }
 
 .public-premiere-clock strong {
-    /* Nos temas padrão, acompanha o destaque principal do tema ativo. */
     color: var(--accent);
     font-size: clamp(2rem, 8vw, 4.8rem);
     line-height: 1.15;
@@ -4221,8 +4166,6 @@ textarea { resize: vertical; }
     display: none !important;
 }
 
-/* No tema personalizado, o contador acompanha a cor configurada para os rótulos.
-   Nos demais temas, permanece usando --accent, definido pelo tema selecionado. */
 :root[data-theme="personalizado"] .chapter-premiere-countdown,
 :root[data-theme="personalizado"] .public-premiere-clock strong {
     color: var(--custom-theme-label-color, var(--custom-theme-color-2, #16002B));
@@ -4245,10 +4188,6 @@ textarea { resize: vertical; }
     }
 }
 
-
-
-/* Tema personalizado: o parágrafo salvo mantém a cor própria do marcador,
-   inclusive quando o mouse está sobre ele. */
 :root[data-theme="personalizado"] .reader-content [data-reading-text].reading-bookmarkable.reading-bookmark-active,
 :root[data-theme="personalizado"] .reader-content [data-reading-text].reading-bookmarkable.reading-bookmark-active:hover {
     background: color-mix(in srgb, var(--custom-theme-bookmark-color, #00E5FF) 18%, var(--custom-theme-card-bg-color, #0C1218)) !important;
@@ -4257,7 +4196,7 @@ textarea { resize: vertical; }
 
 /* ==========================
    EMOJIS PERSONALIZADOS
-========================== */
+   ========================== */
 
 .site-emoji {
     display: inline-block;
@@ -4365,9 +4304,6 @@ textarea { resize: vertical; }
     }
 }
 
-
-/* Editor rico dos emojis: as imagens são átomos visuais, enquanto o valor
-   serializado continua no textarea oculto para preservar o formato salvo. */
 .emoji-source-textarea {
     display: none !important;
 }
@@ -4437,8 +4373,6 @@ textarea { resize: vertical; }
     outline-offset: 1px;
 }
 
-
-/* Ajuda compacta para os recursos de texto dinâmico em avaliações e notícias. */
 .dynamic-format-help {
     display: block;
     margin: 8px 0 12px;
@@ -4455,8 +4389,6 @@ textarea { resize: vertical; }
     font-size: .92em;
 }
 
-
-/* Ícone de aba personalizado por história. */
 .story-favicon-editor {
     display: grid;
     gap: 14px;
@@ -4514,7 +4446,6 @@ textarea { resize: vertical; }
     .custom-theme-favicon-preview-row { justify-self: start; }
 }
 
-/* Gerenciamento funcional de universos de histórias. */
 .universe-create-form {
     display: grid;
     gap: 14px;
@@ -4631,7 +4562,6 @@ textarea { resize: vertical; }
     .universe-search-result { grid-template-columns: 1fr; }
 }
 
-/* Biblioteca pública: alternância entre histórias e universos. */
 .library-controls {
     display: flex;
     align-items: center;
@@ -4698,7 +4628,6 @@ textarea { resize: vertical; }
 .universe-card-meta { display: grid; gap: 5px; color: var(--muted); font-size: .86rem; }
 .universe-card-link { margin-top: 5px; color: var(--accent); }
 
-/* Página pública de um universo. */
 .universe-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 0 0 26px; color: var(--muted); }
 .universe-breadcrumb a { color: var(--accent); text-decoration: none; }
 .universe-public-hero {
@@ -4748,7 +4677,6 @@ textarea { resize: vertical; }
 .universe-story-open { margin-top: 4px; color: var(--accent); }
 .universe-not-found { max-width: 700px; margin: 40px auto; }
 
-/* Descoberta do universo dentro da própria página de uma história. */
 .story-universes-related { margin: 38px 0 44px; }
 .story-universes-related-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .story-universe-link-card { display: grid; grid-template-columns: 104px minmax(0, 1fr); overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); text-decoration: none; box-shadow: var(--shadow); transition: border-color .2s ease, transform .2s ease; }

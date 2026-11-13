@@ -73,9 +73,6 @@ async function updateUniverseEditorPresence(universe) {
         const hasPublicStory = (universe?.story_universe_stories ?? []).some((entry) =>
             entry?.status === "approved" && entry?.stories?.status === "published"
         );
-        // Para universos ainda privados, tenta usar a URL assinada já obtida
-        // pelo portal. O helper só a aceita se respeitar o limite de 300 caracteres
-        // do Discord; caso contrário, a atividade usa a logo do site.
         const imageSource = universe?.cover_path && !hasPublicStory && universe?.cover_display_url
             ? { id: universe.id, cover_url: universe.cover_display_url }
             : universe;
@@ -84,8 +81,6 @@ async function updateUniverseEditorPresence(universe) {
         console.warn("[Crias Presence] Não foi possível preparar a capa do universo em edição.", error);
     }
 
-    // Uma atualização mais recente (ou o fechamento do gerenciador) invalida
-    // qualquer consulta de imagem que ainda esteja em andamento.
     if (sequence !== universePresenceUpdateSequence) return;
 
     criasPresence.update({
@@ -566,7 +561,6 @@ async function handleDiscordLinkResult() {
     const result = params.get("discord-link-result");
     if (!result) return;
 
-    // Atualiza o botão somente depois que a página de retorno terminou de validar a identidade.
     const linked = await refreshDiscordLinkStatus();
 
     if (result === "success" && linked) {
@@ -581,7 +575,6 @@ async function handleDiscordLinkResult() {
         );
     }
 
-    // Remove os indicadores da URL sem mexer na sessão salva pelo Supabase.
     params.delete("discord-link-result");
     params.delete("reason");
     const cleanUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
@@ -590,7 +583,6 @@ async function handleDiscordLinkResult() {
 
 if (linkDiscordButton) {
     linkDiscordButton.addEventListener("click", async () => {
-        // Uma conta já vinculada usa o botão apenas como indicador de estado.
         if (linkDiscordButton.dataset.discordLinked === "true") return;
 
         linkDiscordButton.disabled = true;
@@ -605,8 +597,6 @@ if (linkDiscordButton) {
                 throw new Error("Sua sessão expirou. Entre novamente antes de vincular o Discord.");
             }
 
-            // Não é segredo: guarda apenas a identidade que iniciou o vínculo e o horário.
-            // O callback compara o usuário retornado para impedir confirmação na conta errada.
             localStorage.setItem(
                 DISCORD_LINK_PENDING_KEY,
                 JSON.stringify({ userId: user.id, startedAt: Date.now() }),
@@ -719,8 +709,6 @@ async function loadStories() {
             });
         });
 
-        // Carrega uma história inicial (própria ou em coautoria), mas o usuário
-        // também pode trocar explicitamente pelo botão de cada card.
         await loadReviews(stories[0].id);
     } catch (error) {
         console.error(error);
@@ -765,8 +753,6 @@ form.addEventListener(
                     coverPath: null,
                 });
 
-            // A capa e demais detalhes serão ajustados
-            // já no editor da nova obra.
             dialog.close();
 
             location.href =
@@ -787,7 +773,6 @@ form.addEventListener(
 async function validatePendingDiscordLogin() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("discord-login") !== "1") {
-        // Remove tentativas expiradas que tenham ficado no navegador.
         clearPendingDiscordLoginIfExpired();
         return true;
     }
@@ -796,8 +781,6 @@ async function validatePendingDiscordLogin() {
     clearPendingDiscordLogin();
     const user = await getCurrentUser();
 
-    // O login por Discord só deve abrir o portal se retornar exatamente para a
-    // conta de escritor que foi verificada antes de iniciar o OAuth.
     if (!pending || !user || user.id !== pending.authUserId) {
         if (pending) invalidateRememberedDiscordLink(pending.email, pending.authUserId);
         try { await signOut(); } catch (error) {
@@ -814,7 +797,6 @@ async function validatePendingDiscordLogin() {
 }
 
 async function init() {
-    // Valida a identidade retornada pelo OAuth antes de carregar dados do portal.
     if (!(await validatePendingDiscordLogin())) return;
 
     const writer = await getMyWriterAccount();

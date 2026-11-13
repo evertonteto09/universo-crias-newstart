@@ -275,7 +275,6 @@ async function renderStoryReviewForm(
             );
         }
     } catch (error) {
-        // Leitor anônimo não precisa de conta.
         console.debug(
             "[Own story check]",
             error,
@@ -632,7 +631,6 @@ async function renderReadingBookmarkResume(story) {
         }
     });
 
-    // Mantém os dois botões no mesmo grupo para garantir um espaço visual claro.
     if (savedChapter) {
         container.querySelector(".reading-bookmark-resume-actions")?.append(removeButton);
     } else {
@@ -718,7 +716,6 @@ async function load() {
             scheduledChapterPreviews = premiereResult.items;
             publicPremiereServerClock = premiereResult.serverClock;
         } catch (previewError) {
-            // A falha do recurso opcional não deve impedir a leitura da história.
             console.warn("Não foi possível carregar as contagens regressivas públicas.", previewError);
         }
 

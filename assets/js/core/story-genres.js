@@ -1,7 +1,3 @@
-/**
- * Catálogo de gêneros disponível para as histórias do Universo dos Crias.
- * Os valores são persistidos como text[] em public.stories.genres.
- */
 export const STORY_GENRES = Object.freeze([
     "Ação",
     "Aventura",
@@ -44,7 +40,6 @@ const CANONICAL_GENRES = new Map(
     STORY_GENRES.map((genre) => [normalizeGenreKey(genre), genre]),
 );
 
-/** Retorna apenas gêneros reconhecidos, preservando a ordem do catálogo. */
 export function normalizeStoryGenres(value) {
     const incoming = Array.isArray(value)
         ? value
@@ -59,7 +54,6 @@ export function normalizeStoryGenres(value) {
     return STORY_GENRES.filter((genre) => selected.has(genre));
 }
 
-/** HTML seguro porque todas as opções vêm do catálogo estático acima. */
 export function renderStoryGenreChoices(value = []) {
     const selected = new Set(normalizeStoryGenres(value));
     return `

@@ -837,14 +837,13 @@ function ensureEditorDialog() {
             height: Math.max(1, rect.height),
         };
         cropViewport.classList.add("is-dragging");
-        try { cropViewport.setPointerCapture(event.pointerId); } catch { /* alguns navegadores capturam o ponteiro implicitamente */ }
+        try { cropViewport.setPointerCapture(event.pointerId); } catch {}
         event.preventDefault();
     });
     cropViewport.addEventListener("pointermove", (event) => {
         if (!cropDrag || cropDrag.pointerId !== event.pointerId) return;
         const dx = event.clientX - cropDrag.startX;
         const dy = event.clientY - cropDrag.startY;
-        // Os deslocamentos são relativos ao quadro e limitados para evitar perder a imagem.
         cropOffsetX.value = String(Math.max(-50, Math.min(50, Math.round(cropDrag.startOffsetX - (dx / cropDrag.width) * 100))));
         cropOffsetY.value = String(Math.max(-50, Math.min(50, Math.round(cropDrag.startOffsetY - (dy / cropDrag.height) * 100))));
         event.preventDefault();
@@ -964,7 +963,6 @@ function ensureEditorDialog() {
     });
 
     editorDialog.querySelector("#custom-theme-use-preset").addEventListener("click", async () => {
-        // Volta a um tema conhecido; o botão global permite percorrer os demais temas prontos.
         try {
             const saved = await saveUserPreferencePatch({ theme: "neblina" });
             if (!saved) {
@@ -1022,7 +1020,6 @@ export async function openCustomThemeEditor() {
     } catch (error) {
         console.warn("Não foi possível atualizar as preferências antes de abrir o editor:", error);
         if (!syncedThemeIsCustom(baselineTheme)) {
-            // Use o cache local conhecido; salvar ainda exigirá sincronização se a conta estiver autenticada.
             settings = getCachedCustomThemeSettings();
         }
     }
@@ -1047,7 +1044,7 @@ function syncedThemeIsCustom(theme) {
 
 export function setupTheme() {
     let stored = "neblina";
-    try { stored = localStorage.getItem(STORAGE_KEY) || "neblina"; } catch { /* use default */ }
+    try { stored = localStorage.getItem(STORAGE_KEY) || "neblina"; } catch {}
     const saved = THEMES.includes(stored) ? stored : "neblina";
     document.documentElement.dataset.theme = saved;
     applyCustomThemeSettings(getCachedCustomThemeSettings());
@@ -1103,7 +1100,6 @@ export function setupTheme() {
         refreshThemeLabel();
     });
 
-    // Visitantes recuperam o gradiente do IndexedDB; usuários autenticados recebem o tema do Supabase.
     syncUserPreferences().then(async (synced) => {
         if (synced?.preferences) return;
         const anonymous = await readAnonymousCustomThemeSettings();

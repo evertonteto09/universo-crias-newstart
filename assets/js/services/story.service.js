@@ -258,7 +258,6 @@ export async function updateStory(
                 : null,
     };
 
-    // Permite que chamadas futuras que não conheçam gêneros não apaguem o campo.
     if (genres !== undefined) {
         payload.genres = normalizeStoryGenres(genres);
     }

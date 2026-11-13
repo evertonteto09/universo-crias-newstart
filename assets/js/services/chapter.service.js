@@ -6,8 +6,6 @@ async function readSeasonStatusAfterChapterWrite(seasonId) {
     try {
         return await getSeasonPublicationStatus(seasonId);
     } catch (error) {
-        // O trigger do banco já sincronizou o estado na mesma transação.
-        // Falha nesta leitura auxiliar não deve transformar a gravação em erro.
         console.warn(
             "Não foi possível recarregar o estado da temporada após salvar o episódio:",
             error,
@@ -191,13 +189,10 @@ export async function updateChapter(
         content_format: "plain_text",
     };
 
-    // Omite o status quando a operação é apenas salvar conteúdo. Isso evita
-    // que um autosave com uma aba aberta reverta a publicação feita pelo Cron.
     if (status === "published" || status === "draft") {
         payload.status = status;
     }
 
-    // Publicação manual imediata substitui qualquer agendamento anterior.
     if (status === "published") {
         payload.scheduled_publish_at = null;
         payload.scheduled_public_preview = false;
@@ -221,11 +216,6 @@ export async function updateChapter(
     return { ...data, seasonStatus };
 }
 
-/**
- * Agenda a estreia de um episódio já escrito. O update exige que o capítulo
- * continue em rascunho no banco, evitando alterar acidentalmente um episódio
- * que o Cron já publicou enquanto o editor estava aberto.
- */
 export async function scheduleChapterPublication(
     chapterId,
     { title, content, scheduledPublishAt, scheduledPublicPreview = false },
@@ -268,7 +258,6 @@ export async function scheduleChapterPublication(
     return { ...data, seasonStatus: null };
 }
 
-/** Cancela um agendamento sem publicar nem apagar o episódio. */
 export async function cancelChapterPublicationSchedule(
     chapterId,
     { title, content },
@@ -321,8 +310,6 @@ export async function deleteChapter(chapterId) {
             chapter.content,
         );
     } catch (error) {
-        // A falha de limpeza do Storage não deve impedir
-        // a exclusão do episódio no banco.
         console.warn(
             "Não foi possível limpar algumas imagens do episódio.",
             error,
@@ -340,7 +327,6 @@ export async function deleteChapter(chapterId) {
         throw error;
     }
 
-    // O trigger do banco recalcula a temporada após a exclusão.
     const seasonStatus = await readSeasonStatusAfterChapterWrite(
         chapter.season_id,
     );

@@ -74,7 +74,6 @@ export async function getMyStoryUniverses(writerId = null) {
     ])].filter((id) => Number.isSafeInteger(id) && id > 0);
     if (!universeIds.length) return [];
 
-    // This query now contains only universes owned by or shared with this writer.
     const { data, error } = await supabase
         .from("story_universes")
         .select(`
@@ -206,7 +205,6 @@ export function isStoryUniverseCoverPath(value) {
     return typeof value === "string" && UNIVERSE_COVER_PATH_RE.test(value.trim());
 }
 
-/** Retorna uma URL assinada do bucket privado ou preserva links HTTPS antigos. */
 export async function getStoryUniverseCoverDisplayUrl(value) {
     const cover = String(value ?? "").trim();
     if (!cover) return null;
@@ -246,7 +244,6 @@ function validateUniverseCoverFile(file) {
     return UNIVERSE_COVER_ALLOWED_TYPES.get(mime);
 }
 
-/** Envia a capa para o bucket privado sob o diretório do proprietário original do universo. */
 export async function uploadStoryUniverseCover(universeId, file) {
     const id = positiveId(universeId, "Universo");
     const extension = validateUniverseCoverFile(file);
@@ -254,8 +251,6 @@ export async function uploadStoryUniverseCover(universeId, file) {
     if (authError) throw authError;
     if (!authData?.user?.id) throw new Error("Entre na sua conta de escritor para enviar uma capa.");
 
-    // Coauthors store replacement covers under the universe owner's folder.
-    // This preserves the path contract used by the private bucket and Presence Edge Function.
     const { data: universe, error: universeError } = await supabase
         .from("story_universes")
         .select("id, created_by")
@@ -278,7 +273,6 @@ export async function uploadStoryUniverseCover(universeId, file) {
     return path;
 }
 
-/** Atualiza o caminho no banco; o RPC confirma se o usuário é proprietário ou coautor autorizado. */
 export async function setStoryUniverseCoverPath(universeId, coverPath = null) {
     const id = positiveId(universeId, "Universo");
     const path = coverPath == null ? null : String(coverPath).trim();
@@ -292,7 +286,6 @@ export async function setStoryUniverseCoverPath(universeId, coverPath = null) {
     if (error) throw error;
 }
 
-/** Remove apenas objetos com o formato de caminho esperado; o Storage valida a propriedade. */
 export async function removeStoryUniverseCover(coverPath) {
     const path = String(coverPath ?? "").trim();
     if (!isStoryUniverseCoverPath(path)) return;
@@ -303,7 +296,6 @@ export async function removeStoryUniverseCover(coverPath) {
     universeCoverUrlCache.delete(path);
 }
 
-/** Lista e mantém a permissão de gerenciar coautores exclusiva ao proprietário. */
 export async function addStoryUniverseCollaborator(universeId, writerUsername) {
     const id = positiveId(universeId, "Universo");
     const username = String(writerUsername ?? "").trim().replace(/^@+/, "");
@@ -425,8 +417,6 @@ export async function moveStoryInUniverse(universeId, storyId, direction) {
     if (error) throw error;
 }
 
-
-/** Universos visíveis ao público, contendo somente vínculos aprovados e obras publicadas. */
 export async function getPublicStoryUniverses() {
     const { data, error } = await supabase
         .from("story_universes")
@@ -461,7 +451,6 @@ export async function getPublicStoryUniverses() {
     return visible;
 }
 
-/** Busca um universo público pelo slug e remove qualquer obra não publicada. */
 export async function getPublicStoryUniverseBySlug(slug) {
     const normalizedSlug = String(slug ?? "").trim().toLowerCase();
     if (!normalizedSlug) return null;

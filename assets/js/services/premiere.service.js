@@ -4,8 +4,6 @@ function createServerClock(rows, requestStartedAt, responseReceivedAt) {
     const serverNowMs = Date.parse(rows?.[0]?.server_now ?? "");
     if (!Number.isFinite(serverNowMs)) return null;
 
-    // Usa o relógio monotônico do navegador apenas para medir o tempo decorrido
-    // desde a resposta. A referência inicial vem sempre do PostgreSQL.
     const roundTripMs = Math.max(0, responseReceivedAt - requestStartedAt);
     return {
         serverNowAtReceiptMs: serverNowMs + (roundTripMs / 2),
@@ -21,7 +19,6 @@ function requestFinished() {
     return typeof performance !== "undefined" ? performance.now() : 0;
 }
 
-/** Estima o horário atual do servidor usando uma amostra do banco + tempo monotônico. */
 export function estimateServerNowMs(clock) {
     if (
         !clock ||
@@ -49,7 +46,6 @@ export function formatPremiereCountdown(milliseconds) {
     return `${pad(seconds)}s`;
 }
 
-/** Formata datas públicas sempre no fuso de Brasília, independente do PC do leitor. */
 export function formatBrasiliaDate(value) {
     if (value === null || value === undefined || value === "") return "Horário indisponível";
     const date = new Date(value);
@@ -65,10 +61,6 @@ export function formatBrasiliaDate(value) {
     }).format(date);
 }
 
-/**
- * Retorna somente metadados de pré-estreias públicas e uma amostra do relógio
- * do PostgreSQL. O conteúdo do episódio nunca é solicitado por esta função.
- */
 export async function getPublicScheduledChapterPreviews(storyId) {
     const normalizedStoryId = Number(storyId);
     if (!Number.isSafeInteger(normalizedStoryId) || normalizedStoryId <= 0) {
@@ -91,10 +83,6 @@ export async function getPublicScheduledChapterPreviews(storyId) {
     };
 }
 
-/**
- * Consulta o estado público de um episódio agendado sem retornar seu conteúdo.
- * O servidor informa quando o Cron realmente concluiu a publicação.
- */
 export async function getPublicChapterPremiereStatus(storyId, seasonNumber, chapterNumber) {
     const normalizedStoryId = Number(storyId);
     const normalizedSeasonNumber = Number(seasonNumber);

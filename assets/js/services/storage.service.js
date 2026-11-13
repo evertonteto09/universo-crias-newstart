@@ -11,9 +11,6 @@ const STORY_NEWS_IMAGE_BUCKET = "story-news-images";
 const COVER_SIGNED_URL_TTL_SECONDS = 15 * 60;
 const coverUrlCache = new Map();
 
-// URLs específicas para Rich Presence vivem por mais tempo, pois o Discord
-// precisa buscá-las fora do navegador. O site só as envia ao aplicativo quando
-// o usuário opta por compartilhar imagens; isso não altera as políticas dos buckets.
 const PRESENCE_IMAGE_URL_TTL_SECONDS = 24 * 60 * 60;
 const PRESENCE_IMAGE_URL_CACHE_TTL_MS = 23 * 60 * 60 * 1000;
 const presenceCoverUrlCache = new Map();
@@ -35,7 +32,6 @@ async function getPresenceSignedImageUrl(bucket, path, cache) {
 
     const url = data?.signedUrl || null;
     if (url) {
-        // Renova uma hora antes do vencimento e não reutiliza URLs expiradas.
         cache.set(path, {
             url,
             expiresAt: Date.now() + PRESENCE_IMAGE_URL_CACHE_TTL_MS,
@@ -68,7 +64,6 @@ export async function getStoryCoverUrl(path) {
 
     const url = data?.signedUrl || null;
     if (url) {
-        // Renova antes do vencimento para evitar reutilizar uma URL expirada.
         coverUrlCache.set(path, {
             url,
             expiresAt: Date.now() + 13 * 60 * 1000,
@@ -86,11 +81,6 @@ function validStoryNewsImagePath(path) {
     );
 }
 
-/**
- * Gera uma URL temporária para imagens privadas anexadas às notícias de uma história.
- * O bucket continua privado; as políticas de Storage controlam quais imagens podem
- * receber URL assinada para autores/coautores e leitores de histórias publicadas.
- */
 export async function getStoryNewsImageUrl(path) {
     const value = String(path ?? "").trim();
     if (!validStoryNewsImagePath(value)) {
@@ -116,7 +106,6 @@ export async function getStoryNewsImageUrl(path) {
     return url;
 }
 
-/** Envia uma imagem raster para o bucket privado de imagens de notícias. */
 export async function uploadStoryNewsImage(storyId, file) {
     const numericStoryId = Number(storyId);
     if (!Number.isSafeInteger(numericStoryId) || numericStoryId <= 0) {

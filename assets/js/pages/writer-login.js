@@ -67,8 +67,6 @@ async function syncCurrentWriterState(user) {
     try {
         identities = await getCurrentUserIdentities();
     } catch (error) {
-        // Em falha de verificação, falhamos para o lado seguro: não deixamos o
-        // botão OAuth habilitado com um estado positivo que não pôde ser confirmado.
         console.warn("[Writer Login] Não foi possível verificar identidades Discord:", error);
     }
     rememberWriterLoginState(user, { isWriter: true, identities });
@@ -111,9 +109,6 @@ async function continueExistingWriterSession() {
     }
 }
 
-// Recupera o último e-mail usado neste navegador. O botão Discord continua oculto
-// até existir uma confirmação local de que esse e-mail pertence a uma conta de
-// escritor e que a identidade Discord foi consultada no Supabase.
 if (!emailInput.value) {
     emailInput.value = getLastWriterLoginEmail();
 }
@@ -157,7 +152,6 @@ form.addEventListener("submit", async (event) => {
 
         const { writer } = await syncCurrentWriterState(user);
         if (!writer) {
-            // Não deixamos uma conta comum avançar pelo Portal do Escritor.
             await signOut().catch(() => {});
             setFormDisabled(false);
             showMessage(message, "Esta conta não está associada a um cadastro de escritor. Se você deveria ter acesso às suas histórias, entre em contato com o administrador.", "error");
@@ -174,8 +168,6 @@ form.addEventListener("submit", async (event) => {
 
 await continueExistingWriterSession();
 
-// Exibe os parâmetros de erro depois da verificação inicial da sessão, para que
-// a mensagem não seja apagada quando o navegador não tiver uma sessão ativa.
 const pageParams = new URLSearchParams(location.search);
 if (pageParams.has("error_description")) {
     showMessage(message, "O Discord não concluiu a autorização. Tente novamente.", "error");

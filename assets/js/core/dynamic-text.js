@@ -30,25 +30,11 @@ function restoreTokens(text, tokens) {
     );
 }
 
-/**
- * Renderiza as marcações inline do texto salvo no banco.
- *
- * As marcações podem ser combinadas. Exemplos:
- *  **texto**
- *  __texto__
- *  ||**texto**||
- *  **||texto||**
- *  ||__texto__||
- *  **`texto`**
- *
- * HTML enviado pelo escritor é sempre escapado antes da transformação.
- */
 export function renderDynamicInlineText(value) {
     let text = escapeHtml(value);
 
     const protectedParts = [];
 
-    // Código é atômico: a sintaxe dentro de `...` não é interpretada.
     let protectedResult = protectMatches(
         text,
         /`([^`\n]+?)`/g,
@@ -59,8 +45,6 @@ export function renderDynamicInlineText(value) {
     text = protectedResult.replaced;
     protectedParts.push(...protectedResult.tokens);
 
-    // Spoiler continua protegido do parser externo, mas seu conteúdo
-    // passa novamente pelo parser inline para permitir combinações.
     protectedResult = protectMatches(
         text,
         /\|\|([^|\n]+?)\|\|/g,
@@ -83,8 +67,6 @@ export function renderDynamicInlineText(value) {
     text = protectedResult.replaced;
     protectedParts.push(...protectedResult.tokens);
 
-    // Formatações inline. Como código e spoiler estão protegidos,
-    // as marcações restantes podem ser aplicadas normalmente.
     text = text.replace(
         /\*\*([^*\n]+?)\*\*/g,
         "<strong>$1</strong>",
@@ -100,20 +82,11 @@ export function renderDynamicInlineText(value) {
         "<em>$1</em>",
     );
 
-    // Os placeholders de código e spoiler continuam protegidos. Assim,
-    // emojis são renderizados no texto normal e também dentro de spoilers
-    // (processados recursivamente), mas permanecem literais dentro de código.
     text = renderEmojiTokens(text);
 
-    // Restauramos código e spoilers somente depois das demais marcações.
     return restoreTokens(text, protectedParts);
 }
 
-/**
- * Renderiza texto curto com as mesmas marcações inline das histórias,
- * preservando quebras de linha. Não interpreta blocos de imagem, títulos
- * ou citações; é adequado para avaliações e pequenos trechos.
- */
 export function renderDynamicInlineBlock(value) {
     return String(value ?? "")
         .replace(/\r\n?/g, "\n")
@@ -284,12 +257,6 @@ function renderQuote(lines, anchorLines = lines) {
     `;
 }
 
-/**
- * Mantém os parágrafos separados por linhas vazias, adicionando suporte a:
- *  - # / ## / ### no início da linha;
- *  - < ... > para blocos com linha lateral;
- *  - marcações inline via renderDynamicInlineText().
- */
 export async function renderDynamicContent(value, anchorValue = value, options = {}) {
     const normalized = String(value ?? "").replaceAll("\r\n", "\n");
     const anchorNormalized = String(anchorValue ?? value ?? "").replaceAll("\r\n", "\n");
@@ -348,7 +315,6 @@ export async function renderDynamicContent(value, anchorValue = value, options =
             continue;
         }
 
-        // Uma linha iniciada por < abre um bloco destacado.
         if (/^\s*</.test(line)) {
             flushParagraph();
             quote = [line];
@@ -384,10 +350,6 @@ export async function renderDynamicContent(value, anchorValue = value, options =
     return output.join("");
 }
 
-/**
- * Usa delegação de eventos para os spoilers, evitando registrar um listener
- * em cada elemento após cada troca de conteúdo.
- */
 export function bindDynamicText(root) {
     if (!root || root.dataset.dynamicTextBound === "true") {
         return;

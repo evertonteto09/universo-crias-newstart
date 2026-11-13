@@ -1,8 +1,3 @@
-/**
- * Estado local de conveniência para o login de escritor.
- * Não é uma fonte de autorização: permissões continuam sendo verificadas pelo Supabase.
- * Armazena somente e-mail, flags de vínculo e o auth user id esperado, nunca tokens ou senhas.
- */
 const STORAGE_KEY = "hdc-writer-login-state-v1";
 const PENDING_DISCORD_LOGIN_KEY = "hdc-writer-discord-login-pending";
 const SCHEMA_VERSION = 1;
@@ -58,7 +53,6 @@ function writeState(state) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         return true;
     } catch (error) {
-        // Storage cheio/desativado não deve impedir a autenticação por e-mail e senha.
         console.warn("[Local account state] Não foi possível salvar o estado local:", error);
         return false;
     }
@@ -83,11 +77,6 @@ export function getRememberedWriterLogin(emailValue) {
     return record;
 }
 
-/**
- * Salva somente um estado obtido após consultar o usuário, sua associação de escritor
- * e suas identidades no Supabase. Contas sem cadastro de escritor nunca ficam marcadas
- * como elegíveis para o botão de login Discord do portal.
- */
 export function rememberWriterLoginState(user, { isWriter, identities = [] } = {}) {
     const email = normalizeLoginEmail(user?.email);
     if (!email || !user?.id) return false;
@@ -98,16 +87,12 @@ export function rememberWriterLoginState(user, { isWriter, identities = [] } = {
         && identities.some((identity) => identity?.provider === "discord");
 
     const authUserId = String(user.id);
-    // Se o e-mail da mesma conta mudou, removemos a chave antiga para que um
-    // endereço desatualizado não continue exibindo o botão Discord.
     for (const [knownEmail, record] of Object.entries(state.accounts)) {
         if (knownEmail !== email && record?.authUserId === authUserId) {
             delete state.accounts[knownEmail];
         }
     }
 
-    // O e-mail pré-preenchido representa o último login confirmado de escritor;
-    // uma sessão comum/leitor não deve substituir essa referência.
     if (writerAccount) state.lastLoginEmail = email;
     state.accounts[email] = {
         writerAccount,
@@ -157,12 +142,9 @@ export function readPendingDiscordLogin() {
 export function clearPendingDiscordLogin() {
     try {
         window.localStorage.removeItem(PENDING_DISCORD_LOGIN_KEY);
-    } catch {
-        // Nada a fazer; falhas de storage não devem quebrar o site.
-    }
+    } catch {}
 }
 
-/** Marca o vínculo local como não confirmado depois de uma divergência no retorno OAuth. */
 export function invalidateRememberedDiscordLink(emailValue, expectedAuthUserId = "") {
     const email = normalizeLoginEmail(emailValue);
     if (!email) return false;
@@ -181,8 +163,6 @@ export function clearPendingDiscordLoginIfExpired() {
     if (pending) return pending;
     try {
         window.localStorage.removeItem(PENDING_DISCORD_LOGIN_KEY);
-    } catch {
-        // Ignorado.
-    }
+    } catch {}
     return null;
 }

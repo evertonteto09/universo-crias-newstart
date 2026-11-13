@@ -5,8 +5,6 @@ const STORAGE_KEY = "hdc-profanity-filter";
 let enabled =
     localStorage.getItem(STORAGE_KEY) !== "off";
 
-// As palavras são filtradas somente na camada de exibição.
-// O conteúdo salvo no Supabase permanece intacto.
 const PHRASES = [
     "filho da puta",
     "filho-da-puta",
@@ -24,6 +22,7 @@ const WORDS = [
     "foder",
     "fuder",
     "foderam",
+    "fuderam",
     "fodase",
     "foda-se",
     "foda",
@@ -157,7 +156,6 @@ export function setupProfanityFilter() {
     });
 
     updateFilterButtons();
-    // Recupera também quando o carregamento da conta terminou antes do listener.
     syncUserPreferences().then((account) => {
         if (account?.preferences) applyRemoteFilterPreference(account.preferences.profanity_filter_enabled);
     }).catch((error) => console.warn("Não foi possível carregar o filtro salvo na conta:", error));

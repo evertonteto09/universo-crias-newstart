@@ -1,10 +1,5 @@
 import { escapeHtml } from "./utils.js";
 
-/**
- * Returns the primary author first, followed by the credited coauthors.
- * The list is normalized by writer ID to avoid duplicate credits if a row is
- * accidentally repeated in a query result.
- */
 export function getStoryAuthors(story) {
     if (!story || typeof story !== "object") {
         return [];
@@ -52,7 +47,6 @@ export function getStoryAuthors(story) {
     return authors;
 }
 
-/** Safe HTML label for public author credits. */
 export function renderStoryAuthorNames(story) {
     const authors = getStoryAuthors(story);
     if (!authors.length) {

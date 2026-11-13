@@ -57,7 +57,6 @@ async function loadStories() {
         return;
     }
 
-    // A média será ligada depois por uma view/RPC dedicada.
     const cards = await Promise.all(
         data.map((story) => storyCard({ ...story, average_rating: 0, review_count: 0 }))
     );

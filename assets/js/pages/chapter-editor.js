@@ -282,7 +282,6 @@ async function updateChapterEditorPresence(titleOverride = null) {
         getPresenceStoryCoverUrl(story),
         getPresenceChapterImageUrl(content, chapter),
     ]);
-    // Evita que uma consulta de imagem iniciada antes de outra atualize a presença por último.
     if (sequence !== chapterPresenceUpdateSequence || !criasPresence) return;
 
     const primaryImageUrl = episodeImageUrl || storyCoverUrl || CRIAS_PRESENCE_LOGO_URL;
@@ -301,7 +300,6 @@ function scheduleChapterPresenceTitleUpdate(value) {
         clearTimeout(presenceTitleTimer);
     }
 
-    // Evita enviar uma atualização RPC a cada tecla digitada.
     presenceTitleTimer = setTimeout(() => {
         presenceTitleTimer = null;
         updateChapterEditorPresence(value);
@@ -1187,8 +1185,6 @@ async function save(status) {
         );
 
     const scheduledBeforeSave = chapter.scheduled_publish_at;
-    // Durante um agendamento, salvar o conteúdo não deve forçar status=draft:
-    // o Cron pode ter publicado o episódio entre dois autosaves.
     const effectiveStatus = status === "draft" && scheduledBeforeSave
         ? undefined
         : status;
@@ -1243,7 +1239,6 @@ async function save(status) {
                     ? "Episódio voltou para rascunho."
                     : "Rascunho salvo!");
 
-        // Só anunciamos a mudança automática da temporada quando o status do episódio mudou.
         if (previousStatus !== updated.status) {
             if (
                 updated.status === "published" &&
@@ -1465,7 +1460,6 @@ function parseChapterImageTokens(content) {
             path,
             alt: metadata.alt,
             spoiler: metadata.spoiler,
-            // A primeira linha não vazia só é a capa quando ela própria é uma imagem.
             isCover: lineIndex === firstNonEmptyLineIndex,
             internal: path.startsWith("chapters/") && !/^https?:\/\//i.test(path),
         });
@@ -1800,11 +1794,6 @@ async function deleteChapterImage(path) {
             );
 
             try {
-                /*
-                    Primeiro atualizamos o capítulo para remover
-                    a referência. Assim o episódio não fica apontando
-                    para um objeto que acabou de ser apagado.
-                */
                 const updated =
                     await updateChapter(
                         chapter.id,
@@ -2092,7 +2081,6 @@ function bind() {
             saveTimer =
                 setTimeout(
                     async () => {
-                        // Autosave apenas quando já é rascunho.
                         if (
                             chapter.status !==
                             "published"
@@ -2250,16 +2238,12 @@ async function init() {
                 chapterId
             );
 
-        // Garante que a página nunca tente editar
-        // um capítulo que o RLS não permitiu retornar.
         if (!chapter) {
             throw new Error(
                 "Episódio não encontrado ou sem permissão."
             );
         }
 
-        // O título da história é usado apenas para descrever a atividade.
-        // Se a consulta falhar, o editor continua funcionando normalmente.
         if (Number.isInteger(storyId) && storyId > 0) {
             try {
                 story = await getWriterStoryById(storyId);
@@ -2271,8 +2255,6 @@ async function init() {
             }
         }
 
-        // Inicializa a presença somente depois de validar o escritor
-        // e carregar o episódio autorizado.
         criasPresence = initCriasPresence({
             details: "Editando um episódio",
             state: "Carregando episódio...",
@@ -2280,8 +2262,6 @@ async function init() {
 
         updateChapterEditorPresence();
 
-        // storyId é usado somente para o caminho visual.
-        // A autorização real vem do RLS no capítulo.
         render();
         startScheduledPublicationRefresh();
     } catch (error) {

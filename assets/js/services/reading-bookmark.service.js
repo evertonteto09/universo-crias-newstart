@@ -31,7 +31,6 @@ function normalizeBookmark(bookmark, storyIdOverride = null) {
         chapterTitle: String(bookmark.chapterTitle ?? "").slice(0, 300),
         storySlug: String(bookmark.storySlug ?? "").slice(0, 200),
         seasonNumber: Number.isFinite(rawSeasonNumber) && rawSeasonNumber >= 0 ? rawSeasonNumber : 1,
-        // Episódio 0 é válido e representa o Piloto; não o converta para 1.
         episodeNumber: Number.isFinite(rawEpisodeNumber) && rawEpisodeNumber >= 0 ? rawEpisodeNumber : 1,
         anchorText,
         previousText: String(bookmark.previousText ?? "").slice(-CONTEXT_LENGTH),
@@ -100,11 +99,6 @@ function resetUserBookmarkCache(userId) {
     userBookmarksLoading = null;
 }
 
-/**
- * Carrega os marcadores da conta e migra os marcadores anônimos deste navegador.
- * Quando há conflito para a mesma história, vence o marcador com savedAt mais recente.
- * O localStorage só é limpo depois que todas as migrações foram confirmadas pelo Supabase.
- */
 async function ensureUserBookmarksLoaded(user) {
     if (cachedUserId !== user.id) resetUserBookmarkCache(user.id);
     if (userBookmarksLoaded) return;
@@ -150,8 +144,6 @@ async function ensureUserBookmarksLoaded(user) {
             if (upsertError) throw upsertError;
         }
 
-        // O marcador anônimo foi incorporado à conta. Remove o cache compartilhado
-        // para não expor dados de uma conta quando o usuário sair ou trocar de conta.
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch (storageError) {
@@ -288,8 +280,6 @@ function findBookmarkMatch(blocks, bookmark) {
         return { status: "stale", element: null, index: -1 };
     }
 
-    // Se o texto marcado foi editado, somente sugerimos um ponto aproximado
-    // quando os dois parágrafos vizinhos ainda delimitam exatamente um bloco.
     if (bookmark.previousText && bookmark.nextText) {
         const previousIndices = currentTexts
             .map((text, index) => textMatchesPrevious(text, bookmark.previousText) ? index : -1)
@@ -398,10 +388,6 @@ function renderToolbar(toolbar, { bookmark, chapter, match }) {
     addRemoveButton();
 }
 
-/**
- * Torna cada bloco de texto clicável para salvar o ponto de leitura.
- * Contas autenticadas sincronizam com Supabase; visitantes usam localStorage.
- */
 export async function setupReadingBookmarkUI({ root, toolbar, story, season, chapter }) {
     if (!root || !toolbar || !story?.id || !chapter?.id) return async () => null;
 
@@ -558,7 +544,6 @@ export async function setupReadingBookmarkUI({ root, toolbar, story, season, cha
                 ? findBookmarkMatch(freshBlocks, currentBookmark)
                 : { status: "none", element: null, index: -1 };
 
-            // Clicar novamente no trecho já salvo remove o marcador desta história.
             if (currentMatch.status === "exact" && currentMatch.element === block) {
                 const removed = await removeReadingBookmark(story.id);
                 if (!removed) {
