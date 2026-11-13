@@ -10,7 +10,7 @@ import { getPublishedStories } from "../services/story.service.js?v=20261107-tab
 import { getStoryAuthors } from "../core/story-authors.js?v=20261027-coauthor-2";
 import { getStoryCoverUrl } from "../services/storage.service.js";
 import { getPublishedStoryRatingSummaries } from "../services/review.service.js";
-import { initCriasPresence } from "../services/crias-presence.service.js?v=20261107-tab-icons-1";
+import { initCriasPresence } from "../services/crias-presence.service.js?v=20261113-home-universes-presence-1";
 import { getPublicStoryUniverses } from "../services/story-universe.service.js?v=20261107-reader-universes-2";
 
 setupTheme();
@@ -19,6 +19,8 @@ setupProfanityFilter();
 const criasPresence = initCriasPresence({
     details: "Navegando pelas histórias",
     state: "Universo dos Crias",
+    pageContext: "home",
+    homeSection: "stories",
 });
 
 const grid =
@@ -334,6 +336,14 @@ function setLibraryMode(mode, { syncUrl = false } = {}) {
         storiesFilters.hidden = mobileWriterFilterMedia.matches || !isStories;
     }
     if (searchInput) searchInput.placeholder = isStories ? "Pesquisar por história ou autor..." : "Pesquisar por universo...";
+
+    criasPresence.update({
+        details: isStories ? "Navegando pelas histórias" : "Navegando pelos universos",
+        state: "Universo dos Crias",
+        pageContext: "home",
+        homeSection: isStories ? "stories" : "universes",
+    });
+
     if (syncUrl) {
         const url = new URL(window.location.href);
         if (isStories) {

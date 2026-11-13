@@ -607,7 +607,7 @@ export function initCriasPresence(initialActivity = {}) {
                     <label class="cp-setting-row" for="cp-setting-story-section">
                         <span class="cp-setting-copy">
                             <strong>Mostrar seção da história</strong>
-                            <small>Na página da obra, exibe “Vendo episódios”, “Lendo notícias” ou “Lendo avaliações”. Desative para usar “Lendo uma história”.</small>
+                            <small>Na biblioteca, exibe a seção atual (“Navegando pelas histórias” ou “Navegando pelos universos”). Na obra, exibe episódios, notícias ou avaliações. Desative para usar descrições gerais.</small>
                         </span>
                         <input id="cp-setting-story-section" type="checkbox">
                     </label>
@@ -764,6 +764,7 @@ export function initCriasPresence(initialActivity = {}) {
         const storySection = Object.hasOwn(STORY_SECTION_DETAILS, value.storySection)
             ? value.storySection
             : "chapters";
+        const homeSection = value.homeSection === "universes" ? "universes" : "stories";
         const currentPageButtonLabel = normalizeText(value.currentPageButtonLabel).slice(0, 32);
 
         return {
@@ -775,6 +776,7 @@ export function initCriasPresence(initialActivity = {}) {
             smallImageText: normalizeText(value.smallImageText),
             pageContext,
             storySection,
+            homeSection,
             storyTitle: normalizeText(value.storyTitle),
             universeTitle: normalizeText(value.universeTitle),
             currentPageUrl: normalizePublicPageUrl(value.currentPageUrl),
@@ -854,6 +856,16 @@ export function initCriasPresence(initialActivity = {}) {
                 details: "No Universo dos Crias",
                 state: "Universo dos Crias",
             }, { hideArtwork: true });
+        }
+
+        if (activity.pageContext === "home") {
+            const sectionDetails = activity.homeSection === "universes"
+                ? "Navegando pelos universos"
+                : "Navegando pelas histórias";
+            return withPrivacyFilteredImages({
+                details: settings.showStorySection ? sectionDetails : "Navegando pela biblioteca",
+                state: "Universo dos Crias",
+            });
         }
 
         if (activity.pageContext === "story") {
