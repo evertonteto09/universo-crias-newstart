@@ -1,0 +1,101 @@
+/* Página de download do Universo dos Crias Mobile.
+   Reutiliza as classes e tokens de tema da página Crias Presence para PC. */
+.mobile-app-download-page {
+    --mobile-app-glow: rgba(var(--accent-rgb), .15);
+}
+
+.mobile-app-hero {
+    align-items: center;
+}
+
+.mobile-app-download-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 92% 5%, var(--mobile-app-glow), transparent 43%),
+        var(--surface);
+}
+
+.mobile-app-logo-wrap {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    margin-bottom: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--accent-rgb), .3);
+    border-radius: 21px;
+    background: var(--surface-2);
+}
+
+.mobile-app-logo-wrap img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mobile-app-download-button {
+    border-color: rgba(var(--accent-rgb), .45);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--accent-contrast);
+}
+
+.mobile-app-open-access {
+    margin: 12px 0 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(var(--accent-rgb), .25);
+    border-radius: 12px;
+    background: rgba(var(--accent-rgb), .07);
+    color: var(--muted);
+    font-size: .8rem !important;
+    line-height: 1.6 !important;
+    text-align: center;
+}
+
+.mobile-app-feature-grid {
+    margin-top: 34px;
+}
+
+.mobile-app-install-section {
+    margin-top: 58px;
+}
+
+.mobile-app-safety-note {
+    margin-bottom: 34px;
+}
+
+.mobile-app-beta-note {
+    margin-bottom: 54px;
+}
+
+@media (max-width: 680px) {
+    .mobile-app-download-page {
+        padding-top: 34px;
+    }
+
+    .mobile-app-hero {
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .mobile-app-download-intro h1,
+    .mobile-app-download-page .presence-download-intro h1 {
+        font-size: clamp(2.45rem, 12vw, 3.7rem);
+    }
+
+    .mobile-app-download-card {
+        max-width: none;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .mobile-app-feature-grid {
+        margin-bottom: 52px;
+    }
+
+    .mobile-app-install-section {
+        margin-top: 42px;
+        margin-bottom: 48px;
+    }
+}
