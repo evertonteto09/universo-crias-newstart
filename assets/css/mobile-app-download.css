@@ -1,5 +1,3 @@
-/* Página de download do Universo dos Crias Mobile.
-   Reutiliza as classes e tokens de tema da página Crias Presence para PC. */
 .mobile-app-download-page {
     --mobile-app-glow: rgba(var(--accent-rgb), .15);
 }
@@ -34,8 +32,6 @@
     height: 100%;
     object-fit: cover;
 }
-
-/* O CTA de download herda o estilo destacado de .presence-download-button--latest. */
 
 .mobile-app-open-access {
     margin: 12px 0 0;
