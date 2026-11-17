@@ -35,20 +35,7 @@
     object-fit: cover;
 }
 
-.mobile-app-download-button {
-    border-color: transparent;
-    background: transparent;
-    color: var(--accent);
-    box-shadow: none;
-    text-decoration: none;
-}
-
-.mobile-app-download-button:hover {
-    transform: none;
-    filter: none;
-    text-decoration: underline;
-    text-underline-offset: 4px;
-}
+/* O CTA de download herda o estilo destacado de .presence-download-button--latest. */
 
 .mobile-app-open-access {
     margin: 12px 0 0;
