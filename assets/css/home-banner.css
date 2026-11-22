@@ -1,0 +1,56 @@
+/* Banner principal da página inicial — mantém a arte inteira e responsiva. */
+.hero.hero-with-banner {
+    width: 100%;
+    max-width: 1180px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 42%);
+    align-items: center;
+    gap: clamp(28px, 4.5vw, 64px);
+}
+
+.hero-with-banner .hero-copy {
+    min-width: 0;
+}
+
+.home-banner-wrap {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.home-banner {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+}
+
+@media (max-width: 900px) {
+    .hero.hero-with-banner {
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 40%);
+        gap: 28px;
+    }
+}
+
+@media (max-width: 680px) {
+    .hero.hero-with-banner {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+        margin-bottom: 48px;
+    }
+
+    .home-banner-wrap {
+        justify-content: center;
+    }
+
+    .home-banner {
+        width: 100%;
+        max-width: 580px;
+        border-radius: 16px;
+    }
+}

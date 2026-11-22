@@ -606,9 +606,30 @@ a { color: inherit; }
 .site-header { border-bottom: 1px solid var(--border); }
 
 .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
     text-decoration: none;
     font-weight: 800;
     letter-spacing: -.03em;
+}
+
+.brand-logo {
+    display: block;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+@media (max-width: 680px) {
+    .brand-logo {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
 }
 
 .main-nav {
